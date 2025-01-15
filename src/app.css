@@ -18,17 +18,123 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    max-width: 800px;
-    margin: 0 auto;
     width: 100%;
 }
 
 /* Navigation */
 nav {
-    padding: 20px 32px;
+    padding: 0 20px;
+    height: 60px;
     border-bottom: 1px solid #eee;
     display: flex;
     align-items: center;
+    gap: 24px;
+    background: #fff;
+    position: relative;
+    z-index: 1000;
+}
+
+.menu-button {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: #333;
+    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    margin: -8px;
+}
+
+.menu-button:hover {
+    opacity: 0.8;
+    background: #f5f5f5;
+}
+
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 160px;
+    background: #fff;
+    border-right: 1px solid #eee;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+}
+
+.sidebar.open {
+    transform: translateX(0);
+}
+
+.sidebar-content {
+    padding: 80px 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    background: none;
+    border: none;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    color: #333;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+    width: 100%;
+    text-align: left;
+}
+
+.sidebar-item svg {
+    width: 18px;
+    height: 18px;
+    opacity: 0.9;
+}
+
+.sidebar-item:hover {
+    opacity: 0.9;
+    background: #f5f5f5;
+}
+
+.sidebar-item.active {
+    opacity: 1;
+    background: #f0f0f0;
+    border-left-color: #7fccde;
+}
+
+.sidebar-item span {
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+/* Overlay */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 999;
+    backdrop-filter: blur(2px);
+}
+
+.overlay.visible {
+    opacity: 1;
+    visibility: visible;
 }
 
 .nav-title {
@@ -52,8 +158,9 @@ main {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 30px;
+    gap: 20px;
     padding: 0 20px;
+    margin-top: -40px;
 }
 
 /* Orb styles */
@@ -64,6 +171,28 @@ main {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.mute-button {
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    padding: 12px;
+    cursor: pointer;
+    color: #333;
+    opacity: 0.7;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 10px;
+    transition: all 0.2s ease;
+}
+
+.mute-button:hover {
+    opacity: 0.8;
 }
 
 .orb-segments {
@@ -97,16 +226,22 @@ main {
 
 /* Button styles */
 .talk-button {
-    background-color: #fff;
-    color: #333;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(255, 255, 255, 0.75);
+    color: rgba(51, 51, 51, 0.85);
     border: none;
     padding: 10px 20px;
     border-radius: 16px;
     font-size: 0.9rem;
     cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     transition: all 0.2s ease;
     font-weight: 500;
+    z-index: 10;
+    backdrop-filter: blur(2px);
 }
 
 .talk-button:hover {
@@ -134,13 +269,12 @@ main {
 .input-controls {
     position: fixed;
     bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 800px;
-    padding: 20px 32px;
+    left: 0;
+    right: 0;
+    height: 60px;
+    padding: 0 32px;
     background: #fff;
-    border-top: 1px solid #eee;
+    border-top: 1px solid #ccc;
     display: flex;
     gap: 12px;
     align-items: center;
@@ -149,7 +283,7 @@ main {
 .text-input {
     flex: 1;
     padding: 12px 16px;
-    border: 1px solid #eee;
+    border: none;
     border-radius: 12px;
     font-size: 0.9rem;
     outline: none;
@@ -164,7 +298,8 @@ main {
 
 .input-buttons {
     display: flex;
-    gap: 8px;
+    gap: 2px;
+    margin-right: -4px;
 }
 
 .upload-button,
@@ -205,10 +340,6 @@ svg {
 
 /* Responsive adjustments */
 @media (max-width: 600px) {
-    nav {
-        padding: 16px 20px;
-    }
-
     .container {
         padding: 0;
     }
@@ -219,6 +350,11 @@ svg {
     }
 
     .input-controls {
-        padding: 15px 20px;
+        padding: 0 20px;
+    }
+
+    .talk-button {
+        font-size: 0.8rem;
+        padding: 8px 16px;
     }
 }
