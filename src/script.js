@@ -1,6 +1,6 @@
 // Core elements
 const talkButton = document.querySelector('.talk-button');
-const orb = document.querySelector('.orb-segments');
+const orb = document.querySelector('.orb');
 const statusDisplay = document.getElementById('status-display');
 const textInput = document.querySelector('.text-input');
 const sendButton = document.querySelector('.send-button');
@@ -20,23 +20,6 @@ let isMuted = false;
 let activeSection = 'chat';
 let isSidebarOpen = false;
 
-// Animation styles
-const style = document.createElement('style');
-style.textContent = `
-@keyframes pulse {
-    0% { transform: scale(1) rotate(0deg); }
-    50% { transform: scale(1.05) rotate(180deg); }
-    100% { transform: scale(1) rotate(360deg); }
-}
-
-@keyframes shimmer {
-    0% { opacity: 0.7; transform: rotate(0deg); }
-    50% { opacity: 1; transform: rotate(180deg); }
-    100% { opacity: 0.7; transform: rotate(360deg); }
-}
-`;
-document.head.appendChild(style);
-
 // Status display functions
 function updateStatus(text, type = 'info') {
     statusDisplay.textContent = text;
@@ -51,7 +34,7 @@ talkButton.addEventListener('mousedown', () => {
     }
     talkButton.classList.add('active');
     talkButton.textContent = 'Release to stop';
-    orb.style.animation = 'rotate 10s linear infinite, pulse 2s ease-in-out infinite';
+    orb.dataset.audioLevel = 'high';
     updateStatus('Listening...');
 });
 
@@ -59,7 +42,7 @@ talkButton.addEventListener('mouseup', () => {
     if (isMuted) return;
     talkButton.classList.remove('active');
     talkButton.textContent = 'Talk to interrupt';
-    orb.style.animation = 'rotate 10s linear infinite';
+    delete orb.dataset.audioLevel;
     updateStatus('Processing...');
     // Simulate AI response
     setTimeout(() => {
@@ -73,14 +56,14 @@ function handleSendMessage() {
     if (message) {
         updateStatus(`You: ${message}`);
         textInput.value = '';
-        orb.style.animation = 'rotate 10s linear infinite, shimmer 3s ease-in-out infinite';
+        orb.dataset.audioLevel = 'medium';
         
         // Simulate AI response
         setTimeout(() => {
             updateStatus('AI is responding...');
             setTimeout(() => {
                 updateStatus('AI: I received your message.');
-                orb.style.animation = 'rotate 10s linear infinite';
+                delete orb.dataset.audioLevel;
             }, 1500);
         }, 500);
     }
