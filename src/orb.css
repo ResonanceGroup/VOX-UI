@@ -24,6 +24,8 @@
   transition: filter 0.3s ease;
   overflow: hidden;
   border-radius: 50%;
+  mask-image: radial-gradient(circle at center, black 65%, transparent 70%);
+  -webkit-mask-image: radial-gradient(circle at center, black 65%, transparent 70%);
 }
 
 /* Glass sphere effect */
@@ -32,8 +34,8 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 280px;
-  height: 280px;
+  width: 260px;
+  height: 260px;
   transform: translate(-50%, -50%);
   background: radial-gradient(
     circle at 25% 25%,
@@ -79,9 +81,9 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 240px;
-  height: 240px;
-  margin: -120px 0 0 -120px;
+  width: 220px;
+  height: 220px;
+  margin: -110px 0 0 -110px;
   border-radius: 60% 40% 55% 45% / 45% 55% 45% 55%;
   transform-origin: center;
   transition: all 0.3s ease;
@@ -98,12 +100,12 @@
     opacity: 0.85;
   }
   33% { 
-    transform: scale(1.15) translateY(-20px) rotate(120deg);
+    transform: scale(1.1) translateY(-15px) rotate(120deg);
     border-radius: 45% 55% 40% 60% / 55% 45% 55% 45%;
     opacity: 0.95;
   }
   66% {
-    transform: scale(0.95) translateY(20px) rotate(240deg);
+    transform: scale(0.9) translateY(15px) rotate(240deg);
     border-radius: 55% 45% 60% 40% / 40% 60% 40% 60%;
     opacity: 0.75;
   }
@@ -111,80 +113,75 @@
 
 /* Distinct color patterns for each shape */
 .c:nth-child(1) { 
-  transform: rotate(0deg) translateX(25px); 
+  transform: rotate(0deg) translateX(20px); 
   animation-delay: -0.0s; 
   background: radial-gradient(
     circle at 30% 30%, 
-    rgba(255, 64, 64, 1) 0%, 
-    rgba(255, 0, 128, 0.9) 30%, 
-    rgba(128, 0, 255, 0.7) 60%, 
+    rgba(255, 128, 255, 1) 0%, 
+    rgba(255, 64, 192, 0.9) 30%, 
+    rgba(192, 32, 255, 0.7) 60%, 
     transparent 85%
   ); 
 }
 
 .c:nth-child(2) { 
-  transform: rotate(120deg) translateX(30px); 
+  transform: rotate(120deg) translateX(25px); 
   animation-delay: -6.0s; 
   background: radial-gradient(
     circle at 30% 30%, 
-    rgba(64, 224, 255, 1) 0%, 
-    rgba(0, 128, 255, 0.9) 30%, 
-    rgba(0, 64, 255, 0.7) 60%, 
+    rgba(64, 192, 255, 1) 0%, 
+    rgba(32, 128, 255, 0.9) 30%, 
+    rgba(64, 32, 255, 0.7) 60%, 
     transparent 85%
   ); 
 }
 
 .c:nth-child(3) { 
-  transform: rotate(240deg) translateX(28px); 
+  transform: rotate(240deg) translateX(22px); 
   animation-delay: -12.0s; 
   background: radial-gradient(
     circle at 30% 30%, 
-    rgba(255, 128, 64, 1) 0%, 
-    rgba(255, 64, 0, 0.9) 30%, 
-    rgba(255, 0, 64, 0.7) 60%, 
+    rgba(255, 192, 128, 1) 0%, 
+    rgba(255, 128, 64, 0.9) 30%, 
+    rgba(255, 64, 128, 0.7) 60%, 
     transparent 85%
   ); 
 }
 
-/* Prismatic light effect */
-.orb::after {
+/* Outer glow effect */
+.orb-container::after {
   content: '';
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 270px;
-  height: 270px;
+  width: 320px;
+  height: 320px;
   transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle at center,
+    rgba(64, 206, 224, 0.15) 0%,
+    rgba(95, 89, 255, 0.1) 30%,
+    rgba(148, 255, 238, 0.05) 60%,
+    transparent 80%
+  );
   border-radius: 50%;
-  background: 
-    radial-gradient(
-      circle at center,
-      transparent 30%,
-      rgba(148, 255, 238, 0.1) 45%,
-      rgba(64, 206, 224, 0.1) 55%,
-      rgba(64, 159, 255, 0.1) 65%,
-      transparent 80%
-    );
-  box-shadow:
-    0 0 30px rgba(64, 206, 224, 0.2),
-    0 0 60px rgba(95, 89, 255, 0.1);
-  animation: prism-rotate 15s infinite linear;
-  z-index: 2;
-  mix-blend-mode: screen;
+  filter: blur(20px);
+  animation: glow-rotate 15s infinite linear;
+  pointer-events: none;
 }
 
-@keyframes prism-rotate {
+@keyframes glow-rotate {
   0% { 
-    transform: translate(-50%, -50%) rotate(0deg) scale(0.95);
-    opacity: 0.3;
+    transform: translate(-50%, -50%) rotate(0deg);
+    opacity: 0.5;
   }
   50% { 
-    transform: translate(-50%, -50%) rotate(180deg) scale(1.05);
-    opacity: 0.6;
+    transform: translate(-50%, -50%) rotate(180deg);
+    opacity: 0.7;
   }
   100% { 
-    transform: translate(-50%, -50%) rotate(360deg) scale(0.95);
-    opacity: 0.3;
+    transform: translate(-50%, -50%) rotate(360deg);
+    opacity: 0.5;
   }
 }
 
