@@ -216,15 +216,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendButton = document.querySelector('.send-button');
     const uploadButton = document.querySelector('.upload-button');
     const muteButton = document.querySelector('.mute-button');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const menuButton = document.querySelector('.menu-button');
     const sidebar = document.querySelector('.sidebar');
     const sidebarItems = document.querySelectorAll('.sidebar-item');
     const statusDisplay = document.getElementById('status-display');
-    
-    // Create overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'overlay';
-    document.body.appendChild(overlay);
+    const overlay = document.querySelector('.overlay');
     
     // State
     let isMuted = false;
@@ -291,10 +287,10 @@ document.addEventListener('DOMContentLoaded', () => {
         isSidebarOpen = !isSidebarOpen;
         sidebar.classList.toggle('open', isSidebarOpen);
         overlay.classList.toggle('visible', isSidebarOpen);
-        sidebarToggle.setAttribute('aria-expanded', isSidebarOpen);
+        menuButton.setAttribute('aria-expanded', isSidebarOpen);
     }
     
-    sidebarToggle.addEventListener('click', toggleSidebar);
+    menuButton.addEventListener('click', toggleSidebar);
     overlay.addEventListener('click', toggleSidebar);
     
     sidebarItems.forEach(item => {
