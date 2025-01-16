@@ -7,6 +7,8 @@ class AudioVisualizer {
         this.source = null;
         this.animationFrame = null;
         this.isInitialized = false;
+        this.testMode = false;
+        this.testStartTime = 0;
         
         // Get DOM elements
         this.orbElement = document.querySelector('.orb');
@@ -14,7 +16,7 @@ class AudioVisualizer {
         this.statusDisplay = document.getElementById('status-display');
         
         // Audio analysis settings
-        this.fftSize = 2048; // Larger FFT for better frequency resolution
+        this.fftSize = 2048;
         this.smoothingTimeConstant = 0.8;
         this.energyThresholds = {
             low: 0.1,
@@ -54,30 +56,24 @@ class AudioVisualizer {
             return;
         }
 
-        // Add test mode for animation testing
+        // Add test mode
         this.setupTestMode();
     }
 
     setupTestMode() {
         // Add keyboard shortcuts for testing animations
         document.addEventListener('keydown', (e) => {
-            switch(e.key) {
-                case '1':
-                    this.orbElement.dataset.audioLevel = 'low';
-                    this.updateStatus('Test: Low audio level');
-                    break;
-                case '2':
-                    this.orbElement.dataset.audioLevel = 'medium';
-                    this.updateStatus('Test: Medium audio level');
-                    break;
-                case '3':
-                    this.orbElement.dataset.audioLevel = 'high';
-                    this.updateStatus('Test: High audio level');
-                    break;
-                case '0':
+            if (e.key === 't') {
+                this.testMode = !this.testMode;
+                if (this.testMode) {
+                    this.testStartTime = performance.now();
+                    this.startTestAnimation();
+                    this.updateStatus('Test mode: Sine wave simulation');
+                } else {
                     delete this.orbElement.dataset.audioLevel;
-                    this.updateStatus('Test: No audio');
-                    break;
+                    this.orbElement.style.removeProperty('--intensity');
+                    this.updateStatus('Test mode: Off');
+                }
             }
         });
 
@@ -89,8 +85,41 @@ class AudioVisualizer {
         testInfo.style.transform = 'translateX(-50%)';
         testInfo.style.fontSize = '12px';
         testInfo.style.color = '#666';
-        testInfo.textContent = 'Test keys: 1 (low), 2 (medium), 3 (high), 0 (off)';
+        testInfo.textContent = 'Press T to toggle test animation';
         document.body.appendChild(testInfo);
+    }
+
+    startTestAnimation() {
+        if (!this.testMode) return;
+
+        const animate = () => {
+            if (!this.testMode) {
+                delete this.orbElement.dataset.audioLevel;
+                this.orbElement.style.removeProperty('--intensity');
+                return;
+            }
+
+            // Create a slow sine wave that cycles every 8 seconds
+            const time = (performance.now() - this.testStartTime) / 8000;
+            const value = (Math.sin(time * Math.PI * 2) + 1) / 2; // Normalize to 0-1
+
+            // Map the sine wave to audio levels with smooth transitions
+            this.orbElement.style.setProperty('--intensity', value.toFixed(3));
+            
+            if (value > this.energyThresholds.high) {
+                this.orbElement.dataset.audioLevel = 'high';
+            } else if (value > this.energyThresholds.medium) {
+                this.orbElement.dataset.audioLevel = 'medium';
+            } else if (value > this.energyThresholds.low) {
+                this.orbElement.dataset.audioLevel = 'low';
+            } else {
+                delete this.orbElement.dataset.audioLevel;
+            }
+
+            requestAnimationFrame(animate);
+        };
+
+        animate();
     }
     
     async initialize() {
@@ -98,11 +127,9 @@ class AudioVisualizer {
         
         try {
             console.log('Initializing audio context...');
-            // Initialize audio context
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             console.log('Audio context created:', this.audioContext.state);
             
-            // Create analyzer node with higher FFT size
             this.analyser = this.audioContext.createAnalyser();
             this.analyser.fftSize = this.fftSize;
             this.analyser.smoothingTimeConstant = this.smoothingTimeConstant;
@@ -111,7 +138,6 @@ class AudioVisualizer {
             this.dataArray = new Uint8Array(bufferLength);
             
             console.log('Requesting microphone access...');
-            // Get microphone access
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     echoCancellation: true,
@@ -121,28 +147,23 @@ class AudioVisualizer {
             });
             console.log('Microphone access granted');
             
-            // Create and connect nodes
             this.source = this.audioContext.createMediaStreamSource(stream);
             
-            // Add gain node to boost signal
             const gainNode = this.audioContext.createGain();
-            gainNode.gain.value = 4.0; // Increased gain for better sensitivity
+            gainNode.gain.value = 4.0;
             
-            // Connect nodes: source -> gain -> analyser
             this.source.connect(gainNode);
             gainNode.connect(this.analyser);
             
             this.isInitialized = true;
             this.startVisualization();
             
-            // Update status
             this.updateStatus('Listening...');
             console.log('Audio initialization complete');
         } catch (error) {
             console.error('Error initializing audio:', error);
             let errorMessage = 'Error initializing microphone';
             
-            // More specific error messages
             if (error.name === 'NotAllowedError') {
                 errorMessage = 'Microphone access denied';
             } else if (error.name === 'NotFoundError') {
@@ -167,25 +188,24 @@ class AudioVisualizer {
             sum += frequencies[i];
         }
         
-        return sum / (endIndex - startIndex + 1) / 255; // Normalize to 0-1
+        return sum / (endIndex - startIndex + 1) / 255;
     }
     
     startVisualization() {
         if (!this.isInitialized) return;
         
         const updateVisuals = () => {
-            // Get frequency data
             this.analyser.getByteFrequencyData(this.dataArray);
             
-            // Analyze different frequency ranges
             const bass = this.getFrequencyRangeValue(this.dataArray, ...this.frequencyRanges.bass);
             const midrange = this.getFrequencyRangeValue(this.dataArray, ...this.frequencyRanges.midrange);
             const treble = this.getFrequencyRangeValue(this.dataArray, ...this.frequencyRanges.treble);
             
-            // Calculate weighted average (emphasize midrange for speech)
             const weightedEnergy = (bass * 0.2 + midrange * 0.6 + treble * 0.2);
             
-            // Update orb visualization based on energy level
+            // Update intensity CSS variable for smooth transitions
+            this.orbElement.style.setProperty('--intensity', weightedEnergy.toFixed(3));
+            
             if (weightedEnergy > this.energyThresholds.high) {
                 this.orbElement.dataset.audioLevel = 'high';
             } else if (weightedEnergy > this.energyThresholds.medium) {
@@ -208,6 +228,7 @@ class AudioVisualizer {
             this.animationFrame = null;
         }
         delete this.orbElement.dataset.audioLevel;
+        this.orbElement.style.removeProperty('--intensity');
     }
     
     updateStatus(text, type = 'info') {
@@ -276,7 +297,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateStatus(`You: ${message}`);
             textInput.value = '';
             
-            // Simulate AI response
             setTimeout(() => {
                 updateStatus('AI is responding...');
                 setTimeout(() => {
@@ -339,12 +359,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            // Update active state
             sidebarItems.forEach(btn => btn.classList.remove('active'));
             item.classList.add('active');
             activeSection = section;
             
-            // Show status message and close sidebar
             updateStatus(`${item.title} section will be available in a future update`);
             setTimeout(() => {
                 updateStatus('Ready to assist...');
