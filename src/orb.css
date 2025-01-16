@@ -148,6 +148,67 @@
   ); 
 }
 
+/* Audio level animations */
+.orb[data-audio-level="low"] {
+  filter: drop-shadow(0 0 25px rgba(64, 206, 224, 0.4));
+}
+
+.orb[data-audio-level="low"] .c {
+  animation: audio-morph-low 3s infinite ease-in-out;
+  filter: blur(5px) brightness(1.4) contrast(1.5);
+}
+
+.orb[data-audio-level="medium"] {
+  filter: drop-shadow(0 0 35px rgba(64, 206, 224, 0.5));
+}
+
+.orb[data-audio-level="medium"] .c {
+  animation: audio-morph-medium 2.5s infinite ease-in-out;
+  filter: blur(4px) brightness(1.5) contrast(1.6);
+}
+
+.orb[data-audio-level="high"] {
+  filter: drop-shadow(0 0 45px rgba(64, 206, 224, 0.6));
+}
+
+.orb[data-audio-level="high"] .c {
+  animation: audio-morph-high 2s infinite ease-in-out;
+  filter: blur(3px) brightness(1.6) contrast(1.7);
+}
+
+@keyframes audio-morph-low {
+  0%, 100% { 
+    transform: scale(0.9) translateY(0);
+    opacity: 0.85;
+  }
+  50% { 
+    transform: scale(1.05) translateY(-5px);
+    opacity: 0.9;
+  }
+}
+
+@keyframes audio-morph-medium {
+  0%, 100% { 
+    transform: scale(0.95) translateY(0);
+    opacity: 0.9;
+  }
+  50% { 
+    transform: scale(1.15) translateY(-10px);
+    opacity: 0.95;
+  }
+}
+
+@keyframes audio-morph-high {
+  0%, 100% { 
+    transform: scale(1) translateY(0);
+    opacity: 0.95;
+  }
+  50% { 
+    transform: scale(1.25) translateY(-15px);
+    opacity: 1;
+  }
+}
+
 /* Outer glow effect */
 .orb-container::after {
   content: '';
@@ -183,96 +244,6 @@
     transform: translate(-50%, -50%) rotate(360deg);
     opacity: 0.5;
   }
-}
-
-/* Voice input animation */
-.orb[data-state="listening"] {
-  filter: drop-shadow(0 0 40px rgba(255, 64, 192, 0.5));
-}
-
-.orb[data-state="listening"] .c {
-  animation: input-morph 3s infinite ease-in-out;
-  filter: blur(4px) brightness(1.4) contrast(1.5) saturate(1.4);
-}
-
-@keyframes input-morph {
-  0%, 100% { 
-    transform: scale(0.9) translateY(0) rotate(0deg);
-    border-radius: 60% 40% 55% 45% / 45% 55% 45% 55%;
-    opacity: 0.9;
-  }
-  50% { 
-    transform: scale(1.2) translateY(-10px) rotate(180deg);
-    border-radius: 45% 55% 40% 60% / 55% 45% 55% 45%;
-    opacity: 1;
-  }
-}
-
-.orb[data-state="listening"] .wrap {
-  animation: input-rotate 15s infinite linear;
-}
-
-@keyframes input-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(720deg); }
-}
-
-/* Voice output animation */
-.orb[data-state="speaking"] {
-  filter: drop-shadow(0 0 40px rgba(64, 192, 255, 0.5));
-}
-
-.orb[data-state="speaking"] .c {
-  animation: output-morph 4s infinite ease-in-out;
-  filter: blur(5px) brightness(1.5) contrast(1.6) saturate(1.5);
-}
-
-@keyframes output-morph {
-  0%, 100% { 
-    transform: scale(1) translateY(0) rotate(0deg);
-    border-radius: 55% 45% 50% 50% / 50% 50% 45% 55%;
-    opacity: 0.9;
-  }
-  33% { 
-    transform: scale(1.15) translateY(-15px) rotate(120deg);
-    border-radius: 40% 60% 45% 55% / 55% 45% 60% 40%;
-    opacity: 1;
-  }
-  66% {
-    transform: scale(0.95) translateY(15px) rotate(240deg);
-    border-radius: 50% 50% 55% 45% / 45% 55% 50% 50%;
-    opacity: 0.85;
-  }
-}
-
-.orb[data-state="speaking"] .wrap {
-  animation: output-rotate 20s infinite linear;
-}
-
-@keyframes output-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
-}
-
-/* Outer glow color changes */
-.orb[data-state="listening"] + .orb-container::after {
-  background: radial-gradient(
-    circle at center,
-    rgba(255, 64, 192, 0.15) 0%,
-    rgba(192, 32, 255, 0.1) 30%,
-    rgba(255, 128, 255, 0.05) 60%,
-    transparent 80%
-  );
-}
-
-.orb[data-state="speaking"] + .orb-container::after {
-  background: radial-gradient(
-    circle at center,
-    rgba(64, 192, 255, 0.15) 0%,
-    rgba(32, 128, 255, 0.1) 30%,
-    rgba(64, 32, 255, 0.05) 60%,
-    transparent 80%
-  );
 }
 
 /* Talk button styling */

@@ -53,6 +53,44 @@ class AudioVisualizer {
             this.updateStatus('Error: Microphone not supported', 'error');
             return;
         }
+
+        // Add test mode for animation testing
+        this.setupTestMode();
+    }
+
+    setupTestMode() {
+        // Add keyboard shortcuts for testing animations
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case '1':
+                    this.orbElement.dataset.audioLevel = 'low';
+                    this.updateStatus('Test: Low audio level');
+                    break;
+                case '2':
+                    this.orbElement.dataset.audioLevel = 'medium';
+                    this.updateStatus('Test: Medium audio level');
+                    break;
+                case '3':
+                    this.orbElement.dataset.audioLevel = 'high';
+                    this.updateStatus('Test: High audio level');
+                    break;
+                case '0':
+                    delete this.orbElement.dataset.audioLevel;
+                    this.updateStatus('Test: No audio');
+                    break;
+            }
+        });
+
+        // Add info about test keys
+        const testInfo = document.createElement('div');
+        testInfo.style.position = 'fixed';
+        testInfo.style.bottom = '80px';
+        testInfo.style.left = '50%';
+        testInfo.style.transform = 'translateX(-50%)';
+        testInfo.style.fontSize = '12px';
+        testInfo.style.color = '#666';
+        testInfo.textContent = 'Test keys: 1 (low), 2 (medium), 3 (high), 0 (off)';
+        document.body.appendChild(testInfo);
     }
     
     async initialize() {
