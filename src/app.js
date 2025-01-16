@@ -13,6 +13,22 @@ class AudioVisualizer {
         this.talkButton = document.querySelector('.talk-button');
         this.statusDisplay = document.getElementById('status-display');
         
+        // Audio analysis settings
+        this.fftSize = 2048; // Larger FFT for better frequency resolution
+        this.smoothingTimeConstant = 0.8;
+        this.energyThresholds = {
+            low: 0.1,
+            medium: 0.3,
+            high: 0.5
+        };
+        
+        // Frequency ranges for analysis (in Hz)
+        this.frequencyRanges = {
+            bass: [20, 140],
+            midrange: [140, 2000],
+            treble: [2000, 16000]
+        };
+        
         // Bind methods
         this.handleMouseDown = this.handleMouseDown.bind(this);
         this.handleMouseUp = this.handleMouseUp.bind(this);
@@ -48,10 +64,10 @@ class AudioVisualizer {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             console.log('Audio context created:', this.audioContext.state);
             
-            // Create analyzer node
+            // Create analyzer node with higher FFT size
             this.analyser = this.audioContext.createAnalyser();
-            this.analyser.fftSize = 256;
-            this.analyser.smoothingTimeConstant = 0.8;
+            this.analyser.fftSize = this.fftSize;
+            this.analyser.smoothingTimeConstant = this.smoothingTimeConstant;
             
             const bufferLength = this.analyser.frequencyBinCount;
             this.dataArray = new Uint8Array(bufferLength);
@@ -72,7 +88,7 @@ class AudioVisualizer {
             
             // Add gain node to boost signal
             const gainNode = this.audioContext.createGain();
-            gainNode.gain.value = 3.0;
+            gainNode.gain.value = 4.0; // Increased gain for better sensitivity
             
             // Connect nodes: source -> gain -> analyser
             this.source.connect(gainNode);
@@ -102,6 +118,20 @@ class AudioVisualizer {
         }
     }
     
+    getFrequencyRangeValue(frequencies, rangeStart, rangeEnd) {
+        const sampleRate = this.audioContext.sampleRate;
+        const binCount = this.analyser.frequencyBinCount;
+        const startIndex = Math.floor(rangeStart * binCount / (sampleRate / 2));
+        const endIndex = Math.floor(rangeEnd * binCount / (sampleRate / 2));
+        let sum = 0;
+        
+        for (let i = startIndex; i <= endIndex; i++) {
+            sum += frequencies[i];
+        }
+        
+        return sum / (endIndex - startIndex + 1) / 255; // Normalize to 0-1
+    }
+    
     startVisualization() {
         if (!this.isInitialized) return;
         
@@ -109,26 +139,20 @@ class AudioVisualizer {
             // Get frequency data
             this.analyser.getByteFrequencyData(this.dataArray);
             
-            // Calculate average of vocal frequency range (85-255 Hz)
-            const vocalRangeStart = Math.floor(85 * this.dataArray.length / (this.audioContext.sampleRate / 2));
-            const vocalRangeEnd = Math.floor(255 * this.dataArray.length / (this.audioContext.sampleRate / 2));
-            let sum = 0;
-            let count = 0;
+            // Analyze different frequency ranges
+            const bass = this.getFrequencyRangeValue(this.dataArray, ...this.frequencyRanges.bass);
+            const midrange = this.getFrequencyRangeValue(this.dataArray, ...this.frequencyRanges.midrange);
+            const treble = this.getFrequencyRangeValue(this.dataArray, ...this.frequencyRanges.treble);
             
-            for (let i = vocalRangeStart; i < vocalRangeEnd; i++) {
-                sum += this.dataArray[i];
-                count++;
-            }
+            // Calculate weighted average (emphasize midrange for speech)
+            const weightedEnergy = (bass * 0.2 + midrange * 0.6 + treble * 0.2);
             
-            const average = sum / count;
-            const normalizedValue = average / 255;
-            
-            // Update orb visualization
-            if (normalizedValue > 0.75) {
+            // Update orb visualization based on energy level
+            if (weightedEnergy > this.energyThresholds.high) {
                 this.orbElement.dataset.audioLevel = 'high';
-            } else if (normalizedValue > 0.5) {
+            } else if (weightedEnergy > this.energyThresholds.medium) {
                 this.orbElement.dataset.audioLevel = 'medium';
-            } else if (normalizedValue > 0.25) {
+            } else if (weightedEnergy > this.energyThresholds.low) {
                 this.orbElement.dataset.audioLevel = 'low';
             } else {
                 delete this.orbElement.dataset.audioLevel;
@@ -183,9 +207,8 @@ class AudioVisualizer {
     }
 }
 
-// UI Event Handlers
+// Initialize audio visualizer when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize audio visualizer
     window.audioVisualizer = new AudioVisualizer();
     
     // Get UI elements
