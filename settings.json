@@ -1,0 +1,5 @@
+{
+  "theme": "dark",
+  "n8nwebhook": "https://test-n8n-webhook.example.com",
+  "ultravoxurl": ""
+}

@@ -1,3 +1,127 @@
+// Settings management
+class Settings {
+    constructor() {
+        // Default settings
+        this.settings = {
+            theme: 'light',
+            n8nwebhook: '',
+            ultravoxurl: ''
+        };
+
+        // Debug mode
+        this.debug = true;
+        this.log('Settings initialized with defaults:', this.settings);
+
+        // Initialize settings
+        this.load();
+        this.setupListeners();
+        this.applyTheme();
+    }
+
+    log(...args) {
+        if (this.debug) {
+            console.log('[Settings]', ...args);
+        }
+    }
+
+    async load() {
+        try {
+            const response = await fetch('/api/settings');
+            if (!response.ok) throw new Error('Failed to load settings');
+            const data = await response.json();
+            this.settings = { ...this.settings, ...data };
+            this.log('Successfully loaded settings:', this.settings);
+        } catch (e) {
+            console.error('Error loading settings:', e);
+            // Keep using defaults
+        }
+        this.updateInputs();
+        this.applyTheme();
+    }
+
+    async save() {
+        try {
+            const response = await fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(this.settings)
+            });
+            if (!response.ok) throw new Error('Failed to save settings');
+            const result = await response.json();
+            this.log('Successfully saved settings:', this.settings);
+        } catch (e) {
+            console.error('Error saving settings:', e);
+        }
+    }
+
+    updateInputs() {
+        // Update input values
+        const n8nInput = document.getElementById('n8n-webhook');
+        const ultravoxInput = document.getElementById('ultravox-url');
+        
+        if (n8nInput) {
+            n8nInput.value = this.settings.n8nwebhook || '';
+            this.log('Updated n8n webhook input:', n8nInput.value);
+        }
+        if (ultravoxInput) {
+            ultravoxInput.value = this.settings.ultravoxurl || '';
+            this.log('Updated ultravox URL input:', ultravoxInput.value);
+        }
+        
+        // Update theme buttons
+        document.querySelectorAll('.theme-button').forEach(btn => {
+            const isActive = btn.dataset.theme === this.settings.theme;
+            btn.classList.toggle('active', isActive);
+            if (isActive) {
+                this.log('Set active theme button:', btn.dataset.theme);
+            }
+        });
+    }
+
+    applyTheme() {
+        document.documentElement.dataset.theme = this.settings.theme;
+        this.log('Applied theme:', this.settings.theme);
+    }
+
+    setupListeners() {
+        // Theme switching
+        document.querySelectorAll('.theme-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.theme-button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.settings.theme = btn.dataset.theme;
+                this.applyTheme();
+                this.save();
+                this.log('Theme changed to:', btn.dataset.theme);
+            });
+        });
+
+        // Input fields
+        const n8nInput = document.getElementById('n8n-webhook');
+        const ultravoxInput = document.getElementById('ultravox-url');
+
+        [n8nInput, ultravoxInput].forEach(input => {
+            if (!input) return;
+
+            const updateValue = () => {
+                const key = input.id.replace(/-/g, '');
+                const oldValue = this.settings[key];
+                this.settings[key] = input.value;
+                this.save();
+                this.log(`Updated ${key}:`, oldValue, '->', input.value);
+            };
+
+            // Handle all input events for real-time updates
+            ['input', 'change', 'blur'].forEach(eventType => {
+                input.addEventListener(eventType, updateValue);
+                this.log(`Added ${eventType} listener to:`, input.id);
+            });
+        });
+    }
+}
+
 // Audio Visualizer Class
 class AudioVisualizer {
     constructor() {
@@ -266,9 +390,10 @@ class AudioVisualizer {
     }
 }
 
-// Initialize audio visualizer when the page loads
+// Initialize when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.audioVisualizer = new AudioVisualizer();
+    window.settings = new Settings();
     
     // Get UI elements
     const textInput = document.querySelector('.text-input');
@@ -280,6 +405,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarItems = document.querySelectorAll('.sidebar-item');
     const statusDisplay = document.getElementById('status-display');
     const overlay = document.querySelector('.overlay');
+    const settingsPanel = document.querySelector('.settings-panel');
+    const orbContainer = document.querySelector('.orb-container');
     
     // State
     let isMuted = false;
@@ -363,10 +490,14 @@ document.addEventListener('DOMContentLoaded', () => {
             item.classList.add('active');
             activeSection = section;
             
-            updateStatus(`${item.title} section will be available in a future update`);
-            setTimeout(() => {
-                updateStatus('Ready to assist...');
-            }, 2000);
+            if (section === 'settings') {
+                settingsPanel.classList.add('visible');
+                orbContainer.style.display = 'none';
+            } else if (section === 'chat') {
+                settingsPanel.classList.remove('visible');
+                orbContainer.style.display = 'flex';
+            }
+            
             toggleSidebar();
         });
     });
