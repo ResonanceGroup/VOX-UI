@@ -47,9 +47,18 @@
                         <div class="setting-item">
                             <label>Theme</label>
                             <div class="theme-toggle">
-                                <button type="button" class="theme-button" data-theme="system">System</button>
-                                <button type="button" class="theme-button active" data-theme="light">Light</button>
-                                <button type="button" class="theme-button" data-theme="dark">Dark</button>
+                                <label class="theme-option">
+                                    <input type="radio" name="theme" value="system">
+                                    <span class="theme-radio">System</span>
+                                </label>
+                                <label class="theme-option">
+                                    <input type="radio" name="theme" value="light">
+                                    <span class="theme-radio">Light</span>
+                                </label>
+                                <label class="theme-option">
+                                    <input type="radio" name="theme" value="dark">
+                                    <span class="theme-radio">Dark</span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -74,7 +83,7 @@
                         <a href="index.html" class="button secondary">Cancel</a>
                         <button type="submit" class="button primary">Save Changes</button>
                     </div>
-                    <div style="height: 240px"></div>
+                    <br>
                 </form>
             </div>
         </main>

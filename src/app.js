@@ -74,14 +74,12 @@ class Settings {
             this.log('Updated ultravox URL input:', ultravoxInput.value);
         }
         
-        // Update theme buttons
-        document.querySelectorAll('.theme-button').forEach(btn => {
-            const isActive = btn.dataset.theme === this.settings.theme;
-            btn.classList.toggle('active', isActive);
-            if (isActive) {
-                this.log('Set active theme button:', btn.dataset.theme);
-            }
-        });
+        // Update theme radio inputs
+        const themeInput = document.querySelector(`input[name="theme"][value="${this.settings.theme}"]`);
+        if (themeInput) {
+            themeInput.checked = true;
+            this.log('Set active theme radio:', themeInput.value);
+        }
     }
 
     applyTheme() {
@@ -95,13 +93,13 @@ class Settings {
 
     setupListeners() {
         // Theme switching
-        document.querySelectorAll('.theme-button').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.theme-button').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                this.settings.theme = btn.dataset.theme;
-                this.applyTheme();
-                this.log('Theme changed to:', btn.dataset.theme);
+        document.querySelectorAll('input[name="theme"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (radio.checked) {
+                    this.settings.theme = radio.value;
+                    this.applyTheme();
+                    this.log('Theme changed to:', radio.value);
+                }
             });
         });
 
