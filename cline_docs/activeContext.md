@@ -1,27 +1,30 @@
+# Recent Changes
+
+## Settings Page Improvements
+- Converted theme buttons to semantic radio inputs
+- Fixed text color contrast in both light and dark modes
+- Updated header styles to match original design
+- Removed sidebar gap to properly overlap with header
+- Improved hover and active states for theme selection
+
+## Completed Tasks
+- Theme button contrast issues resolved
+- Header styling aligned with original design
+- Sidebar spacing fixed to properly overlap header
+- Radio input accessibility improved with proper focus states
+
 # Current Issues
 
 ## Settings Page Layout
-- Bottom spacing between buttons and screen edge is too large (currently 80px padding)
-- Need to review and match text/styling with original design in src-old folder
-
-## Theme Button Issues
-- Theme button contrast issues:
-  - In light mode: "Dark" button label has poor contrast
-  - In dark mode: "Light" button label has poor contrast
-- Button states need to be reviewed to ensure active/inactive states are clearly visible
-
-## Additional Observations
 - Need to verify mobile responsiveness of settings page
-- Theme transitions could be smoother
 - Form input styles may need adjustment to match original design
 - Consider adding loading states for settings form
 - Verify accessibility of all interactive elements
 - Review error handling for form submissions
 
 # Next Steps
-1. Fix theme button contrast issues
-2. Adjust bottom spacing on settings page
-3. Audit and align styling with original design
-4. Implement proper form submission handling
-5. Add loading and error states
-6. Test mobile responsiveness
+1. Implement proper form submission handling
+2. Add loading and error states
+3. Test mobile responsiveness
+4. Review and test keyboard navigation
+5. Add form validation feedback
