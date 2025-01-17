@@ -1,28 +1,53 @@
-# System Patterns
+# System Architecture and Design Patterns
 
-## Architecture
-The system will follow a client-server architecture. The front-end (VOX-UI) will be a web application built using HTML, CSS, and JavaScript. It will use the UltraVox Client SDK to handle voice processing and will communicate with n8n via webhooks for backend functionality.
+## Layout Structure
+- Main container with flex layout for vertical organization
+- Fixed header with navigation controls
+- Scrollable content area with padding management
+- Absolute positioning for overlay elements
 
-## Key Technical Decisions
-- Use of UltraVox for voice processing
-- Use of n8n for backend workflow automation
-- Emulation of the ElevenLabs UI design for a clean and intuitive user experience
-- Implementation of an animated orb that responds to voice activity
-- Responsive design to support both desktop and mobile browsers
-- Use of CSS transitions and animations for smooth interactions
-- Implementation of a popup sidebar menu for navigation
-- Use of semi-transparent overlays with blur effects
+## Theme System
+- CSS variables for consistent theming
+- Theme-specific gradients and colors
+- Dark/light mode support with system preference detection
+- Theme switching with persistent storage
 
-## Architecture Patterns
-- **Client-Server:** The front-end will act as a client, sending requests to the backend (n8n) and receiving responses
-- **API Integration:** The front-end will integrate with the UltraVox API for voice processing
-- **Webhook Integration:** The front-end will use webhooks to communicate with n8n
+## Component Organization
+- Settings form with sections for logical grouping
+- Reusable button components with consistent styling
+- Form inputs with standardized styling and behavior
+- Navigation sidebar with icon + text layout
 
-## UI Patterns
-- **Responsive Layout:** Consistent spacing and component sizes across screen sizes
-- **Navigation:** Popup sidebar menu with overlay for main navigation
-- **State Management:** Clear visual feedback for button states and interactions
-- **Voice Interface:** Central orb with visual feedback for voice activity
-- **Input Methods:** Dual input support with voice and text options
-- **Visual Feedback:** Use of transitions and animations for user interactions
-- **Mobile First:** Optimized touch targets and text handling for mobile devices
+## CSS Architecture
+- Base styles for reset and typography
+- Component-specific styles with BEM-like naming
+- Theme variables for color management
+- Media queries for responsive design
+- Transition effects for interactive elements
+
+## State Management
+- Local storage for theme preferences
+- Form state management with input validation
+- Loading and error states for async operations
+- Navigation state for menu visibility
+
+## Responsive Design
+- Mobile-first approach
+- Breakpoints for different screen sizes
+- Flexible layouts with CSS Grid and Flexbox
+- Touch-friendly interaction targets
+
+## Technical Decisions
+- CSS custom properties for theme switching
+- Flexbox for layout management
+- CSS Grid for form organization
+- Local storage for persistence
+- Event delegation for form handling
+
+## Areas for Improvement
+- Consider CSS modules for better scoping
+- Implement proper form validation
+- Add loading states for async operations
+- Improve accessibility features
+- Optimize theme transitions
+- Standardize spacing system

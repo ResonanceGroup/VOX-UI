@@ -1,41 +1,27 @@
-# Active Context
+# Current Issues
 
-## Current Task
-Improving the VOX-UI interface with refined styling and interactions.
+## Settings Page Layout
+- Bottom spacing between buttons and screen edge is too large (currently 80px padding)
+- Need to review and match text/styling with original design in src-old folder
 
-## Recent Changes
-- Refined interface layout and styling:
-  - Added popup sidebar menu with Chat, Settings, and Tools sections
-  - Standardized header and input area heights to 60px
-  - Optimized mobile layout with consistent spacing
-  - Added semi-transparent overlay with blur effect
-  - Improved button states and transitions
+## Theme Button Issues
+- Theme button contrast issues:
+  - In light mode: "Dark" button label has poor contrast
+  - In dark mode: "Light" button label has poor contrast
+- Button states need to be reviewed to ensure active/inactive states are clearly visible
 
-- Enhanced UI Components:
-  - Added mute button with toggle state
-  - Implemented responsive text input area
-  - Added upload and send buttons
-  - Improved status display positioning
+## Additional Observations
+- Need to verify mobile responsiveness of settings page
+- Theme transitions could be smoother
+- Form input styles may need adjustment to match original design
+- Consider adding loading states for settings form
+- Verify accessibility of all interactive elements
+- Review error handling for form submissions
 
-- Refined Spacing and Sizing:
-  - Consistent nav padding (20px) across screen sizes
-  - Optimized sidebar width (160px) with balanced padding
-  - Improved icon sizing and alignment
-  - Better mobile text handling
-
-## Next Steps
-1. Improve orb visualization:
-   - Enhance gradient and animation
-   - Add state transitions
-   - Improve visual feedback
-
-2. Future Enhancements:
-   - Implement sidebar menu functionality
-   - Add tool configuration interface
-   - Enable file upload capability
-   - Add voice activity visualization
-
-3. Begin Phase 3: Add tool use functionality
-   - Implement tool configuration UI
-   - Add tool invocation logic
-   - Test tool functionality
+# Next Steps
+1. Fix theme button contrast issues
+2. Adjust bottom spacing on settings page
+3. Audit and align styling with original design
+4. Implement proper form submission handling
+5. Add loading and error states
+6. Test mobile responsiveness

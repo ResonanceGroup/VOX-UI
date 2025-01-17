@@ -23,68 +23,42 @@
         
         <div class="sidebar">
             <div class="sidebar-content">
-                <button class="sidebar-item active" title="Chat">
+                <a href="index.html" class="sidebar-item active" title="Chat">
                     <svg viewBox="0 0 24 24" width="24" height="24">
                         <path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
                     </svg>
                     <span>Chat</span>
-                </button>
-                <button class="sidebar-item" title="Settings">
+                </a>
+                <a href="settings.html" class="sidebar-item" title="Settings">
                     <svg viewBox="0 0 24 24" width="24" height="24">
                         <path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
                     </svg>
                     <span>Settings</span>
-                </button>
+                </a>
             </div>
         </div>
 
         <div class="overlay"></div>
         
-        <main>
-            <div class="settings-panel hidden">
-                <div class="settings-section">
-                    <h2>Appearance</h2>
-                    <div class="setting-item">
-                        <label>Theme</label>
-                        <div class="theme-toggle">
-                            <button class="theme-button active" data-theme="light">Light</button>
-                            <button class="theme-button" data-theme="dark">Dark</button>
+        <main class="chat-main">
+            <div class="orb-container">
+                        <div class="orb">
+                            <div class="wrap">
+                                <div class="c"></div>
+                                <div class="c"></div>
+                                <div class="c"></div>
+                            </div>
+                            <button class="talk-button">Talk to interrupt</button>
                         </div>
+                        <button class="mute-button" title="Mute microphone">
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>
+                            </svg>
+                        </button>
+                        <div id="status-display" class="status-display">Ready to assist...</div>
                     </div>
                 </div>
                 
-                <div class="settings-section">
-                    <h2>n8n Integration</h2>
-                    <div class="setting-item">
-                        <label>Webhook URL</label>
-                        <input type="url" class="settings-input" id="n8n-webhook" placeholder="https://your-n8n-webhook-url">
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <h2>UltraVOX Connection</h2>
-                    <div class="setting-item">
-                        <label>API Server URL</label>
-                        <input type="url" class="settings-input" id="ultravox-url" placeholder="https://your-ultravox-server">
-                    </div>
-                </div>
-            </div>
-
-            <div class="orb-container">
-                <div class="orb">
-                    <div class="wrap">
-                        <div class="c"></div>
-                        <div class="c"></div>
-                        <div class="c"></div>
-                    </div>
-                    <button class="talk-button">Talk to interrupt</button>
-                </div>
-                <button class="mute-button" title="Mute microphone">
-                    <svg viewBox="0 0 24 24" width="24" height="24">
-                        <path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>
-                    </svg>
-                </button>
-                <div id="status-display" class="status-display">Ready to assist...</div>
             </div>
         </main>
 
@@ -105,5 +79,74 @@
         </div>
     </div>
     <script src="app.js"></script>
+    <script src="audio-visualizer.js"></script>
+    <script>
+        // Chat functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            const textInput = document.querySelector('.text-input');
+            const sendButton = document.querySelector('.send-button');
+            const uploadButton = document.querySelector('.upload-button');
+            const muteButton = document.querySelector('.mute-button');
+            const statusDisplay = document.getElementById('status-display');
+            
+            // State
+            let isMuted = false;
+            
+            // Mute button icons
+            const micOnIcon = 'M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z';
+            const micOffIcon = 'M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z';
+            
+            // Text input handling
+            function handleSendMessage() {
+                const message = textInput.value.trim();
+                if (message) {
+                    updateStatus(`You: ${message}`);
+                    textInput.value = '';
+                    
+                    setTimeout(() => {
+                        updateStatus('AI is responding...');
+                        setTimeout(() => {
+                            updateStatus('AI: I received your message.');
+                            setTimeout(() => {
+                                updateStatus('Ready to assist...');
+                            }, 1500);
+                        }, 1500);
+                    }, 500);
+                }
+            }
+            
+            // Status display function
+            function updateStatus(text, type = 'info') {
+                statusDisplay.textContent = text;
+                statusDisplay.className = `status-display status-${type}`;
+            }
+            
+            // Event listeners
+            sendButton.addEventListener('click', handleSendMessage);
+            
+            textInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleSendMessage();
+                }
+            });
+            
+            uploadButton.addEventListener('click', () => {
+                updateStatus('File upload will be available in a future update');
+                setTimeout(() => {
+                    updateStatus('Ready to assist...');
+                }, 2000);
+            });
+            
+            muteButton.addEventListener('click', () => {
+                isMuted = !isMuted;
+                muteButton.title = isMuted ? 'Unmute microphone' : 'Mute microphone';
+                muteButton.querySelector('path').setAttribute('d', isMuted ? micOffIcon : micOnIcon);
+                updateStatus(isMuted ? 'Microphone muted' : 'Microphone active');
+                setTimeout(() => {
+                    updateStatus('Ready to assist...');
+                }, 1500);
+            });
+        });
+    </script>
 </body>
 </html>
