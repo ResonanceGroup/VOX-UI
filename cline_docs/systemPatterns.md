@@ -1,6 +1,48 @@
 # System Architecture and Design Patterns
 
-## Layout Structure
+## Backend Architecture
+
+### Deployment Architecture
+- RunPod instance hosting all backend services
+- GPU acceleration for speech processing
+- Secure SSH access for deployment and management
+- High-throughput WebSocket server
+
+### Resource Management
+- GPU memory allocation for UltraVox and Kokoro TTS
+- CUDA acceleration for speech processing
+- Efficient audio stream handling
+- Process monitoring and logging
+
+### Service Organization
+- UltraVox and Kokoro TTS co-located on GPU instance
+- WebSocket server managing client connections
+- Local service communication for minimal latency
+- Error handling and recovery mechanisms
+
+### WebSocket Communication
+- Bidirectional audio streaming between frontend and backend
+- JSON message format for structured communication
+- Connection management and error handling
+- Reconnection logic for dropped connections
+
+### Audio Processing Pipeline
+1. Frontend audio capture and streaming
+2. Backend WebSocket message routing
+3. UltraVox integration for speech-to-text
+4. Response type determination (audio/tool_call)
+5. Kokoro TTS processing for audio responses
+6. Audio streaming back to frontend
+
+### Data Flow Patterns
+- Audio chunks streamed via WebSocket
+- Structured JSON responses from UltraVox
+- Binary audio data from Kokoro TTS
+- Error and status messages for UI feedback
+
+## Frontend Structure
+
+### Layout Structure
 - Main container with flex layout for vertical organization
 - Fixed header with navigation controls
 - Scrollable content area with padding management

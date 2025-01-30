@@ -37,14 +37,16 @@ A web-based interface for interacting with an AI assistant, featuring:
 6. Accessible to all users
 
 ## Integration Points
-- n8n for workflow automation
-- UltraVOX for voice processing
+- Python backend for audio processing and routing
+- WebSocket connections for real-time audio streaming
+- UltraVOX for speech-to-text and response generation
+- Kokoro TTS for text-to-speech conversion
 - Local storage for settings
 - System theme detection
 
 ## Current Focus
-- Improving settings page usability
-- Enhancing theme switching experience
-- Implementing proper form validation
-- Optimizing mobile experience
-- Adding loading states and error handling
+- Implementing Python backend with WebSocket support
+- Integrating UltraVox SDK for voice processing
+- Setting up Kokoro TTS for audio generation
+- Creating bidirectional audio streaming
+- Handling connection management and error cases
