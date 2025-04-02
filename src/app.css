@@ -328,7 +328,7 @@ main {
     display: flex;
     justify-content: center;
     overflow-y: auto;
-    padding: 0;
+    padding: 0; /* Reverted padding */
 }
 
 .settings-main .settings-form {
@@ -676,6 +676,7 @@ svg {
     padding: 24px;
     margin: 0 auto;
     background: transparent;
+    padding-bottom: 120px; /* Added padding here instead */
 }
 
 .mcp-header {
@@ -821,7 +822,7 @@ svg {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    /* margin-left: 4px; */ /* Removed to rely on parent gap */
+    margin-left: 6px; /* Added specific margin for spacing */
     flex-shrink: 0; /* Prevent shrinking */
 }
 
@@ -1066,14 +1067,12 @@ input:checked + .slider:before {
 .mcp-settings-actions {
     display: flex;
     gap: 12px;
-    justify-content: flex-start; /* Align button to the left */
+    justify-content: center; /* Center the button */
     margin-top: 32px;
     padding-top: 24px;
     border-top: 1px solid var(--input-border);
+    /* margin-bottom: 24px; */ /* Removed - using padding on container instead */
 }
 
-/* Ensure settings container scrolls properly */
-.settings-main .settings-container {
-    padding-bottom: 80px; /* Add padding at the bottom */
-}
+/* Padding moved to original rule block */
 
