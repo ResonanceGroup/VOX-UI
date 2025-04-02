@@ -4,45 +4,34 @@
 - Basic chat interface implemented
 - Orb visualization working
 - Theme system implemented
-- Settings page structure
+- Settings page structure (basic)
 - Navigation controls
 
-## Backend Planning
-- Architecture design completed
-- Technology stack selected
-- Integration points identified
-- Data flow patterns defined
+## Backend Planning (Original Plan - Deferred)
+- Architecture design completed (for old plan)
+- Technology stack selected (for old plan)
+- Integration points identified (for old plan)
+- Data flow patterns defined (for old plan)
 
-# In Progress
+# In Progress (New Plan - April 2025)
 
-## Backend Development
-- Setting up Python environment
-- Creating WebSocket server
-- Implementing audio processing pipeline
-- Integrating external services
+## Phase 1: MCP Server Page UI
+- **Goal:** Implement an MCP Server settings page in the VOX UI (target file: `src/mcp_settings.html`).
+- **Tasks:**
+    1. Create the basic HTML structure based on Roo Code reference UI. (Next Step)
+    2. Apply existing VOX UI CSS styles.
+    3. Add placeholder elements for deferred functionality (JSON loading, interactions, Edit button action).
 
-## Frontend Updates
-- WebSocket client implementation
-- Audio streaming functionality
-- Connection management
-- Error handling
-- Status indicators
+# Upcoming Tasks (New Plan)
 
-# Upcoming Tasks
+## Phase 2: Enhance Visualizations
+- Develop dynamic status indicators (MCP connections, Roo Code status).
+- Define common UI elements.
+- Update UI prototype with enhancements.
 
-## Backend Implementation
-1. Create backend directory structure
-2. Set up Python virtual environment
-3. Install FastAPI and dependencies
-4. Implement WebSocket server
-5. Integrate UltraVox SDK
-6. Configure Kokoro TTS
-7. Test audio processing pipeline
+## Phase 3: Backend Implementation
+- Design robust backend architecture (supporting MCP UI & Roo Code).
+- Implement necessary backend code (MCP config handling, command relay?).
 
-## Frontend Integration
-1. Add WebSocket connection handling
-2. Implement audio capture
-3. Add binary audio playback
-4. Create connection status UI
-5. Implement error handling
-6. Test end-to-end functionality
+## Phase 4: MCP Server for Roo Code
+- Build the specific MCP server for Roo Code WebSocket API interaction.
