@@ -364,8 +364,8 @@ main {
     display: flex;
     justify-content: center;
     padding: 20px 20px 140px;
-    opacity: 0;
-    transform: translateY(20px);
+    /* opacity: 0; */ /* Temporarily commented out for visibility */
+    /* transform: translateY(20px); */ /* Temporarily commented out for visibility */
     transition: opacity 0.3s ease, transform 0.3s ease;
     transition-delay: 0.1s;
 }
@@ -666,3 +666,414 @@ svg {
 [data-theme="dark"] .status-display {
     color: rgba(255, 255, 255, 0.5);
 }
+/* ================================== */
+/* MCP Settings Styles                */
+/* ================================== */
+
+.mcp-settings-content {
+    max-width: 700px; /* Slightly wider for MCP details */
+    width: 100%;
+    padding: 24px;
+    margin: 0 auto;
+    background: transparent;
+}
+
+.mcp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--input-border);
+}
+
+.mcp-header h1 {
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.mcp-header .done-button {
+    /* Uses existing .button.primary styles */
+    height: 36px;
+    padding: 0 18px;
+}
+
+.mcp-settings-content > p {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    opacity: 0.7;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.mcp-settings-content .setting-item {
+    margin-bottom: 20px;
+    padding-left: 4px; /* Align checkboxes slightly */
+}
+
+.mcp-settings-content .setting-item label {
+    display: flex; /* Align checkbox and text */
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    margin-bottom: 6px; /* Reduced margin */
+    color: var(--text-color);
+    opacity: 1; /* Make label text clearer */
+    cursor: pointer;
+}
+
+.mcp-settings-content .setting-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #7fccde; /* Match primary color */
+}
+
+.mcp-settings-content .setting-item .description {
+    font-size: 0.85rem;
+    color: var(--text-color);
+    opacity: 0.6;
+    margin-left: 24px; /* Indent description */
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+
+/* MCP Server List */
+.mcp-server-list {
+    margin-top: 32px;
+    border-top: 1px solid var(--input-border);
+    padding-top: 24px;
+}
+
+.mcp-server-item {
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    background-color: var(--input-bg); /* Subtle background */
+    overflow: hidden; /* Contain borders */
+}
+
+.mcp-server-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    gap: 10px;
+}
+
+.mcp-server-header:hover {
+    background-color: var(--button-hover);
+}
+
+.expand-icon {
+    font-family: monospace; /* Consistent arrow */
+    font-size: 1.1rem;
+    width: 16px; /* Fixed width */
+    text-align: center;
+    transition: transform 0.2s ease;
+    opacity: 0.6;
+}
+
+.mcp-server-item.open > .mcp-server-header .expand-icon {
+    transform: rotate(90deg);
+}
+
+.server-name {
+    flex-grow: 1;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.server-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto; /* Push controls to the right */
+}
+
+/* Basic Icon Button Style (if not globally defined) */
+.icon-button {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: var(--text-color);
+    opacity: 0.6;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem; /* Adjust icon size if needed */
+    width: 28px;
+    height: 28px;
+}
+
+.icon-button:hover {
+    opacity: 0.9;
+    background-color: var(--button-hover);
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-left: 4px;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+.status-dot.status-ok { background-color: #4CAF50; }
+.status-dot.status-error { background-color: #F44336; }
+.status-dot.status-pending { background-color: #FFC107; }
+.status-dot.status-disabled { background-color: #9E9E9E; }
+
+
+/* Switch Styles (Copied and adapted from settings.html if needed, assuming they exist) */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 34px; /* Smaller switch */
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px; /* Smaller handle */
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #7fccde; /* Primary color */
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #7fccde;
+}
+
+input:checked + .slider:before {
+  transform: translateX(14px); /* Adjusted translation */
+}
+
+.slider.round {
+  border-radius: 20px; /* Adjusted radius */
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+
+/* MCP Server Details (Accordion Content) */
+.mcp-server-details {
+    display: none; /* Initially hidden */
+    padding: 16px;
+    border-top: 1px solid var(--input-border);
+    background-color: var(--bg-color); /* Match page background */
+}
+
+.mcp-server-item.open > .mcp-server-details {
+    display: block; /* Show when open */
+}
+
+.details-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--input-border);
+}
+
+.details-tabs .tab {
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    color: var(--text-color);
+    opacity: 0.7;
+    cursor: pointer;
+    font-size: 0.9rem;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+    margin-bottom: -1px; /* Overlap border */
+}
+
+.details-tabs .tab:hover {
+    opacity: 1;
+    background-color: var(--button-hover);
+}
+
+.details-tabs .tab.active {
+    opacity: 1;
+    font-weight: 500;
+    border-bottom-color: #7fccde;
+}
+
+.details-content {
+    padding-top: 8px;
+}
+
+.tool-details {
+    margin-bottom: 20px;
+    padding: 12px;
+    border: 1px dashed var(--input-border); /* Dashed border for distinction */
+    border-radius: 6px;
+    background-color: rgba(127, 204, 222, 0.05); /* Subtle highlight */
+}
+
+[data-theme="dark"] .tool-details {
+     background-color: rgba(127, 204, 222, 0.1);
+}
+
+
+.tool-details h3 {
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    display: inline-block; /* Align with icon */
+    margin-left: 8px;
+}
+
+.tool-icon {
+    font-size: 1.2rem;
+    opacity: 0.8;
+}
+
+.tool-details label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+    color: var(--text-color);
+    opacity: 0.8;
+    cursor: pointer;
+}
+
+.tool-details label input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+}
+
+.tool-details > p { /* Description */
+    font-size: 0.85rem;
+    color: var(--text-color);
+    opacity: 0.7;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.parameters {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(127, 204, 222, 0.2);
+}
+
+.parameters h4 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-color);
+    opacity: 0.6;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+.parameters p {
+    font-size: 0.8rem;
+    color: var(--text-color);
+    opacity: 0.8;
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+.parameters code {
+    background-color: rgba(127, 204, 222, 0.15);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.75rem;
+}
+
+[data-theme="dark"] .parameters code {
+     background-color: rgba(127, 204, 222, 0.25);
+}
+
+/* Select dropdown in details */
+.mcp-server-details .setting-item {
+    padding-left: 0; /* Reset indent */
+    margin-top: 20px;
+}
+.mcp-server-details .setting-item label {
+     opacity: 0.7; /* Standard label opacity */
+     margin-bottom: 8px;
+}
+.mcp-server-details select {
+    /* Use existing .settings-input styles */
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    background: var(--input-bg);
+    color: var(--text-color);
+    appearance: none; /* Custom arrow needed */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23333'%3E%3Cpath d='M8 11L3 6h10L8 11z'/%3E%3C/svg%3E"); /* Basic arrow */
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px;
+}
+
+[data-theme="dark"] .mcp-server-details select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3E%3Cpath d='M8 11L3 6h10L8 11z'/%3E%3C/svg%3E"); /* Dark arrow */
+}
+
+.mcp-server-details select:focus {
+    border-color: #7fccde;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(127, 204, 222, 0.2);
+}
+
+.mcp-server-details .setting-item .description {
+    margin-left: 0; /* No indent needed here */
+}
+
+
+/* MCP Settings Actions */
+.mcp-settings-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-start; /* Align button to the left */
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--input-border);
+}
+
+/* Ensure settings container scrolls properly */
+.settings-main .settings-container {
+    padding-bottom: 80px; /* Add padding at the bottom */
+}
+
