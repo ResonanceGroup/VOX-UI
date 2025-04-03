@@ -6,6 +6,11 @@
 - Theme system implemented
 - Settings page structure (basic)
 - Navigation controls
+- **Phase 1: MCP Server Page UI (HTML/CSS)**
+    - HTML structure created (`src/mcp_settings.html`) based on Roo Code reference.
+    - CSS styling applied (`src/app.css`) for consistency with VOX UI themes.
+    - Sample server data included in HTML.
+    - *Note: JS functionality (loading, interaction) and minor CSS tweaks deferred.*
 
 ## Backend Planning (Original Plan - Deferred)
 - Architecture design completed (for old plan)
@@ -15,19 +20,17 @@
 
 # In Progress (New Plan - April 2025)
 
-## Phase 1: MCP Server Page UI
-- **Goal:** Implement an MCP Server settings page in the VOX UI (target file: `src/mcp_settings.html`).
+## Phase 2: Enhance Visualizations
+- **Goal:** Improve visual feedback in the main chat UI.
 - **Tasks:**
-    1. Create the basic HTML structure based on Roo Code reference UI. (Next Step)
-    2. Apply existing VOX UI CSS styles.
-    3. Add placeholder elements for deferred functionality (JSON loading, interactions, Edit button action).
+    1. Brainstorm visual representation and placement for status indicators (MCP Connection, Roo Code Status). (Next Step)
+    2. Add placeholder HTML elements for status indicators.
+    3. Style the status indicators.
+    4. Define common UI elements for consistency.
+    5. Update the current UI prototype to incorporate enhanced UI elements.
+    6. Implement JavaScript for dynamic status updates.
 
 # Upcoming Tasks (New Plan)
-
-## Phase 2: Enhance Visualizations
-- Develop dynamic status indicators (MCP connections, Roo Code status).
-- Define common UI elements.
-- Update UI prototype with enhancements.
 
 ## Phase 3: Backend Implementation
 - Design robust backend architecture (supporting MCP UI & Roo Code).

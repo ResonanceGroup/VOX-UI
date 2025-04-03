@@ -3,23 +3,25 @@
 ## Recent Changes
 - **Project Direction Shift:** The project's focus has pivoted from building a standalone voice assistant backend (RunPod/UltraVox/Kokoro) to creating a voice UI (VOX UI) that acts as a frontend controller for the Roo Code VSCode extension via the Model Context Protocol (MCP).
 - **Previous Backend Work Deferred:** All work related to the RunPod infrastructure, UltraVox, and Kokoro TTS integration is now deferred indefinitely.
+- **Phase 1 Complete (HTML/CSS):** The initial HTML structure and CSS styling for the MCP Server settings page (`src/mcp_settings.html`) are complete, including sample data. Minor styling tweaks (e.g., bottom margin) and JavaScript functionality are deferred.
 
 ## Current Focus: Phased UI Development for Roo Code Integration
 
 The development will proceed in the following phases:
 
-### Phase 1: MCP Server Page UI (In Progress)
+### Phase 1: MCP Server Page UI (HTML/CSS Complete)
 - **Goal:** Implement an MCP Server settings page in the VOX UI (target file: `src/mcp_settings.html`).
-- **UI Design:** Visually replicate the Roo Code MCP settings screenshots (header, intro text, enable checkboxes, accordion list for servers, expanded view with Tools/Resources tabs, parameters, allow checkbox, network timeout).
-- **Styling:** Use existing VOX UI styles.
-- **Simplifications:** No 'global' tags needed. No 'Global/Project MCP' edit buttons.
-- **Editing:** Include a single 'Edit MCP Servers' button at the bottom. Functionality (opening JSON config) is deferred. Adding new servers via UI is also deferred.
-- **JS Logic:** Defer JavaScript logic (reading JSON, refresh on change, accordion interaction) for a later phase. Focus is on HTML structure and CSS styling first.
+- **Status:** HTML structure and CSS styling implemented, including sample data. JS logic and minor CSS tweaks deferred.
 
-### Phase 2: Enhance Visualizations
-- Develop dynamic status indicators for the voice UI (e.g., MCP connection status, Roo Code status).
-- Define common UI elements for consistency.
-- Update the current UI prototype to incorporate enhanced UI elements.
+### Phase 2: Enhance Visualizations (In Progress)
+- **Goal:** Improve visual feedback in the main chat UI.
+- **Tasks:**
+    1. Brainstorm visual representation and placement for status indicators (MCP Connection, Roo Code Status). (Next Step)
+    2. Add placeholder HTML elements for status indicators.
+    3. Style the status indicators.
+    4. Define common UI elements for consistency.
+    5. Update the current UI prototype to incorporate enhanced UI elements.
+    6. Implement JavaScript for dynamic status updates.
 
 ### Phase 3: Backend Implementation
 - Design a robust backend architecture focused on supporting the MCP-centric UI and communication with Roo Code (details TBD).
@@ -30,4 +32,4 @@ The development will proceed in the following phases:
 
 # Next Steps
 
-1.  **Create the basic HTML structure for the new MCP Settings page (`src/mcp_settings.html`) based on the Roo Code reference UI.**
+1.  **Brainstorm visual representation and placement for status indicators (MCP Connection, Roo Code Status) in the main chat UI (`src/index.html`).**
