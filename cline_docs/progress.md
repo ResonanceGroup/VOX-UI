@@ -6,18 +6,15 @@
 - Theme system implemented
 - Settings page structure (basic)
 - Navigation controls
-- Settings page overhaul (`src/settings.html`):
-   - Restructured sections (Voice Agent, MCP, n8n, General UI)
-   - Styled section groups with background panels
-   - Updated primary color for better contrast
-   - Fixed layout/spacing issues (top gap, bottom spacing)
-   - Converted Model input to dropdown
-   - Adjusted System Prompt textarea height
 - **Phase 1: MCP Server Page UI (HTML/CSS)**
-    - HTML structure created (`src/mcp_settings.html`) based on Roo Code reference.
-    - CSS styling applied (`src/app.css`) for consistency with VOX UI themes.
-    - Sample server data included in HTML.
-    - *Note: JS functionality (loading, interaction) and minor CSS tweaks deferred.*
+    - HTML structure created (`src/mcp_settings.html`).
+    - CSS styling applied (`src/app.css`).
+    - Sample server data included.
+    - *Note: JS functionality deferred.*
+- **UI Finalization - Phase A: Settings Page Overhaul**
+    - Restructured `src/settings.html` (Voice Agent, MCP, n8n, General UI sections).
+    - Styled section groups, updated colors, fixed layout issues.
+    - Updated inputs (Model dropdown, Textarea height).
 
 ## Backend Planning (Original Plan - Deferred)
 - Architecture design completed (for old plan)
@@ -27,21 +24,22 @@
 
 # In Progress (New Plan - April 2025)
 
-## Phase 2: Enhance Visualizations
-- **Goal:** Improve visual feedback in the main chat UI.
+## UI Finalization - Phase B: MCP Page Integration
+- **Goal:** Integrate the MCP settings page icon.
 - **Tasks:**
-    1. Brainstorm visual representation and placement for status indicators (MCP Connection, Roo Code Status). (Next Step)
-    2. Add placeholder HTML elements for status indicators.
-    3. Style the status indicators.
-    4. Define common UI elements for consistency.
-    5. Update the current UI prototype to incorporate enhanced UI elements.
-    6. Implement JavaScript for dynamic status updates.
+    1. Retrieve MCP Icon SVG from Roo Code source. (Next Step)
+    2. Update `src/mcp_settings.html` sidebar link with the correct icon.
 
 # Upcoming Tasks (New Plan)
 
-## Phase 3: Backend Implementation
-- Design robust backend architecture (supporting MCP UI & Roo Code).
-- Implement necessary backend code (MCP config handling, command relay?).
+## UI Finalization - Phase C: Theme Persistence Bug Fix
+- **Goal:** Diagnose and fix the global theme application issue.
 
-## Phase 4: MCP Server for Roo Code
-- Build the specific MCP server for Roo Code WebSocket API interaction.
+## Phase 2 (Original Plan): Enhance Visualizations (Deferred)
+- **Goal:** Improve visual feedback in the main chat UI (Status Indicators, etc.).
+
+## Phase 3 (Original Plan): Backend Implementation (Deferred)
+- **Goal:** Design and implement backend architecture.
+
+## Phase 4 (Original Plan): MCP Server for Roo Code (Deferred)
+- **Goal:** Build the specific MCP server for Roo Code interaction.
