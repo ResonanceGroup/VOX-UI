@@ -56,7 +56,8 @@ This document outlines the agreed-upon design and frontend architecture for stat
     *   **Idle:** `[●] Ready to assist...` (or `[✓]`)
     *   **Executing Tools:** `[⚙️] Executing: [Tool Name]...`
     *   **Receiving Notification:** `[🔔] Notification Received` (Briefly shown)
-    *   **Processing:** `[...] Processing...`
+    *   **Processing:** No icon, only animated ellipsis: `Processing....` with 1-4 dots that animate in sequence
+    *   **Processing (Custom):** Supports custom labels: `CustomLabel....` with same animated dots
     *   **Muted:** `[🎙️🚫] Microphone Muted` (Orange/muted grey icon color suggested)
     *   **Disconnected:** `[❌] Disconnected` (Red icon/text color suggested)
 -   **Animation:** Smooth cross-fades for text/icon changes (~150ms), synchronized with orb transitions.
@@ -87,6 +88,16 @@ This document outlines the agreed-upon design and frontend architecture for stat
     *   **State Classes:** Define `.state-idle`, `.state-executing`, `.state-notifying`, `.state-processing`, `.state-muted`, `.state-disconnected` (applied to `body` or main container).
     *   **Orb Animations:** Define `@keyframes` for ring pulse, particle burst (if feasible in pure CSS), swirl speed change, transition flash. Style `.orb-status-ring`. Add rules for `.state-disconnected .orb` (grayscale, stop animations).
     *   **Status Bar Styling:** Style `#status-display`, `.status-icon`, `.status-text`. Use state classes to set icon content (e.g., `.state-executing .status-icon::before { content: '⚙️'; }`) and colors. Define fade transitions.
+    *   **Processing State Animation:** Hide the status icon with `.state-processing .status-icon { display: none; }`. Use custom keyframes for dots animation that progresses from 1 to 4 dots and then resets:
+        ```css
+        @keyframes ellipsis-animation {
+            0% { content: '.'; }
+            20% { content: '..'; }
+            40% { content: '...'; }
+            60% { content: '....'; }
+            80%, 100% { content: '.'; }
+        }
+        ```
 
 3.  **JavaScript Logic (`src/app.js`)**
     *   **State Management:** Use `currentAIState` and potentially `underlyingAIState` (for mute).

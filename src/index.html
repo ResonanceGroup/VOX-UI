@@ -263,48 +263,99 @@
                 case 'idle':
                     iconContent = '●'; // Or '✓'
                     textContent = 'Ready to assist...';
+                    
+                    // Clear any existing processing container
+                    const idleExistingContainer = document.querySelector('.processing-container');
+                    if (idleExistingContainer) {
+                        idleExistingContainer.remove();
+                    }
                     break;
                 case 'executing':
                     iconContent = '⚙️';
                     textContent = `Executing: ${detail || 'Task'}...`;
+                    
+                    // Clear any existing processing container
+                    const execExistingContainer = document.querySelector('.processing-container');
+                    if (execExistingContainer) {
+                        execExistingContainer.remove();
+                    }
                     break;
                 case 'processing':
-                    iconContent = '⟳';
+                    iconContent = ''; // Empty icon for processing state to avoid conflict with dots
                     
                     // Base text for processing (can be overridden with detail)
                     const baseText = detail || 'Processing';
                     
-                    // Set the text content first
-                    textContent = baseText;
+                    // Set the text content but use container structure to prevent text movement
+                    textContent = ''; // Clear existing text
                     
-                    // After setting text content, add animated ellipsis with timeout
+                    // Create a structured container for processing status with fixed positioning
                     setTimeout(() => {
-                        // Remove any existing ellipsis to prevent duplicates
-                        const existingEllipsis = document.querySelector('.animated-ellipsis');
-                        if (existingEllipsis) {
-                            existingEllipsis.remove();
+                        // Remove any existing ellipsis container to prevent duplicates
+                        const existingContainer = document.querySelector('.processing-container');
+                        if (existingContainer) {
+                            existingContainer.remove();
                         }
                         
-                        // Create animated ellipsis span
-                        const ellipsis = document.createElement('span');
-                        ellipsis.className = 'animated-ellipsis';
-                        statusText.appendChild(ellipsis);
+                        // Clear the current text and add only the processing state
+                        statusText.textContent = '';
                         
-                        // Create ellipsis animation style if it doesn't exist
-                        if (!document.querySelector('#ellipsis-animation')) {
+                        // Create container for just the text (no dots before)
+                        const container = document.createElement('div');
+                        container.className = 'processing-container';
+
+                        // Create the text span (no dots in the content)
+                        const baseTextSpan = document.createElement('span');
+                        baseTextSpan.className = 'processing-text';
+                        baseTextSpan.textContent = baseText;
+                        
+                        // Create dots span that will appear after the text
+                        const ellipsis = document.createElement('span');
+                        ellipsis.className = 'ellipsis-dots';
+                        
+                        // Add text first, then dots to ensure correct order
+                        container.appendChild(baseTextSpan);
+                        container.appendChild(ellipsis);
+                        
+                        // Add the complete container to the status display
+                        statusText.appendChild(container);
+                        
+                        // Create processing status styles if they don't exist
+                        if (!document.querySelector('#processing-styles')) {
                             const style = document.createElement('style');
-                            style.id = 'ellipsis-animation';
+                            style.id = 'processing-styles';
                             style.textContent = `
-                                .animated-ellipsis::after {
+                                .processing-container {
+                                    display: inline-flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                }
+                                
+                                .processing-text {
+                                    display: inline;
+                                    white-space: nowrap;
+                                }
+                                
+                                .ellipsis-dots {
+                                    display: inline-block;
+                                    width: 18px;
+                                    text-align: left;
+                                    overflow: hidden;
+                                }
+                                
+                                .ellipsis-dots::after {
                                     content: '.';
-                                    animation: ellipsis-animation 1.5s infinite;
+                                    display: inline-block;
+                                    margin-left: 2px;  /* Space between text and dots */
+                                    animation: ellipsis-animation 2s infinite;
                                 }
                                 
                                 @keyframes ellipsis-animation {
                                     0% { content: '.'; }
-                                    33% { content: '..'; }
-                                    66% { content: '...'; }
-                                    100% { content: '.'; }
+                                    20% { content: '..'; }
+                                    40% { content: '...'; }
+                                    60% { content: '....'; }
+                                    80%, 100% { content: '.'; }
                                 }
                             `;
                             document.head.appendChild(style);
@@ -315,10 +366,10 @@
                     iconContent = '🔔';
                     textContent = detail || 'Notification Received';
                     
-                    // First clear any existing ellipsis from processing state
-                    const existingEllipsis = document.querySelector('.animated-ellipsis');
-                    if (existingEllipsis) {
-                        existingEllipsis.remove();
+                    // First clear any existing processing container
+                    const existingContainer = document.querySelector('.processing-container');
+                    if (existingContainer) {
+                        existingContainer.remove();
                     }
                     
                     // Manually clear existing particles to ensure clean state
@@ -341,11 +392,29 @@
                 case 'muted':
                     iconContent = '🎙️🚫';
                     textContent = 'Microphone Muted';
+                    
+                    // Clear any existing processing container
+                    const mutedExistingContainer = document.querySelector('.processing-container');
+                    if (mutedExistingContainer) {
+                        mutedExistingContainer.remove();
+                    }
                     break;
                 case 'disconnected':
                     iconContent = '❌';
                     textContent = 'Disconnected';
+                    
+                    // Clear any existing processing container
+                    const discExistingContainer = document.querySelector('.processing-container');
+                    if (discExistingContainer) {
+                        discExistingContainer.remove();
+                    }
                     break;
+            }
+
+            // Global cleanup for old animated ellipsis elements (legacy code)
+            const legacyEllipsis = document.querySelector('.animated-ellipsis');
+            if (legacyEllipsis) {
+                legacyEllipsis.remove();
             }
 
             // Don't set the icon text content - let CSS pseudo-elements handle this

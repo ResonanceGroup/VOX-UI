@@ -598,6 +598,11 @@ main {
     color: #FB8C00; /* Orange for muted */
 }
 
+/* Hide the status icon completely in processing state */
+.state-processing .status-icon {
+    display: none; /* Remove the icon entirely */
+}
+
 /* Helper for state transitions */
 .transitioning .orb {
     animation: state-transition-flash 0.15s ease-in-out;
@@ -1453,14 +1458,29 @@ input:checked + .slider:before {
 [data-theme="dark"] .state-notifying .status-icon::before {
     color: #64B5F6; /* Lighter Blue */
 }
-
-/* Muted State */
+/* Muted State - Simplified for better visibility */
 .state-muted .status-icon::before {
-    content: '🎙️🚫';
+    content: '🔇'; /* Single unicode muted speaker icon */
     color: #FFA726; /* Orange */
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.5); /* Better visibility on all backgrounds */
 }
+
+/* Add a red decorative underline for emphasis */
+.state-muted .status-text {
+    position: relative;
+    color: #F44336; /* Red */
+    font-weight: 500; /* Semi-bold */
+}
+
+/* Add a highlight glow for dark mode */
 [data-theme="dark"] .state-muted .status-icon::before {
     color: #FFB74D; /* Lighter Orange */
+    text-shadow: 0 0 4px rgba(255, 255, 255, 0.3); /* Light glow for dark mode */
+}
+
+[data-theme="dark"] .state-muted .status-text {
+    color: #FF7043; /* Brighter red-orange in dark mode */
+}
 }
 
 /* Disconnected State */
