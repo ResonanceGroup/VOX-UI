@@ -6,6 +6,13 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+:root {
+  --primary-color: #347ab8;
+  --primary-color-hover: #2a6194; /* Darker shade for hover */
+  --primary-color-focus-shadow: rgba(52, 122, 184, 0.2); /* RGBA for box-shadow */
+  /* Add other global variables here if needed */
+}
+
 html, body {
     height: 100%;
     width: 100%;
@@ -125,7 +132,7 @@ nav {
 .sidebar-item.active {
     opacity: 1;
     background: rgba(127, 204, 222, 0.15);
-    border-left-color: #7fccde;
+    border-left-color: var(--primary-color);
 }
 
 .sidebar-item span {
@@ -244,7 +251,7 @@ main {
 }
 
 .send-button {
-    color: #7fccde;
+    color: var(--primary-color);
 }
 
 .send-button:hover {
@@ -652,7 +659,7 @@ main {
 .settings-main .settings-form {
     max-width: 600px;
     width: 100%;
-    padding: 0 24px 24px 24px; /* Remove top padding */
+    padding: 24px 24px 24px 24px; /* Restore top padding */
     margin: 0 auto;
     background: transparent;
 }
@@ -748,9 +755,9 @@ main {
 }
 
 .settings-input:focus {
-    border-color: #7fccde;
+    border-color: var(--primary-color);
     outline: none;
-    box-shadow: 0 0 0 2px rgba(127, 204, 222, 0.2);
+    box-shadow: 0 0 0 2px var(--primary-color-focus-shadow);
 }
 
 .theme-toggle {
@@ -791,15 +798,15 @@ main {
 }
 
 .theme-option input[type="radio"]:checked + .theme-radio {
-    background: #7fccde;
+    background: var(--primary-color);
     color: #fff;
-    border-color: #7fccde;
+    border-color: var(--primary-color);
     font-weight: 500;
 }
 
 /* Focus styles */
 .theme-option input[type="radio"]:focus-visible + .theme-radio {
-    outline: 2px solid #7fccde;
+    outline: 2px solid var(--primary-color);
     outline-offset: 1px;
 }
 
@@ -820,13 +827,13 @@ main {
 }
 
 .button.primary {
-    background: #7fccde;
+    background: var(--primary-color);
     color: #fff;
     border: none;
 }
 
 .button.primary:hover {
-    background: #6bb8c9;
+    background: var(--primary-color-hover);
 }
 
 .button.secondary {
@@ -868,9 +875,10 @@ svg {
         padding: 8px 16px;
     }
 
-    main {
-        bottom: 50px;
-    }
+    /* Remove 'bottom: 50px;' from main in mobile view, likely only needed for chat view */
+    /* main { */
+    /*     bottom: 50px; */
+    /* } */
 
     .settings-form {
         margin: 0;
@@ -1079,7 +1087,7 @@ select.settings-input:required:invalid {
 .mcp-settings-content .setting-item input[type="checkbox"] {
     width: 16px;
     height: 16px;
-    accent-color: #7fccde; /* Match primary color */
+    accent-color: var(--primary-color); /* Match primary color */
 }
 
 .mcp-settings-content .setting-item .description {
@@ -1221,11 +1229,11 @@ select.settings-input:required:invalid {
 }
 
 input:checked + .slider {
-  background-color: #7fccde; /* Primary color */
+  background-color: var(--primary-color); /* Primary color */
 }
 
 input:focus + .slider {
-  box-shadow: 0 0 1px #7fccde;
+  box-shadow: 0 0 1px var(--primary-color);
 }
 
 input:checked + .slider:before {
@@ -1281,7 +1289,7 @@ input:checked + .slider:before {
 .details-tabs .tab.active {
     opacity: 1;
     font-weight: 500;
-    border-bottom-color: #7fccde;
+    border-bottom-color: var(--primary-color);
 }
 
 .details-content {
@@ -1404,9 +1412,9 @@ input:checked + .slider:before {
 }
 
 .mcp-server-details select:focus {
-    border-color: #7fccde;
+    border-color: var(--primary-color);
     outline: none;
-    box-shadow: 0 0 0 2px rgba(127, 204, 222, 0.2);
+    box-shadow: 0 0 0 2px var(--primary-color-focus-shadow);
 }
 
 .mcp-server-details .setting-item .description {
