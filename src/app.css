@@ -642,7 +642,7 @@ main {
 
 .settings-main .settings-container {
     position: absolute;
-    inset: 60px 0 0 0;
+    inset: 0; /* Remove top inset to fix gap */
     display: flex;
     justify-content: center;
     overflow-y: auto;
@@ -652,7 +652,7 @@ main {
 .settings-main .settings-form {
     max-width: 600px;
     width: 100%;
-    padding: 24px;
+    padding: 0 24px 24px 24px; /* Remove top padding */
     margin: 0 auto;
     background: transparent;
 }
@@ -942,12 +942,33 @@ svg {
     --input-hover: rgba(127, 204, 222, 0.2);
     --button-bg: rgba(255, 255, 255, 0.1);
     --button-hover: rgba(127, 204, 222, 0.2);
+    --dropdown-option-bg-dark: #242424; /* Specific background for dark dropdown options (nav/sidebar color) */
 }
 
 .settings-input {
     background: var(--input-bg);
     border-color: var(--input-border);
     color: var(--text-color);
+}
+
+
+/* Style dropdown options in dark mode */
+/* Style dropdown options in dark mode */
+[data-theme="dark"] .settings-input option {
+    background-color: var(--dropdown-option-bg-dark); /* Use specific variable */
+    color: var(--text-color); /* Ensure text is white */
+}
+
+/* Style for unselected dropdown placeholder text */
+select.settings-input:required:invalid {
+    color: rgba(0, 0, 0, 0.5); /* Placeholder color for light mode */
+}
+[data-theme="dark"] select.settings-input:required:invalid {
+    color: rgba(255, 255, 255, 0.4); /* Placeholder color for dark mode - reduced opacity */
+}
+
+[data-theme="light"] .settings-input {
+    background: var(--bg-color); /* Use main bg for inputs in light mode for contrast */
 }
 
 .text-input {
@@ -996,6 +1017,18 @@ svg {
     background: transparent;
     padding-bottom: 120px; /* Added padding here instead */
 }
+
+
+/* Settings Page Grouping */
+.settings-group {
+    background-color: var(--input-bg); /* Subtle background color */
+    padding: 20px; /* Padding inside the group */
+    margin-bottom: 25px; /* Space between groups */
+    border-radius: 8px; /* Slightly rounded corners */
+}
+
+/* Remove the :first-child rule as it's no longer needed for borders */
+
 
 .mcp-header {
     display: flex;

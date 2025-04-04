@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -19,7 +19,7 @@
             </button>
             <div class="nav-title">Settings</div>
         </nav>
-        
+
         <div class="sidebar">
             <div class="sidebar-content">
                 <a href="index.html" class="sidebar-item" title="Chat">
@@ -38,44 +38,83 @@
         </div>
 
         <div class="overlay"></div>
-        
+
         <main class="settings-main">
             <div class="settings-container" style="opacity: 1; transform: none;">
                 <form class="settings-form" style="opacity: 1;">
-                    <div class="settings-section">
-                        <h2>Appearance</h2>
-                        <div class="setting-item">
-                            <label>Theme</label>
-                            <div class="theme-toggle">
-                                <label class="theme-option">
-                                    <input type="radio" name="theme" value="system">
-                                    <span class="theme-radio">System</span>
-                                </label>
-                                <label class="theme-option">
-                                    <input type="radio" name="theme" value="light">
-                                    <span class="theme-radio">Light</span>
-                                </label>
-                                <label class="theme-option">
-                                    <input type="radio" name="theme" value="dark">
-                                    <span class="theme-radio">Dark</span>
-                                </label>
+
+                    <div class="settings-group">
+                        <div class="settings-section">
+                            <h2>Voice Agent</h2>
+                            <div class="setting-item">
+                                <label>Server URL</label>
+                                <input type="url" class="settings-input" id="voice-agent-url" placeholder="Enter server URL">
+                            </div>
+                            <div class="setting-item">
+                                <label>System Prompt</label>
+                                <textarea class="settings-input" id="voice-agent-prompt" placeholder="Enter system prompt..." rows="7"></textarea>
+                            </div>
+                            <div class="setting-item">
+                                <label>Model</label>
+                                <select class="settings-input" id="voice-agent-model" required>
+                                    <option value="" disabled selected hidden>Select a model...</option>
+                                    <!-- Options will be added later -->
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label>Voice</label>
+                                <input type="text" class="settings-input" id="voice-agent-voice" placeholder="Enter voice ID">
+                            </div>
+                            <div class="setting-item">
+                                <label>Language</label>
+                                <select class="settings-input" id="voice-agent-language">
+                                    <option value="en">English</option>
+                                    <option value="zh">Chinese</option>
+                                </select>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="settings-section">
-                        <h2>n8n Integration</h2>
-                        <div class="setting-item">
-                            <label>Webhook URL</label>
-                            <input type="url" class="settings-input" id="n8n-webhook" placeholder="https://your-n8n-webhook-url">
+
+                    <div class="settings-group">
+                        <div class="settings-section">
+                            <h2>MCP</h2>
+                            <div class="setting-item">
+                                <label>Config File Path</label>
+                                <input type="text" class="settings-input" id="mcp-config-path" placeholder="Enter path to MCP JSON config">
+                            </div>
                         </div>
                     </div>
 
-                    <div class="settings-section">
-                        <h2>UltraVOX Connection</h2>
-                        <div class="setting-item">
-                            <label>API Server URL</label>
-                            <input type="url" class="settings-input" id="ultravox-url" placeholder="https://your-ultravox-server">
+                    <div class="settings-group">
+                        <div class="settings-section">
+                            <h2>n8n Integration</h2>
+                            <div class="setting-item">
+                                <label>Webhook URL</label>
+                                <input type="url" class="settings-input" id="n8n-webhook" placeholder="https://your-n8n-webhook-url">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <div class="settings-section">
+                            <h2>General UI</h2>
+                            <div class="setting-item">
+                                <label>Theme</label>
+                                <div class="theme-toggle">
+                                    <label class="theme-option">
+                                        <input type="radio" name="theme" value="system">
+                                        <span class="theme-radio">System</span>
+                                    </label>
+                                    <label class="theme-option">
+                                        <input type="radio" name="theme" value="light">
+                                        <span class="theme-radio">Light</span>
+                                    </label>
+                                    <label class="theme-option">
+                                        <input type="radio" name="theme" value="dark">
+                                        <span class="theme-radio">Dark</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
