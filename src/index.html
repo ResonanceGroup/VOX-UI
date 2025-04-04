@@ -72,7 +72,7 @@
                             </svg>
                         </button>
                         <div id="status-display" class="status-display">
-                            <span class="status-icon">●</span>
+                            <span class="status-icon"></span>
                             <span class="status-text">Ready to assist...</span>
                         </div>
                     </div>
@@ -348,7 +348,9 @@
                     break;
             }
 
-            statusIcon.textContent = iconContent;
+            // Don't set the icon text content - let CSS pseudo-elements handle this
+            // instead of duplicating the icon in the DOM
+            // statusIcon.textContent = iconContent;
             statusText.textContent = textContent;
 
             console.log(`UI updated for state: ${newState}`);
