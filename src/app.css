@@ -405,52 +405,125 @@ main {
     animation: pulse-ring 1.5s infinite ease-in-out;
 }
 
-/* Create code-execution-like animation effect */
+/* Create a bubble container for the executing state */
+.state-executing .orb {
+    position: relative;
+    overflow: visible;
+}
+
+/* Dim the center of the orb to show the gear better */
+.state-executing .orb .c {
+    opacity: 0.35;
+}
+
+/* Create glass bubble with prominent shiny reflection */
 .state-executing .orb::before {
     content: '';
     position: absolute;
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    background-color: rgba(0, 0, 0, 0.05);
-    z-index: 1;
+    background: radial-gradient(
+        circle at 30% 25%,
+        rgba(255, 255, 255, 0.9) 0%,
+        rgba(255, 255, 255, 0.7) 5%,
+        rgba(255, 255, 255, 0.4) 15%,
+        rgba(200, 200, 255, 0.1) 40%,
+        rgba(200, 200, 255, 0) 70%
+    );
+    box-shadow:
+        inset 0 0 20px rgba(255, 255, 255, 0.4),
+        0 0 15px rgba(126, 87, 194, 0.5);
+    opacity: 0.95;
+    z-index: 5; /* Above gear but allowing it to show through */
+    pointer-events: none;
+    mix-blend-mode: overlay;
 }
 
-/* Code line animation for executing state */
+/* Add 3D bubble edge effect */
+.state-executing .orb-status-ring {
+    border-color: rgba(126, 87, 194, 0.7);
+    border-width: 3px;
+    box-shadow:
+        inset 0 0 10px rgba(126, 87, 194, 0.2),
+        0 0 15px rgba(126, 87, 194, 0.4);
+}
+
+/* Gear appears from inside the orb */
 .state-executing .orb::after {
     content: '';
     position: absolute;
+    width: 60%;
+    height: 60%;
+    top: 20%;
+    left: 20%;
+    /* Create a cleaner metallic gear with more detailed gradients */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='gearGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23EEEEEE' /%3E%3Cstop offset='45%25' stop-color='%23AAAAAA' /%3E%3Cstop offset='100%25' stop-color='%23666666' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z' fill='url(%23gearGradient)' stroke='%23444444' stroke-width='0.4'/%3E%3C/svg%3E");
+    background-size: 50% 50%; /* Smaller gear size */
+    background-repeat: no-repeat;
+    background-position: center center;
+    opacity: 0;
+    filter: drop-shadow(0 0 8px rgba(126, 87, 194, 0.5));
+    pointer-events: none;
+    z-index: 3; /* Below the bubble reflection for proper containment effect */
+    
+    /* Position as a fullsize element and use background positioning instead */
+    position: absolute;
     width: 100%;
     height: 100%;
-    border-radius: 50%;
-    background-image:
-        linear-gradient(transparent 0%, transparent 10%,
-                       rgba(126, 87, 194, 0.7) 10%, rgba(126, 87, 194, 0.7) 12%,
-                       transparent 12%, transparent 20%,
-                       rgba(126, 87, 194, 0.5) 20%, rgba(126, 87, 194, 0.5) 22%,
-                       transparent 22%, transparent 30%,
-                       rgba(126, 87, 194, 0.7) 30%, rgba(126, 87, 194, 0.7) 32%,
-                       transparent 32%, transparent 60%,
-                       rgba(126, 87, 194, 0.5) 60%, rgba(126, 87, 194, 0.5) 62%,
-                       transparent 62%, transparent 70%,
-                       rgba(126, 87, 194, 0.7) 70%, rgba(126, 87, 194, 0.7) 72%,
-                       transparent 72%, transparent 80%,
-                       rgba(126, 87, 194, 0.5) 80%, rgba(126, 87, 194, 0.5) 82%,
-                       transparent 82%, transparent 90%);
-    opacity: 0.9;
-    pointer-events: none;
-    z-index: 2;
-    animation: scan-code 2s infinite linear;
+    top: 0;
+    left: 0;
+    transform: scale(0.1);
+    transform-origin: center center;
+    animation:
+        appear-from-center 0.8s forwards ease-out,
+        rotate-gear 5s infinite linear 0.8s;
 }
 
-@keyframes scan-code {
-    0% { background-position: 0 0; }
-    100% { background-position: 0 100px; }
+/* Animation for gear appearing from center */
+@keyframes appear-from-center {
+    0% {
+        transform: scale(0.1);
+        opacity: 0;
+    }
+    60% {
+        transform: scale(1.15);
+        opacity: 0.95;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0.9;
+    }
+}
+
+/* Gear rotation animation */
+@keyframes rotate-gear {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Enhanced ring pulse animation */
+@keyframes pulse-ring {
+    0% {
+        opacity: 0.3;
+        transform: translate(-50%, -50%) scale(1);
+        border-color: #7E57C2;
+    }
+    50% {
+        opacity: 0.7;
+        transform: translate(-50%, -50%) scale(1.15);
+        border-color: #9575CD;
+    }
+    100% {
+        opacity: 0.3;
+        transform: translate(-50%, -50%) scale(1);
+        border-color: #7E57C2;
+    }
 }
 
 /* Highlight effect for executing state */
 .state-executing .orb .c {
-    animation-duration: 1.5s;
+    animation-duration: 1.8s;
 }
 
 [data-theme="dark"] .state-executing .orb-status-ring {
@@ -467,14 +540,15 @@ main {
     filter: blur(6px) brightness(1.5) contrast(1.5); /* Enhance colors */
 }
 
+/* Simple grayscale for disconnected state */
 .state-disconnected .orb {
     filter: grayscale(1) !important;
 }
 
-/* Lighter grayscale for light mode */
+/* Light mode: Washed out version (lighter against white background) */
 @media (prefers-color-scheme: light) {
     .state-disconnected .orb {
-        filter: grayscale(0.7) brightness(1.4) !important;
+        filter: grayscale(1) brightness(1.6) !important;
     }
 }
 
