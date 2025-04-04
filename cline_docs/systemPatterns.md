@@ -49,10 +49,12 @@
 - Absolute positioning for overlay elements
 
 ## Theme System
-- CSS variables for consistent theming
-- Theme-specific gradients and colors
-- Dark/light mode support with system preference detection
-- Theme switching with persistent storage
+- CSS variables for consistent theming (`:root` for global, `[data-theme="..."]` for theme-specific).
+- Introduced `--primary-color`, `--primary-color-hover`, `--primary-color-focus-shadow` for consistent button/accent colors.
+- Introduced `--dropdown-option-bg-dark` for dark mode dropdown options (though browser support varies).
+- Theme-specific gradients and colors used elsewhere.
+- Dark/light mode support with system preference detection.
+- Theme switching with persistent storage.
 
 ## Component Organization
 - Settings form with sections for logical grouping
@@ -64,8 +66,11 @@
 - Base styles for reset and typography
 - Component-specific styles with BEM-like naming
 - Theme variables for color management
-- Media queries for responsive design
-- Transition effects for interactive elements
+- Media queries for responsive design (e.g., `@media (max-width: 600px)`).
+- Transition effects for interactive elements.
+- **Layout Spacing:**
+    - Used `padding` on `.settings-form` for top spacing within the scrollable area.
+    - Used a spacer `div` with fixed height after `.settings-actions` for bottom spacing, as relying solely on form padding/action margin proved inconsistent.
 
 ## State Management
 - Local storage for theme preferences

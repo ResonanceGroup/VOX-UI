@@ -6,6 +6,13 @@
 - Theme system implemented
 - Settings page structure (basic)
 - Navigation controls
+- Settings page overhaul (`src/settings.html`):
+   - Restructured sections (Voice Agent, MCP, n8n, General UI)
+   - Styled section groups with background panels
+   - Updated primary color for better contrast
+   - Fixed layout/spacing issues (top gap, bottom spacing)
+   - Converted Model input to dropdown
+   - Adjusted System Prompt textarea height
 - **Phase 1: MCP Server Page UI (HTML/CSS)**
     - HTML structure created (`src/mcp_settings.html`) based on Roo Code reference.
     - CSS styling applied (`src/app.css`) for consistency with VOX UI themes.

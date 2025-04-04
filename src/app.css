@@ -659,7 +659,7 @@ main {
 .settings-main .settings-form {
     max-width: 600px;
     width: 100%;
-    padding: 24px 24px 24px 24px; /* Restore top padding */
+    padding: 24px 24px 0 24px; /* Restore top padding, remove bottom */
     margin: 0 auto;
     background: transparent;
 }
@@ -671,7 +671,7 @@ main {
     margin-top: 48px;
     padding-top: 24px;
     border-top: 1px solid var(--input-border);
-    margin-bottom: 24px;
+    /* margin-bottom: 24px; */ /* Rely on form padding-bottom instead */
 }
 
 .chat-main {

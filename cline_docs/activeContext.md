@@ -3,8 +3,8 @@
 ## Recent Changes
 - **Project Direction Shift:** The project's focus has pivoted from building a standalone voice assistant backend (RunPod/UltraVox/Kokoro) to creating a voice UI (VOX UI) that acts as a frontend controller for the Roo Code VSCode extension via the Model Context Protocol (MCP).
 - **Previous Backend Work Deferred:** All work related to the RunPod infrastructure, UltraVox, and Kokoro TTS integration is now deferred indefinitely.
-- **Phase 1 Complete (HTML/CSS):** The initial HTML structure and CSS styling for the MCP Server settings page (`src/mcp_settings.html`) are complete, including sample data. Minor styling tweaks (e.g., bottom margin) and JavaScript functionality are deferred.
-
+- **Phase 1 Complete (HTML/CSS):** The initial HTML structure and CSS styling for the MCP Server settings page (`src/mcp_settings.html`) are complete.
+- **Settings Page Overhaul Complete:** Restructured `src/settings.html` with new sections (Voice Agent, MCP, n8n, General UI), styled section groups, updated primary color for better contrast, and addressed layout/spacing issues.
 ## Current Focus: Phased UI Development for Roo Code Integration
 
 The development will proceed in the following phases:
@@ -16,7 +16,7 @@ The development will proceed in the following phases:
 ### Phase 2: Enhance Visualizations (In Progress)
 - **Goal:** Improve visual feedback in the main chat UI.
 - **Tasks:**
-    1. Brainstorm visual representation and placement for status indicators (MCP Connection, Roo Code Status). (Next Step)
+    1. Brainstorm visual representation and placement for status indicators (MCP Connection, Roo Code Status). (Current Task)
     2. Add placeholder HTML elements for status indicators.
     3. Style the status indicators.
     4. Define common UI elements for consistency.
@@ -32,4 +32,4 @@ The development will proceed in the following phases:
 
 # Next Steps
 
-1.  **Brainstorm visual representation and placement for status indicators (MCP Connection, Roo Code Status) in the main chat UI (`src/index.html`).**
+1.  **Continue Phase 2:** Brainstorm visual representation and placement for status indicators (MCP Connection, Roo Code Status) in the main chat UI (`src/index.html`).
