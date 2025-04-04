@@ -322,6 +322,7 @@ main {
     z-index: 1; /* Ensure it's above the base orb but below interactive elements if any */
 }
 
+/* Ring effect for Executing state */
 .orb-status-ring {
     position: absolute;
     top: 50%;
@@ -333,13 +334,168 @@ main {
     border: 3px solid transparent; /* Transparent base, color set by state */
     opacity: 0; /* Hidden by default */
     transition: border-color 0.3s ease, opacity 0.3s ease;
-    /* Animation will be added later */
+}
+
+/* Particle container for Notifying state */
+.orb-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Individual particle styling */
+.particle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: 0 0 8px 2px rgba(100, 181, 246, 0.8);
+    z-index: 2;
+}
+/* Animations for status indicators */
+@keyframes pulse-ring {
+    0% {
+        opacity: 0.3;
+        transform: translate(-50%, -50%) scale(1);
+        border-color: #7E57C2;
+    }
+    50% {
+        opacity: 0.7;
+        transform: translate(-50%, -50%) scale(1.1);
+        border-color: #9575CD;
+    }
+    100% {
+        opacity: 0.3;
+        transform: translate(-50%, -50%) scale(1);
+        border-color: #7E57C2;
+    }
+}
+
+@keyframes particle-burst {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) translate(var(--x, 50px), var(--y, 50px)) scale(0);
+        opacity: 0;
+    }
+}
+
+@keyframes state-transition-flash {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.3); }
+}
+
+/* Status indicator state classes */
+.state-executing .orb-status-ring {
+    border-color: #7E57C2; /* Light mode color */
+    border-width: 4px;
+    box-shadow: 0 0 15px rgba(126, 87, 194, 0.6);
+    opacity: 0.5;
+    animation: pulse-ring 1.5s infinite ease-in-out;
+}
+
+/* Add rotating dots inside the ring for a more dynamic executing indicator */
+.state-executing .orb::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 50% 20%, #7E57C2 0%, #7E57C2 4px, transparent 5px),
+        radial-gradient(circle at 80% 50%, #7E57C2 0%, #7E57C2 4px, transparent 5px),
+        radial-gradient(circle at 50% 80%, #7E57C2 0%, #7E57C2 4px, transparent 5px),
+        radial-gradient(circle at 20% 50%, #7E57C2 0%, #7E57C2 4px, transparent 5px);
+    opacity: 0.7;
+    animation: rotate-dots 2s infinite linear;
+    pointer-events: none;
+    z-index: 2;
+}
+
+@keyframes rotate-dots {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+[data-theme="dark"] .state-executing .orb-status-ring {
+    border-color: #9575CD; /* Dark mode color */
+    opacity: 0.6;
+}
+
+.state-processing .wrap {
+    animation-duration: 15s; /* Speed up the rotation (default is 40s) */
+}
+
+.state-processing .c {
+    animation-duration: 12s; /* Speed up the morphing (default is 20s) */
+    filter: blur(6px) brightness(1.5) contrast(1.5); /* Enhance colors */
+}
+
+.state-disconnected .orb {
+    filter: grayscale(1) !important;
+}
+
+/* Ensure ALL animations stop in disconnected state */
+.state-disconnected .wrap,
+.state-disconnected .wrap *,
+.state-disconnected .c,
+.state-disconnected .orb::before,
+.state-disconnected .orb::after {
+    animation-play-state: paused !important;
+    transition: none !important;
+}
+
+/* Add subtle static noise effect to disconnected state */
+.state-disconnected .orb::before {
+    background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='noise' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='0.1'/%3E%3CfeFuncG type='linear' slope='0.1'/%3E%3CfeFuncB type='linear' slope='0.1'/%3E%3C/feComponentTransfer%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='3' intercept='-0.9'/%3E%3CfeFuncG type='linear' slope='3' intercept='-0.9'/%3E%3CfeFuncB type='linear' slope='3' intercept='-0.9'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"), radial-gradient(
+        circle at 25% 25%,
+        rgba(255, 255, 255, 0.95) 0%,
+        rgba(255, 255, 255, 0.9) 4%,
+        rgba(148, 148, 148, 0.5) 8%,
+        rgba(64, 64, 64, 0.3) 12%,
+        rgba(64, 64, 64, 0.1) 20%,
+        transparent 30%
+    );
+    opacity: 0.9;
+    mix-blend-mode: overlay;
 }
 
 /* Dark mode adjustments for status display */
 [data-theme="dark"] .status-display {
     color: #D0D0D0; /* Lighter grey for dark mode */
     opacity: 0.85;
+}
+
+/* Status bar icon colors for different states */
+.state-notifying .status-icon {
+    color: #42A5F5; /* Light blue for notifications */
+}
+
+.state-disconnected .status-icon,
+.state-disconnected .status-text {
+    color: #F44336; /* Red for disconnection */
+    font-weight: bold;
+}
+
+.state-muted .status-icon {
+    color: #FB8C00; /* Orange for muted */
+}
+
+/* Helper for state transitions */
+.transitioning .orb {
+    animation: state-transition-flash 0.15s ease-in-out;
+}
 }
 
 /* Page Layout */
