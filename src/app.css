@@ -399,33 +399,58 @@ main {
 /* Status indicator state classes */
 .state-executing .orb-status-ring {
     border-color: #7E57C2; /* Light mode color */
-    border-width: 4px;
+    border-width: 3px;
     box-shadow: 0 0 15px rgba(126, 87, 194, 0.6);
     opacity: 0.5;
     animation: pulse-ring 1.5s infinite ease-in-out;
 }
 
-/* Add rotating dots inside the ring for a more dynamic executing indicator */
+/* Create code-execution-like animation effect */
+.state-executing .orb::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.05);
+    z-index: 1;
+}
+
+/* Code line animation for executing state */
 .state-executing .orb::after {
     content: '';
     position: absolute;
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    background:
-        radial-gradient(circle at 50% 20%, #7E57C2 0%, #7E57C2 4px, transparent 5px),
-        radial-gradient(circle at 80% 50%, #7E57C2 0%, #7E57C2 4px, transparent 5px),
-        radial-gradient(circle at 50% 80%, #7E57C2 0%, #7E57C2 4px, transparent 5px),
-        radial-gradient(circle at 20% 50%, #7E57C2 0%, #7E57C2 4px, transparent 5px);
-    opacity: 0.7;
-    animation: rotate-dots 2s infinite linear;
+    background-image:
+        linear-gradient(transparent 0%, transparent 10%,
+                       rgba(126, 87, 194, 0.7) 10%, rgba(126, 87, 194, 0.7) 12%,
+                       transparent 12%, transparent 20%,
+                       rgba(126, 87, 194, 0.5) 20%, rgba(126, 87, 194, 0.5) 22%,
+                       transparent 22%, transparent 30%,
+                       rgba(126, 87, 194, 0.7) 30%, rgba(126, 87, 194, 0.7) 32%,
+                       transparent 32%, transparent 60%,
+                       rgba(126, 87, 194, 0.5) 60%, rgba(126, 87, 194, 0.5) 62%,
+                       transparent 62%, transparent 70%,
+                       rgba(126, 87, 194, 0.7) 70%, rgba(126, 87, 194, 0.7) 72%,
+                       transparent 72%, transparent 80%,
+                       rgba(126, 87, 194, 0.5) 80%, rgba(126, 87, 194, 0.5) 82%,
+                       transparent 82%, transparent 90%);
+    opacity: 0.9;
     pointer-events: none;
     z-index: 2;
+    animation: scan-code 2s infinite linear;
 }
 
-@keyframes rotate-dots {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+@keyframes scan-code {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 100px; }
+}
+
+/* Highlight effect for executing state */
+.state-executing .orb .c {
+    animation-duration: 1.5s;
 }
 
 [data-theme="dark"] .state-executing .orb-status-ring {
@@ -444,6 +469,13 @@ main {
 
 .state-disconnected .orb {
     filter: grayscale(1) !important;
+}
+
+/* Lighter grayscale for light mode */
+@media (prefers-color-scheme: light) {
+    .state-disconnected .orb {
+        filter: grayscale(0.7) brightness(1.4) !important;
+    }
 }
 
 /* Ensure ALL animations stop in disconnected state */

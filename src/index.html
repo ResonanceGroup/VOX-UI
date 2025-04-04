@@ -180,7 +180,7 @@
             wave.style.boxShadow = '0 0 15px rgba(100, 181, 246, 0.6)';
             wave.style.animation = 'expand-wave 1s forwards ease-out';
             orbParticles.appendChild(wave);
-            orbParticles.appendChild(flash);
+            // No need to append flash again - it was already appended at line 167
         }
         
         // Add keyframes for notification animations
@@ -269,8 +269,44 @@
                     textContent = `Executing: ${detail || 'Task'}...`;
                     break;
                 case 'processing':
-                    iconContent = '...';
-                    textContent = 'Processing...';
+                    iconContent = '⟳';
+                    
+                    // Base text for processing (can be overridden with detail)
+                    const baseText = detail || 'Processing';
+                    
+                    // Use a custom animation for the ellipsis
+                    // We'll create a span with a special class that will be animated with CSS
+                    textContent = baseText;
+                    
+                    // After setting text content, add animated ellipsis with timeout
+                    setTimeout(() => {
+                        // Create animated ellipsis span if it doesn't exist
+                        if (!document.querySelector('.animated-ellipsis')) {
+                            const ellipsis = document.createElement('span');
+                            ellipsis.className = 'animated-ellipsis';
+                            statusText.appendChild(ellipsis);
+                            
+                            // Create ellipsis animation style if it doesn't exist
+                            if (!document.querySelector('#ellipsis-animation')) {
+                                const style = document.createElement('style');
+                                style.id = 'ellipsis-animation';
+                                style.textContent = `
+                                    .animated-ellipsis::after {
+                                        content: '.';
+                                        animation: ellipsis-animation 1.5s infinite;
+                                    }
+                                    
+                                    @keyframes ellipsis-animation {
+                                        0% { content: '.'; }
+                                        33% { content: '..'; }
+                                        66% { content: '...'; }
+                                        100% { content: '.'; }
+                                    }
+                                `;
+                                document.head.appendChild(style);
+                            }
+                        }
+                    }, 10);
                     break;
                 case 'notifying':
                     iconContent = '🔔';
