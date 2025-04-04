@@ -146,6 +146,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuButton = document.querySelector('.menu-button');
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.querySelector('.overlay');
+
+
+
     
     // Handle sidebar toggle
     function toggleSidebar() {

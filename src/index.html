@@ -19,6 +19,18 @@
                 </svg>
             </button>
             <div class="nav-title">AI Assistant</div>
+
+            <!-- Temporary Debug Buttons (HTML) -->
+            <div style="margin-left: auto; display: flex; gap: 5px;">
+                <button style="padding: 2px 5px; font-size: 0.75rem;" onclick="updateUIState('idle')">Idle</button>
+                <button style="padding: 2px 5px; font-size: 0.75rem;" onclick="updateUIState('executing', 'Test Tool')">Exec</button>
+                <button style="padding: 2px 5px; font-size: 0.75rem;" onclick="updateUIState('processing')">Proc</button>
+                <button style="padding: 2px 5px; font-size: 0.75rem;" onclick="updateUIState('notifying', 'Test Notification')">Notify</button>
+                <button style="padding: 2px 5px; font-size: 0.75rem;" onclick="updateUIState('disconnected')">Disc</button>
+                <!-- Mute is handled by its own button -->
+            </div>
+            <!-- End Temporary Debug Buttons -->
+
         </nav>
         
         <div class="sidebar">
@@ -43,6 +55,10 @@
         <main class="chat-main">
             <div class="orb-container">
                         <div class="orb">
+                            <div class="orb-status-effects">
+                                <div class="orb-status-ring"></div>
+                                <!-- Particle container will be managed by JS -->
+                            </div>
                             <div class="wrap">
                                 <div class="c"></div>
                                 <div class="c"></div>
@@ -55,7 +71,10 @@
                                 <path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>
                             </svg>
                         </button>
-                        <div id="status-display" class="status-display">Ready to assist...</div>
+                        <div id="status-display" class="status-display">
+                            <span class="status-icon">●</span>
+                            <span class="status-text">Ready to assist...</span>
+                        </div>
                     </div>
                 </div>
                 
@@ -81,6 +100,90 @@
     <script src="app.js"></script>
     <script src="audio-visualizer.js"></script>
     <script>
+
+        // --- Global Scope for Status Logic ---
+        let currentAIState = 'idle'; // Initial state
+        let underlyingAIState = 'idle'; // State before mute
+        const ALL_STATES = ['idle', 'executing', 'notifying', 'processing', 'muted', 'disconnected'];
+        
+        // Declare globally, assign inside DOMContentLoaded
+        let statusIcon = null;
+        let statusText = null;
+
+        function updateUIState(newState, detail = '') {
+            if (!ALL_STATES.includes(newState)) {
+                console.warn('Invalid AI state provided:', newState);
+                return;
+            }
+
+            console.log(`Updating UI State: ${newState}, Detail: ${detail}`);
+
+            // --- Manage State Classes on Body --- 
+            ALL_STATES.forEach(state => document.body.classList.remove(`state-${state}`));
+            document.body.classList.add(`state-${newState}`);
+            
+            // Store the state before mute if not already muted
+            if (newState === 'muted' && currentAIState !== 'muted') {
+                underlyingAIState = currentAIState === 'muted' ? 'idle' : currentAIState; // Avoid storing 'muted' itself
+            }
+            currentAIState = newState;
+
+            // --- Update Status Bar --- 
+            // Ensure elements exist before updating (they should after DOMContentLoaded)
+            if (!statusIcon || !statusText) {
+                // Don't log error here, might be called before DOM ready on initial load
+                // console.error('Status icon or text element not found!');
+                return; 
+            }
+            
+            let iconContent = '●';
+            let textContent = 'Ready to assist...';
+
+            switch (newState) {
+                case 'idle':
+                    iconContent = '●'; // Or '✓'
+                    textContent = 'Ready to assist...';
+                    break;
+                case 'executing':
+                    iconContent = '⚙️';
+                    textContent = `Executing: ${detail || 'Task'}...`;
+                    break;
+                case 'processing':
+                    iconContent = '...';
+                    textContent = 'Processing...';
+                    break;
+                case 'notifying':
+                    iconContent = '🔔';
+                    textContent = detail || 'Notification Received';
+                    // Maybe revert state after a short delay?
+                    // setTimeout(() => updateUIState(underlyingAIState || 'idle'), 2000);
+                    break;
+                case 'muted':
+                    iconContent = '🎙️🚫';
+                    textContent = 'Microphone Muted';
+                    break;
+                case 'disconnected':
+                    iconContent = '❌';
+                    textContent = 'Disconnected';
+                    break;
+            }
+
+            statusIcon.textContent = iconContent;
+            statusText.textContent = textContent;
+
+            // --- Trigger Orb Animations (Placeholders/Examples) --- 
+            // TODO: Implement particle burst for 'notifying'
+            // TODO: Implement processing swirl modification
+            // TODO: Implement transition flash (e.g., add/remove 'transitioning' class)
+
+            console.log(`UI updated for state: ${newState}`);
+        }
+        // --- End Global Scope for Status Logic ---
+
+
+
+            // --- End Status Indicator Logic --- (Initial call moved inside DOMContentLoaded)
+
         // Chat functionality
         document.addEventListener('DOMContentLoaded', () => {
             const textInput = document.querySelector('.text-input');
@@ -88,8 +191,19 @@
             const uploadButton = document.querySelector('.upload-button');
             const muteButton = document.querySelector('.mute-button');
             const statusDisplay = document.getElementById('status-display');
+            // Assign to globally declared variables
+            statusIcon = statusDisplay?.querySelector('.status-icon');
+            statusText = statusDisplay?.querySelector('.status-text');
+
+            // Initial state setup after DOM elements are ready
+            updateUIState('idle'); 
+
             
             // State
+
+
+            // --- Status Indicator Logic ---
+
             let isMuted = false;
             
             // Mute button icons
@@ -100,26 +214,21 @@
             function handleSendMessage() {
                 const message = textInput.value.trim();
                 if (message) {
-                    updateStatus(`You: ${message}`);
+                    // Don't show user message in status bar, handle actual AI state changes
                     textInput.value = '';
                     
+                    // Simulate AI processing and responding
+                    updateUIState('processing'); // Show processing state
+                    
+                    // Placeholder: Replace with actual logic to send message and receive response
                     setTimeout(() => {
-                        updateStatus('AI is responding...');
-                        setTimeout(() => {
-                            updateStatus('AI: I received your message.');
-                            setTimeout(() => {
-                                updateStatus('Ready to assist...');
-                            }, 1500);
-                        }, 1500);
-                    }, 500);
+                        updateUIState('idle', 'AI: I received your message.'); // Example response, back to idle
+                        // If the AI were executing a tool, you'd call updateUIState('executing', 'Tool Name') here
+                    }, 1500);
                 }
             }
             
-            // Status display function
-            function updateStatus(text, type = 'info') {
-                statusDisplay.textContent = text;
-                statusDisplay.className = `status-display status-${type}`;
-            }
+            // Removed old updateStatus function
             
             // Event listeners
             sendButton.addEventListener('click', handleSendMessage);
@@ -131,22 +240,40 @@
             });
             
             uploadButton.addEventListener('click', () => {
-                updateStatus('File upload will be available in a future update');
+                // Use notifying state for temporary messages
+                updateUIState('notifying', 'File upload coming soon!');
+                // Optional: Revert to previous state after a delay
                 setTimeout(() => {
-                    updateStatus('Ready to assist...');
-                }, 2000);
+                    // Revert only if still in notifying state (user might have muted etc.)
+                    if (currentAIState === 'notifying') {
+                       updateUIState(underlyingAIState || 'idle');
+                    }
+                }, 2500);
             });
             
             muteButton.addEventListener('click', () => {
-                isMuted = !isMuted;
-                muteButton.title = isMuted ? 'Unmute microphone' : 'Mute microphone';
-                muteButton.querySelector('path').setAttribute('d', isMuted ? micOffIcon : micOnIcon);
-                updateStatus(isMuted ? 'Microphone muted' : 'Microphone active');
-                setTimeout(() => {
-                    updateStatus('Ready to assist...');
-                }, 1500);
+                const willBeMuted = currentAIState !== 'muted';
+                
+                muteButton.title = willBeMuted ? 'Unmute microphone' : 'Mute microphone';
+                muteButton.querySelector('path').setAttribute('d', willBeMuted ? micOffIcon : micOnIcon);
+                
+                if (willBeMuted) {
+                    updateUIState('muted');
+                } else {
+
+
+
+
+                    // Revert to the state before mute
+                    updateUIState(underlyingAIState || 'idle');
+                }
+                // No need for setTimeout to revert status here, state is managed
             });
         });
     </script>
 </body>
 </html>
+
+
+
+

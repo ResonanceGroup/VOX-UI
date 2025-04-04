@@ -281,14 +281,65 @@ main {
 }
 
 .status-display {
-    color: #666;
-    font-size: 0.85rem;
+    /* Enhanced visibility */
+    color: #555; /* Slightly darker grey for light mode */
+    font-size: 0.9rem; /* Slightly larger font */
+    opacity: 0.9; /* Less transparent */
+
+    /* Layout for icon + text */
+    display: inline-flex; /* Use flex to align icon and text */
+    align-items: center;
+    justify-content: center;
+    gap: 6px; /* Space between icon and text */
+
+    /* Original styles */
     text-align: center;
     line-height: 1.5;
     min-height: 1.5em;
-    transition: all 0.3s ease;
+    transition: color 0.3s ease, opacity 0.3s ease; /* Adjusted transition */
     margin-top: 5px;
-    opacity: 0.75;
+}
+
+.status-icon {
+    display: inline-block; /* Ensure it takes space */
+    /* Add specific icon styling later based on state */
+    transition: color 0.3s ease;
+}
+
+.status-text {
+    display: inline-block; /* Ensure it takes space */
+    transition: opacity 0.3s ease; /* For potential text fades */
+}
+
+/* Styles for Orb Effects Container */
+.orb-status-effects {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Allow clicks to pass through */
+    z-index: 1; /* Ensure it's above the base orb but below interactive elements if any */
+}
+
+.orb-status-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100% + 16px); /* Slightly larger than orb */
+    height: calc(100% + 16px);
+    border-radius: 50%;
+    border: 3px solid transparent; /* Transparent base, color set by state */
+    opacity: 0; /* Hidden by default */
+    transition: border-color 0.3s ease, opacity 0.3s ease;
+    /* Animation will be added later */
+}
+
+/* Dark mode adjustments for status display */
+[data-theme="dark"] .status-display {
+    color: #D0D0D0; /* Lighter grey for dark mode */
+    opacity: 0.85;
 }
 
 /* Page Layout */
@@ -1075,4 +1126,143 @@ input:checked + .slider:before {
 }
 
 /* Padding moved to original rule block */
+
+/* Keyframe Animations for Status Indicators */
+
+@keyframes orbRingPulse {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0.3; }
+}
+
+[data-theme="dark"] @keyframes orbRingPulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+
+@keyframes transitionFlash {
+  0% { opacity: 0; }
+  50% { opacity: 0.15; }
+  100% { opacity: 0; }
+}
+
+/* Placeholder for particle burst - likely needs JS */
+@keyframes particleBurst {
+  from { transform: scale(0.5); opacity: 1; }
+  to { transform: scale(1.5); opacity: 0; }
+}
+
+
+/* State-Specific Indicator Styles */
+
+/* --- Status Bar States --- */
+
+/* Idle State (Default) */
+.state-idle .status-icon::before {
+    content: '●'; /* Or '✓' */
+    color: #4CAF50; /* Green */
+}
+[data-theme="dark"] .state-idle .status-icon::before {
+    color: #81C784; /* Lighter Green */
+}
+
+/* Executing State */
+.state-executing .status-icon::before {
+    content: '⚙️';
+    color: #7E57C2; /* Purple */
+}
+[data-theme="dark"] .state-executing .status-icon::before {
+    color: #9575CD; /* Lighter Purple */
+}
+
+/* Processing State */
+.state-processing .status-icon::before {
+    content: '...'; /* Simple ellipsis */
+    /* Consider animation for ellipsis dots if desired */
+    color: inherit; /* Use default text color */
+}
+
+/* Notifying State (Icon might be temporary via JS) */
+.state-notifying .status-icon::before {
+    content: '🔔';
+    color: #42A5F5; /* Blue */
+}
+[data-theme="dark"] .state-notifying .status-icon::before {
+    color: #64B5F6; /* Lighter Blue */
+}
+
+/* Muted State */
+.state-muted .status-icon::before {
+    content: '🎙️🚫';
+    color: #FFA726; /* Orange */
+}
+[data-theme="dark"] .state-muted .status-icon::before {
+    color: #FFB74D; /* Lighter Orange */
+}
+
+/* Disconnected State */
+.state-disconnected .status-icon::before {
+    content: '❌';
+    color: #F44336; /* Red */
+}
+.state-disconnected .status-text {
+    color: #F44336; /* Red */
+}
+[data-theme="dark"] .state-disconnected .status-icon::before,
+[data-theme="dark"] .state-disconnected .status-text {
+    color: #E57373; /* Lighter Red */
+}
+
+/* --- Orb Effect States --- */
+
+/* Executing State - Ring */
+.state-executing .orb-status-ring {
+    border-color: #7E57C2; /* Purple */
+    opacity: 1; /* Make visible */
+    animation: orbRingPulse 2s infinite ease-in-out;
+}
+[data-theme="dark"] .state-executing .orb-status-ring {
+    border-color: #9575CD; /* Lighter Purple */
+}
+
+/* Processing State - Swirl (Requires modifying existing orb animation - Placeholder) */
+/* .state-processing .orb .some-inner-element { animation-duration: 0.5s; } */
+
+/* Disconnected State - Grayscale Orb */
+.state-disconnected .orb {
+    filter: grayscale(100%);
+    /* Add !important if needed to override existing animations */
+    /* animation: none !important; */ 
+}
+
+/* Notifying State - Particles (Handled by JS potentially) */
+/* .state-notifying .particle { animation: particleBurst 0.5s ease-out forwards; } */
+
+/* Transition Flash (Applied temporarily via JS) */
+.transitioning .orb::after { /* Example using pseudo-element */
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.7); /* Light mode flash */
+    border-radius: 50%;
+    animation: transitionFlash 0.15s ease-out forwards;
+    z-index: 5; /* Above orb content */
+}
+[data-theme="dark"] .transitioning .orb::after {
+    background: rgba(50, 50, 50, 0.7); /* Dark mode flash */
+}
+
+/* Placeholder for processing swirl - modify existing orb animation */
+
+/* Placeholder for status text/icon fade */
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
