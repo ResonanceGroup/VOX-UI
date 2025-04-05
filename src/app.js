@@ -170,6 +170,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+
+    // Accordion logic for settings page
+    document.querySelectorAll('.settings-group-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const group = header.closest('.settings-group.accordion');
+            if (group) {
+                group.classList.toggle('open');
+                const details = group.querySelector('.settings-group-details');
+                if (details) {
+                    // Toggle display based on 'open' class presence
+                    details.style.display = group.classList.contains('open') ? 'block' : 'none';
+                }
+            }
+        });
+    });
+
     // Initialize audio visualizer if on chat page
     if (currentPage === 'index.html' && window.AudioVisualizer) {
         window.audioVisualizer = new AudioVisualizer();

@@ -10,7 +10,76 @@
   --primary-color: #347ab8;
   --primary-color-hover: #2a6194; /* Darker shade for hover */
   --primary-color-focus-shadow: rgba(52, 122, 184, 0.2); /* RGBA for box-shadow */
-  /* Add other global variables here if needed */
+  /* Theme variables */
+  --bg-color: #ffffff;
+  --text-color: #333;
+  --text-color-light: #666;
+  --text-color-dark: #ccc;
+  --border-color: #eee;
+  --border-color-dark: #444;
+  --header-bg: #fff;
+  --header-bg-dark: #252526;
+  --sidebar-bg: #fff;
+  --sidebar-bg-dark: #252526;
+  --sidebar-border: #eee;
+  --sidebar-border-dark: #333;
+  --sidebar-item-hover-bg: rgba(127, 204, 222, 0.1);
+  --sidebar-item-hover-bg-dark: rgba(127, 204, 222, 0.1);
+  --sidebar-item-active-bg: rgba(127, 204, 222, 0.15);
+  --sidebar-item-active-bg-dark: rgba(127, 204, 222, 0.2);
+  --input-controls-bg: #fff;
+  --input-controls-bg-dark: #1e1e1e;
+  --input-controls-border: #ccc;
+  --input-controls-border-dark: #333;
+  --button-hover: #f5f5f5;
+  --button-hover-dark: #3a3a3a;
+  --send-button-hover-bg: #e8f7fa;
+  --send-button-hover-bg-dark: #2a6194;
+  --send-button-hover-color: #5a9fde;
+  --send-button-hover-color-dark: #fff;
+  --settings-bg: #f9f9f9;
+  --settings-bg-dark: #1e1e1e;
+  --settings-container-bg: #fff;
+  --settings-container-bg-dark: #252526;
+  --settings-border-color: #ddd; /* Default border for settings container */
+  --settings-border-color-dark: #444;
+  --settings-group-bg: #fff; /* Default background for settings group */
+  --settings-group-bg-dark: #2c2c2c;
+  --settings-group-border: #eee; /* Default border for settings group accordion */
+  --settings-group-border-dark: #444;
+  --settings-group-header-hover-bg: #f0f0f0;
+  --settings-group-header-hover-bg-dark: #3a3a3a;
+  --settings-header-text: #333;
+  --settings-header-text-dark: #eee;
+  --settings-input-bg: #fff; /* Light mode input background */
+  --settings-input-bg-dark: #3a3a3a; /* Dark mode input background */
+  --settings-input-border: #ccc;
+  --settings-input-border-dark: #555;
+  --settings-input-text: #333;
+  --settings-input-text-dark: #e0e0e0;
+  --settings-input-focus-border: var(--primary-color);
+  --settings-input-focus-shadow: rgba(52, 122, 184, 0.2);
+  --dropdown-option-bg-dark: #3a3a3a;
+  --mcp-border-color: #eee;
+  --mcp-border-color-dark: #444;
+  --mcp-details-bg: #fff;
+  --mcp-details-bg-dark: #2c2c2c;
+  --mcp-tab-bg: #eee;
+  --mcp-tab-bg-dark: #444;
+  --mcp-tab-active-bg: #fff;
+  --mcp-tab-active-bg-dark: #555;
+  --mcp-tab-text: #666;
+  --mcp-tab-text-dark: #bbb;
+  --mcp-tab-active-text: #333;
+  --mcp-tab-active-text-dark: #eee;
+  --mcp-tool-bg: #f9f9f9;
+  --mcp-tool-bg-dark: #383838;
+  --mcp-tool-border: #ddd;
+  --mcp-tool-border-dark: #555;
+  --status-dot-ok: #4CAF50;
+  --status-dot-error: #F44336;
+  --status-dot-warn: #FFC107;
+  --status-dot-unknown: #9E9E9E;
 }
 
 html, body {
@@ -18,12 +87,12 @@ html, body {
     width: 100%;
     overflow: hidden;
     position: fixed;
-    background: #ffffff;
+    background: var(--bg-color);
 }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    color: #333;
+    color: var(--text-color);
     display: flex;
     flex-direction: column;
     -webkit-text-size-adjust: 100%;
@@ -36,7 +105,7 @@ body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: #ffffff;
+    background: var(--bg-color);
     position: relative;
 }
 
@@ -44,11 +113,11 @@ body {
 nav {
     padding: 0 20px;
     height: 60px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     gap: 24px;
-    background: #fff;
+    background: var(--header-bg);
     position: relative;
     z-index: 1000;
     flex-shrink: 0;
@@ -59,7 +128,7 @@ nav {
     border: none;
     padding: 8px;
     cursor: pointer;
-    color: #333;
+    color: var(--text-color);
     opacity: 0.6;
     display: flex;
     align-items: center;
@@ -71,7 +140,7 @@ nav {
 
 .menu-button:hover {
     opacity: 0.8;
-    background: #f5f5f5;
+    background: var(--button-hover);
 }
 
 /* Sidebar */
@@ -83,8 +152,8 @@ nav {
     width: 160px !important;
     min-width: 160px;
     max-width: 160px;
-    background: #fff;
-    border-right: 1px solid #eee;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border);
     transform: translateX(-100%);
     transition: transform 0.3s ease;
     z-index: 1100;
@@ -110,7 +179,7 @@ nav {
     border: none;
     border-left: 3px solid transparent;
     cursor: pointer;
-    color: #333;
+    color: var(--text-color);
     opacity: 0.7;
     transition: all 0.2s ease;
     width: 100%;
@@ -126,12 +195,12 @@ nav {
 
 .sidebar-item:hover {
     opacity: 0.9;
-    background: rgba(127, 204, 222, 0.1);
+    background: var(--sidebar-item-hover-bg);
 }
 
 .sidebar-item.active {
     opacity: 1;
-    background: rgba(127, 204, 222, 0.15);
+    background: var(--sidebar-item-active-bg);
     border-left-color: var(--primary-color);
 }
 
@@ -163,7 +232,7 @@ nav {
 .nav-title {
     font-size: 1.25rem;
     font-weight: 500;
-    color: #333;
+    color: var(--text-color);
     opacity: 0.85;
 }
 
@@ -174,7 +243,7 @@ main {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: #ffffff;
+    background: var(--bg-color);
 }
 
 .orb-container {
@@ -195,8 +264,8 @@ main {
     right: 0;
     height: 60px;
     padding: 0 32px;
-    background: #fff;
-    border-top: 1px solid #ccc;
+    background: var(--input-controls-bg);
+    border-top: 1px solid var(--input-controls-border);
     display: flex;
     gap: 12px;
     align-items: center;
@@ -235,7 +304,7 @@ main {
     border: none;
     cursor: pointer;
     padding: 8px;
-    color: #333;
+    color: var(--text-color);
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
@@ -247,7 +316,7 @@ main {
 
 .upload-button:hover,
 .send-button:hover {
-    background: #f5f5f5;
+    background: var(--button-hover);
 }
 
 .send-button {
@@ -255,8 +324,8 @@ main {
 }
 
 .send-button:hover {
-    background: #e8f7fa;
-    color: #5a9fde;
+    background: var(--send-button-hover-bg);
+    color: var(--send-button-hover-color);
 }
 
 /* Mute button */
@@ -288,34 +357,28 @@ main {
 }
 
 .status-display {
-    /* Enhanced visibility */
-    color: #555; /* Slightly darker grey for light mode */
-    font-size: 0.9rem; /* Slightly larger font */
-    opacity: 0.9; /* Less transparent */
-
-    /* Layout for icon + text */
-    display: inline-flex; /* Use flex to align icon and text */
+    color: var(--text-color-light);
+    font-size: 0.9rem;
+    opacity: 0.9;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px; /* Space between icon and text */
-
-    /* Original styles */
+    gap: 6px;
     text-align: center;
     line-height: 1.5;
     min-height: 1.5em;
-    transition: color 0.3s ease, opacity 0.3s ease; /* Adjusted transition */
+    transition: color 0.3s ease, opacity 0.3s ease;
     margin-top: 5px;
 }
 
 .status-icon {
-    display: inline-block; /* Ensure it takes space */
-    /* Add specific icon styling later based on state */
+    display: inline-block;
     transition: color 0.3s ease;
 }
 
 .status-text {
-    display: inline-block; /* Ensure it takes space */
-    transition: opacity 0.3s ease; /* For potential text fades */
+    display: inline-block;
+    transition: opacity 0.3s ease;
 }
 
 /* Styles for Orb Effects Container */
@@ -325,8 +388,8 @@ main {
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none; /* Allow clicks to pass through */
-    z-index: 1; /* Ensure it's above the base orb but below interactive elements if any */
+    pointer-events: none;
+    z-index: 1;
 }
 
 /* Ring effect for Executing state */
@@ -335,11 +398,11 @@ main {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: calc(100% + 16px); /* Slightly larger than orb */
+    width: calc(100% + 16px);
     height: calc(100% + 16px);
     border-radius: 50%;
-    border: 3px solid transparent; /* Transparent base, color set by state */
-    opacity: 0; /* Hidden by default */
+    border: 3px solid transparent;
+    opacity: 0;
     transition: border-color 0.3s ease, opacity 0.3s ease;
 }
 
@@ -405,25 +468,22 @@ main {
 
 /* Status indicator state classes */
 .state-executing .orb-status-ring {
-    border-color: #7E57C2; /* Light mode color */
+    border-color: #7E57C2;
     border-width: 3px;
     box-shadow: 0 0 15px rgba(126, 87, 194, 0.6);
     opacity: 0.5;
     animation: pulse-ring 1.5s infinite ease-in-out;
 }
 
-/* Create a bubble container for the executing state */
 .state-executing .orb {
     position: relative;
     overflow: visible;
 }
 
-/* Dim the center of the orb to show the gear better */
 .state-executing .orb .c {
     opacity: 0.35;
 }
 
-/* Create glass bubble with prominent shiny reflection */
 .state-executing .orb::before {
     content: '';
     position: absolute;
@@ -442,12 +502,11 @@ main {
         inset 0 0 20px rgba(255, 255, 255, 0.4),
         0 0 15px rgba(126, 87, 194, 0.5);
     opacity: 0.95;
-    z-index: 5; /* Above gear but allowing it to show through */
+    z-index: 5;
     pointer-events: none;
     mix-blend-mode: overlay;
 }
 
-/* Add 3D bubble edge effect */
 .state-executing .orb-status-ring {
     border-color: rgba(126, 87, 194, 0.7);
     border-width: 3px;
@@ -456,7 +515,6 @@ main {
         0 0 15px rgba(126, 87, 194, 0.4);
 }
 
-/* Gear appears from inside the orb */
 .state-executing .orb::after {
     content: '';
     position: absolute;
@@ -464,17 +522,14 @@ main {
     height: 60%;
     top: 20%;
     left: 20%;
-    /* Create a cleaner metallic gear with more detailed gradients */
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='gearGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23EEEEEE' /%3E%3Cstop offset='45%25' stop-color='%23AAAAAA' /%3E%3Cstop offset='100%25' stop-color='%23666666' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z' fill='url(%23gearGradient)' stroke='%23444444' stroke-width='0.4'/%3E%3C/svg%3E");
-    background-size: 50% 50%; /* Smaller gear size */
+    background-size: 50% 50%;
     background-repeat: no-repeat;
     background-position: center center;
     opacity: 0;
     filter: drop-shadow(0 0 8px rgba(126, 87, 194, 0.5));
     pointer-events: none;
-    z-index: 3; /* Below the bubble reflection for proper containment effect */
-    
-    /* Position as a fullsize element and use background positioning instead */
+    z-index: 3;
     position: absolute;
     width: 100%;
     height: 100%;
@@ -487,7 +542,6 @@ main {
         rotate-gear 5s infinite linear 0.8s;
 }
 
-/* Animation for gear appearing from center */
 @keyframes appear-from-center {
     0% {
         transform: scale(0.1);
@@ -499,236 +553,296 @@ main {
     }
     100% {
         transform: scale(1);
-        opacity: 0.9;
+        opacity: 0.95;
     }
 }
 
-/* Gear rotation animation */
 @keyframes rotate-gear {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
-/* Enhanced ring pulse animation */
-@keyframes pulse-ring {
-    0% {
-        opacity: 0.3;
-        transform: translate(-50%, -50%) scale(1);
-        border-color: #7E57C2;
-    }
-    50% {
-        opacity: 0.7;
-        transform: translate(-50%, -50%) scale(1.15);
-        border-color: #9575CD;
-    }
-    100% {
-        opacity: 0.3;
-        transform: translate(-50%, -50%) scale(1);
-        border-color: #7E57C2;
-    }
+@keyframes pulse-processing {
+    0%, 100% { box-shadow: 0 0 10px rgba(100, 181, 246, 0.3); }
+    50% { box-shadow: 0 0 18px rgba(100, 181, 246, 0.6); }
 }
 
-/* Highlight effect for executing state */
-.state-executing .orb .c {
-    animation-duration: 1.8s;
+.state-processing .orb {
+    animation: pulse-processing 1.8s infinite ease-in-out;
 }
 
-[data-theme="dark"] .state-executing .orb-status-ring {
-    border-color: #9575CD; /* Dark mode color */
-    opacity: 0.6;
+.state-muted .orb {
+    filter: grayscale(80%) brightness(0.8);
 }
 
-.state-processing .wrap {
-    animation-duration: 15s; /* Speed up the rotation (default is 40s) */
-}
-
-.state-processing .c {
-    animation-duration: 12s; /* Speed up the morphing (default is 20s) */
-    filter: blur(6px) brightness(1.5) contrast(1.5); /* Enhance colors */
-}
-
-/* Simple grayscale for disconnected state */
 .state-disconnected .orb {
-    filter: grayscale(1) !important;
+    filter: grayscale(100%) brightness(0.6);
 }
-
-/* Light mode: Washed out version (lighter against white background) */
-@media (prefers-color-scheme: light) {
-    .state-disconnected .orb {
-        filter: grayscale(1) brightness(1.6) !important;
-    }
-}
-
-/* Ensure ALL animations stop in disconnected state */
-.state-disconnected .wrap,
-.state-disconnected .wrap *,
-.state-disconnected .c,
-.state-disconnected .orb::before,
 .state-disconnected .orb::after {
-    animation-play-state: paused !important;
-    transition: none !important;
+    content: '❌';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 40px;
+    color: rgba(255, 0, 0, 0.7);
+    z-index: 10;
+    text-shadow: 0 0 5px black;
 }
 
-/* Add subtle static noise effect to disconnected state */
-.state-disconnected .orb::before {
-    background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='noise' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='0.1'/%3E%3CfeFuncG type='linear' slope='0.1'/%3E%3CfeFuncB type='linear' slope='0.1'/%3E%3C/feComponentTransfer%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='3' intercept='-0.9'/%3E%3CfeFuncG type='linear' slope='3' intercept='-0.9'/%3E%3CfeFuncB type='linear' slope='3' intercept='-0.9'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"), radial-gradient(
-        circle at 25% 25%,
-        rgba(255, 255, 255, 0.95) 0%,
-        rgba(255, 255, 255, 0.9) 4%,
-        rgba(148, 148, 148, 0.5) 8%,
-        rgba(64, 64, 64, 0.3) 12%,
-        rgba(64, 64, 64, 0.1) 20%,
-        transparent 30%
-    );
-    opacity: 0.9;
-    mix-blend-mode: overlay;
-}
-
-/* Dark mode adjustments for status display */
-[data-theme="dark"] .status-display {
-    color: #D0D0D0; /* Lighter grey for dark mode */
-    opacity: 0.85;
-}
-
-/* Status bar icon colors for different states */
-.state-notifying .status-icon {
-    color: #42A5F5; /* Light blue for notifications */
-}
-
-.state-disconnected .status-icon,
-.state-disconnected .status-text {
-    color: #F44336; /* Red for disconnection */
-    font-weight: bold;
-}
-
-.state-muted .status-icon {
-    color: #FB8C00; /* Orange for muted */
-}
-
-/* Hide the status icon completely in processing state */
-.state-processing .status-icon {
-    display: none; /* Remove the icon entirely */
-}
-
-/* Helper for state transitions */
 .transitioning .orb {
-    animation: state-transition-flash 0.15s ease-in-out;
-}
+    animation: state-transition-flash 0.15s ease-out;
 }
 
-/* Page Layout */
-.settings-main {
+.state-idle .status-text { color: var(--text-color-light); }
+.state-executing .status-text { color: #7E57C2; font-weight: 500; }
+.state-processing .status-text { color: #0288D1; font-weight: 500; }
+.state-notifying .status-text { color: #0097A7; font-weight: 500; }
+.state-muted .status-text { color: #757575; font-style: italic; }
+.state-disconnected .status-text { color: #D32F2F; font-weight: bold; }
+
+.status-icon::before {
+    display: inline-block;
+    font-family: inherit;
+    font-size: 1em;
+    line-height: 1;
+    width: 1em;
+    text-align: center;
+}
+
+.state-idle .status-icon::before { content: '●'; color: #4CAF50; }
+.state-executing .status-icon::before { content: '⚙️'; color: #7E57C2; }
+.state-processing .status-icon::before { content: ''; }
+.state-notifying .status-icon::before { content: '🔔'; color: #00BCD4; }
+.state-muted .status-icon::before { content: '🎙️'; color: #757575; position: relative; }
+.state-muted .status-icon::after {
+    content: '/';
     position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    background: transparent;
+    color: #D32F2F;
+    font-weight: bold;
+    left: 0.1em;
+    top: -0.1em;
+    transform: rotate(-20deg);
+    font-size: 1.2em;
+}
+.state-disconnected .status-icon::before { content: '❌'; color: #F44336; }
+
+
+/* Dark Mode Specific Styles */
+[data-theme="dark"] {
+    --bg-color: #1e1e1e;
+    --text-color: #d4d4d4;
+    --text-color-light: #9e9e9e;
+    --text-color-dark: #ccc;
+    --border-color: #333;
+    --header-bg: #252526;
+    --sidebar-bg: #252526;
+    --sidebar-border: #333;
+    --sidebar-item-hover-bg: rgba(127, 204, 222, 0.1);
+    --sidebar-item-active-bg: rgba(127, 204, 222, 0.2);
+    --input-controls-bg: #1e1e1e;
+    --input-controls-border: #333;
+    --button-hover: #3a3a3a;
+    --send-button-hover-bg: #2a6194;
+    --send-button-hover-color: #fff;
+    --settings-bg: #1e1e1e;
+    --settings-container-bg: #252526;
+    --settings-border-color: #ddd; /* Light mode default */
+    --settings-border-color-dark: #444;
+    --settings-group-bg: #fff; /* Light mode default */
+    --settings-group-bg-dark: #2c2c2c;
+    --settings-group-border: #eee; /* Light mode default */
+    --settings-group-border-dark: #444;
+    --settings-group-header-hover-bg: #f0f0f0; /* Light mode default */
+    --settings-group-header-hover-bg-dark: #3a3a3a;
+    --settings-header-text: #333; /* Light mode default */
+    --settings-header-text-dark: #eee;
+    --settings-input-bg: #fff; /* Light mode default */
+    --settings-input-bg-dark: #3a3a3a; /* Dark mode input background */
+    --settings-input-border: #ccc; /* Light mode default */
+    --settings-input-border-dark: #555;
+    --settings-input-text: #333; /* Light mode default */
+    --settings-input-text-dark: #e0e0e0;
+    --settings-input-focus-border: var(--primary-color);
+    --settings-input-focus-shadow: rgba(82, 158, 218, 0.3);
+    --dropdown-option-bg-dark: #3a3a3a;
+    --mcp-border-color: #eee;
+    --mcp-border-color-dark: #444;
+    --mcp-details-bg: #fff;
+    --mcp-details-bg-dark: #2c2c2c;
+    --mcp-tab-bg: #eee;
+    --mcp-tab-bg-dark: #444;
+    --mcp-tab-active-bg: #fff;
+    --mcp-tab-active-bg-dark: #555;
+    --mcp-tab-text: #666;
+    --mcp-tab-text-dark: #bbb;
+    --mcp-tab-active-text: #333;
+    --mcp-tab-active-text-dark: #eee;
+    --mcp-tool-bg: #f9f9f9;
+    --mcp-tool-bg-dark: #383838;
+    --mcp-tool-border: #ddd;
+    --mcp-tool-border-dark: #555;
+    --status-dot-ok: #4CAF50;
+    --status-dot-error: #F44336;
+    --status-dot-warn: #FFC107;
+    --status-dot-unknown: #9E9E9E;
 }
 
-.settings-main::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    backdrop-filter: blur(30px) saturate(180%);
-    -webkit-backdrop-filter: blur(30px) saturate(180%);
-    background: linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0.7),
-        rgba(255, 255, 255, 0.5)
-    );
-    z-index: -1;
-}
-
-[data-theme="dark"] .settings-main::before {
-    background: linear-gradient(
-        to bottom,
-        rgba(0, 0, 0, 0.7),
-        rgba(0, 0, 0, 0.5)
-    );
-}
-
-.settings-main .settings-container {
-    position: absolute;
-    inset: 0; /* Remove top inset to fix gap */
-    display: flex;
-    justify-content: center;
-    overflow-y: auto;
-    padding: 0; /* Reverted padding */
-}
-
-.settings-main .settings-form {
-    max-width: 600px;
-    width: 100%;
-    padding: 24px 24px 0 24px; /* Restore top padding, remove bottom */
-    margin: 0 auto;
-    background: transparent;
-}
-
-.settings-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    margin-top: 48px;
-    padding-top: 24px;
-    border-top: 1px solid var(--input-border);
-    /* margin-bottom: 24px; */ /* Rely on form padding-bottom instead */
-}
-
-.chat-main {
-    position: relative;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.settings-container {
-    width: 100%;
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    justify-content: center;
-    padding: 20px 20px 140px;
-    /* opacity: 0; */ /* Temporarily commented out for visibility */
-    /* transform: translateY(20px); */ /* Temporarily commented out for visibility */
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    transition-delay: 0.1s;
-}
-
-@media (max-width: 600px) {
-    .settings-container {
-        padding: 20px 20px 160px;
-    }
-}
-
-.settings-page .settings-form {
-    max-width: 600px;
-    width: 100%;
-    margin: 0;
-    padding: 24px 20px;
-    background: inherit;
-    border: none;
-}
-
-.settings-section {
-    margin-bottom: 40px;
-    padding: 0 0 8px;
-}
-
-.settings-section:last-child {
-    margin-bottom: 24px;
-    padding-bottom: 0;
-}
-
-.settings-section h2 {
-    font-size: 1.1rem;
-    font-weight: 500;
-    margin-bottom: 16px;
+[data-theme="dark"] body {
     color: var(--text-color);
 }
 
+[data-theme="dark"] nav {
+    background: var(--header-bg);
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .menu-button {
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .menu-button:hover {
+    background: var(--button-hover);
+}
+
+[data-theme="dark"] .sidebar {
+    background: var(--sidebar-bg);
+    border-right-color: var(--sidebar-border);
+}
+
+[data-theme="dark"] .sidebar-item {
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .sidebar-item:hover {
+    background: var(--sidebar-item-hover-bg-dark);
+}
+
+[data-theme="dark"] .sidebar-item.active {
+     background: var(--sidebar-item-active-bg-dark);
+}
+
+[data-theme="dark"] .nav-title {
+    color: var(--text-color);
+}
+
+[data-theme="dark"] main {
+    background: var(--bg-color);
+}
+
+[data-theme="dark"] .input-controls {
+    background: var(--input-controls-bg);
+    border-top-color: var(--input-controls-border);
+}
+
+[data-theme="dark"] .text-input {
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .upload-button,
+[data-theme="dark"] .send-button {
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .upload-button:hover,
+[data-theme="dark"] .send-button:hover {
+    background: var(--button-hover);
+}
+
+[data-theme="dark"] .send-button {
+    color: var(--primary-color); /* Keep primary color for send */
+}
+
+[data-theme="dark"] .send-button:hover {
+    background: var(--send-button-hover-bg-dark);
+    color: var(--send-button-hover-color-dark);
+}
+
+[data-theme="dark"] .mute-button {
+    background: rgba(40, 40, 40, 0.9); /* Darker background */
+    color: #ccc; /* Lighter icon */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* Darker shadow */
+}
+
+[data-theme="dark"] .mute-button:hover {
+    background: rgba(50, 50, 50, 0.95);
+}
+
+[data-theme="dark"] .status-display {
+    color: var(--text-color-dark); /* Use dark text color */
+}
+
+/* Dark mode Orb effects */
+[data-theme="dark"] .state-executing .orb-status-ring {
+    border-color: #B39DDB; /* Lighter purple for dark mode */
+    box-shadow: 0 0 18px rgba(179, 157, 219, 0.5);
+}
+[data-theme="dark"] .state-executing .orb::before {
+     background: radial-gradient(
+        circle at 30% 25%,
+        rgba(200, 200, 255, 0.6) 0%, /* Brighter highlight */
+        rgba(180, 180, 220, 0.4) 10%,
+        rgba(100, 100, 150, 0.1) 40%,
+        rgba(50, 50, 80, 0) 70%
+    );
+     box-shadow:
+        inset 0 0 15px rgba(200, 200, 255, 0.2),
+        0 0 20px rgba(179, 157, 219, 0.4);
+}
+[data-theme="dark"] .state-executing .orb::after {
+     filter: drop-shadow(0 0 10px rgba(179, 157, 219, 0.6));
+}
+
+[data-theme="dark"] .state-disconnected .orb::after {
+    color: rgba(255, 80, 80, 0.8); /* Brighter red for dark */
+    text-shadow: 0 0 8px black;
+}
+
+/* Settings Page Specific Styles */
+.settings-main {
+    overflow-y: auto; /* Allow scrolling */
+    padding: 24px;
+    background-color: var(--settings-bg);
+}
+
+.settings-container {
+    max-width: 800px; /* Ensure max-width is set */
+    margin: 0 auto; /* Ensure centering */
+    background-color: var(--settings-container-bg);
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--settings-border-color);
+}
+
+[data-theme="dark"] .settings-container {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    border-color: var(--settings-border-color-dark);
+}
+
+.settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.settings-group {
+    /* Styles moved to .settings-group.accordion */
+}
+
+.settings-section h2 {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+    color: var(--settings-header-text);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--settings-border-color);
+}
+
 .setting-item {
-    margin-bottom: 28px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .setting-item:last-child {
@@ -736,383 +850,198 @@ main {
 }
 
 .setting-item label {
+    font-weight: 500;
+    color: var(--text-color);
     font-size: 0.95rem;
-    margin-bottom: 10px;
-    color: inherit;
-    opacity: 0.7;
-    display: block;
 }
 
-.settings-input {
+.settings-input,
+.setting-item select {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid var(--input-border);
+    border: 1px solid var(--settings-input-border);
     border-radius: 6px;
     font-size: 0.9rem;
-    transition: all 0.2s ease;
-    background: var(--input-bg);
-    color: inherit;
+    background-color: var(--settings-input-bg);
+    color: var(--settings-input-text);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.settings-input:focus {
-    border-color: var(--primary-color);
+.setting-item select {
+     -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23666666' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.5rem; /* Make space for the arrow */
+}
+
+
+.settings-input:focus,
+.setting-item select:focus {
     outline: none;
-    box-shadow: 0 0 0 2px var(--primary-color-focus-shadow);
+    border-color: var(--settings-input-focus-border);
+    box-shadow: 0 0 0 3px var(--settings-input-focus-shadow);
+}
+
+textarea.settings-input {
+    resize: vertical;
+    min-height: 80px;
 }
 
 .theme-toggle {
     display: flex;
-    gap: 8px;
+    gap: 10px;
+    border: 1px solid var(--settings-input-border);
+    border-radius: 6px;
+    padding: 4px;
+    background-color: var(--settings-input-bg);
+    width: fit-content;
 }
 
 .theme-option {
-    flex: 1;
-    position: relative;
+    display: inline-block;
     cursor: pointer;
 }
 
 .theme-option input[type="radio"] {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
+    display: none; /* Hide the actual radio button */
 }
 
 .theme-radio {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 16px;
-    border: 1px solid var(--input-border);
-    border-radius: 6px;
-    background: var(--button-bg);
-    color: var(--text-color);
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 4px;
     font-size: 0.9rem;
-    transition: all 0.2s ease;
-    font-weight: 500;
-    user-select: none;
-}
-
-.theme-option:hover .theme-radio {
-    background: var(--button-hover);
+    text-align: center;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    color: var(--text-color-light);
 }
 
 .theme-option input[type="radio"]:checked + .theme-radio {
-    background: var(--primary-color);
+    background-color: var(--primary-color);
     color: #fff;
-    border-color: var(--primary-color);
     font-weight: 500;
 }
 
-/* Focus styles */
-.theme-option input[type="radio"]:focus-visible + .theme-radio {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 1px;
+.theme-option:hover .theme-radio {
+     background-color: rgba(52, 122, 184, 0.1); /* Light primary color */
+}
+.theme-option input[type="radio"]:checked:hover + .theme-radio {
+     background-color: var(--primary-color-hover); /* Darker primary on hover if checked */
 }
 
+
+.settings-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 24px;
+    border-top: 1px solid var(--settings-border-color);
+}
+
+/* General Button Styles */
 .button {
-    height: 38px;
-    padding: 0 20px;
+    padding: 10px 20px;
+    border: none;
     border-radius: 6px;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
-    text-decoration: none;
-    display: inline-flex;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    text-decoration: none; /* For link buttons */
+    display: inline-flex; /* Align text and potential icons */
     align-items: center;
     justify-content: center;
-    line-height: 1;
-    box-sizing: border-box;
 }
 
 .button.primary {
-    background: var(--primary-color);
+    background-color: var(--primary-color);
     color: #fff;
-    border: none;
 }
 
 .button.primary:hover {
-    background: var(--primary-color-hover);
+    background-color: var(--primary-color-hover);
 }
 
+.button.primary:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--primary-color-focus-shadow);
+}
+
+
 .button.secondary {
-    background: var(--button-bg);
-    color: var(--text-color);
-    border: 1px solid var(--input-border);
-    opacity: 0.9;
+    background-color: #f0f0f0;
+    color: #555;
+    border: 1px solid #ccc;
 }
 
 .button.secondary:hover {
-    background: var(--button-hover);
-    opacity: 1;
+    background-color: #e0e0e0;
 }
 
-/* SVG icons */
-svg {
-    width: 20px;
-    height: 20px;
+.button.secondary:focus {
+     outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Responsive adjustments */
-@media (max-width: 600px) {
-    .container {
-        padding: 0;
-    }
-
-    .orb {
-        width: 240px;
-        height: 240px;
-    }
-
-    .input-controls {
-        padding: 0 20px;
-        height: 50px;
-    }
-
-    .talk-button {
-        font-size: 0.8rem;
-        padding: 8px 16px;
-    }
-
-    /* Remove 'bottom: 50px;' from main in mobile view, likely only needed for chat view */
-    /* main { */
-    /*     bottom: 50px; */
-    /* } */
-
-    .settings-form {
-        margin: 0;
-        border-radius: 0;
-    }
+[data-theme="dark"] .button.secondary {
+    background-color: #444;
+    color: #ccc;
+    border-color: #555;
 }
 
-/* Height-based adjustments */
-@media (max-height: 600px) {
-    .orb {
-        width: 200px;
-        height: 200px;
-    }
-
-    .mute-button {
-        width: 50px;
-        height: 50px;
-        padding: 12px;
-    }
-
-    .mute-button svg {
-        width: 26px;
-        height: 26px;
-    }
+[data-theme="dark"] .button.secondary:hover {
+    background-color: #555;
 }
 
-/* Dark theme */
-[data-theme="dark"] {
-    background: #1a1a1a;
-    color: #fff;
-}
-
-[data-theme="dark"] .container,
-[data-theme="dark"] main {
-    background: #1a1a1a;
-}
-
-[data-theme="dark"] nav,
-[data-theme="dark"] .sidebar,
-[data-theme="dark"] .input-controls {
-    background: #242424;
-    border-color: #333;
-}
-
-[data-theme="dark"] .settings-form {
-    background: inherit;
-}
-
-[data-theme="dark"] .settings-actions {
-    border-color: rgba(255, 255, 255, 0.15);
-}
-
-/* Theme-specific styles */
-[data-theme="light"] {
-    --bg-color: #ffffff;
-    --text-color: #333333;
-    --input-bg: #f5f5f5;
-    --input-border: rgba(0, 0, 0, 0.15);
-    --input-hover: rgba(127, 204, 222, 0.1);
-    --button-bg: rgba(0, 0, 0, 0.08);
-    --button-hover: rgba(127, 204, 222, 0.15);
-}
-
-[data-theme="dark"] {
-    --bg-color: #1a1a1a;
-    --text-color: #ffffff;
-    --input-bg: rgba(255, 255, 255, 0.08);
-    --input-border: rgba(255, 255, 255, 0.15);
-    --input-hover: rgba(127, 204, 222, 0.2);
-    --button-bg: rgba(255, 255, 255, 0.1);
-    --button-hover: rgba(127, 204, 222, 0.2);
-    --dropdown-option-bg-dark: #242424; /* Specific background for dark dropdown options (nav/sidebar color) */
-}
-
-.settings-input {
-    background: var(--input-bg);
-    border-color: var(--input-border);
-    color: var(--text-color);
+[data-theme="dark"] .button.secondary:focus {
+     outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
 }
 
 
-/* Style dropdown options in dark mode */
-/* Style dropdown options in dark mode */
-[data-theme="dark"] .settings-input option {
-    background-color: var(--dropdown-option-bg-dark); /* Use specific variable */
-    color: var(--text-color); /* Ensure text is white */
-}
-
-/* Style for unselected dropdown placeholder text */
-select.settings-input:required:invalid {
-    color: rgba(0, 0, 0, 0.5); /* Placeholder color for light mode */
-}
-[data-theme="dark"] select.settings-input:required:invalid {
-    color: rgba(255, 255, 255, 0.4); /* Placeholder color for dark mode - reduced opacity */
-}
-
-[data-theme="light"] .settings-input {
-    background: var(--bg-color); /* Use main bg for inputs in light mode for contrast */
-}
-
-.text-input {
-    background: transparent;
-    border: none;
-    color: var(--text-color);
-}
-
-.nav-title,
-.settings-section h2 {
-    color: var(--text-color);
-}
-
-.setting-item label {
-    color: var(--text-color);
-    opacity: 0.7;
-}
-
-[data-theme="dark"] .menu-button,
-[data-theme="dark"] .sidebar-item,
-[data-theme="dark"] .upload-button,
-[data-theme="dark"] .send-button {
-    color: rgba(255, 255, 255, 0.7);
-}
-
-[data-theme="dark"] .sidebar-item:hover {
-    background: rgba(127, 204, 222, 0.15);
-}
-
-[data-theme="dark"] .sidebar-item.active {
-    background: rgba(127, 204, 222, 0.2);
-}
-
-[data-theme="dark"] .status-display {
-    color: rgba(255, 255, 255, 0.5);
-}
-/* ================================== */
-/* MCP Settings Styles                */
-/* ================================== */
-
+/* MCP Settings Page Specific Styles */
 .mcp-settings-content {
-    max-width: 700px; /* Slightly wider for MCP details */
-    width: 100%;
-    padding: 24px;
-    margin: 0 auto;
-    background: transparent;
-    padding-bottom: 120px; /* Added padding here instead */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
-
-
-/* Settings Page Grouping */
-.settings-group {
-    background-color: var(--input-bg); /* Subtle background color */
-    padding: 20px; /* Padding inside the group */
-    margin-bottom: 25px; /* Space between groups */
-    border-radius: 8px; /* Slightly rounded corners */
-}
-
-/* Remove the :first-child rule as it's no longer needed for borders */
-
 
 .mcp-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
     padding-bottom: 16px;
-    border-bottom: 1px solid var(--input-border);
+    border-bottom: 1px solid var(--settings-border-color); /* Use settings border var */
 }
 
 .mcp-header h1 {
-    font-size: 1.4rem;
-    font-weight: 500;
-    color: var(--text-color);
     margin: 0;
-}
-
-.mcp-header .done-button {
-    /* Uses existing .button.primary styles */
-    height: 36px;
-    padding: 0 18px;
+    font-size: 1.4rem;
+    color: var(--settings-header-text); /* Use settings header var */
 }
 
 .mcp-settings-content > p {
-    font-size: 0.9rem;
-    color: var(--text-color);
-    opacity: 0.7;
-    margin-bottom: 24px;
-    line-height: 1.5;
-}
-
-.mcp-settings-content .setting-item {
-    margin-bottom: 20px;
-    padding-left: 4px; /* Align checkboxes slightly */
-}
-
-.mcp-settings-content .setting-item label {
-    display: flex; /* Align checkbox and text */
-    align-items: center;
-    gap: 8px;
+    color: var(--text-color-light);
     font-size: 0.95rem;
-    margin-bottom: 6px; /* Reduced margin */
-    color: var(--text-color);
-    opacity: 1; /* Make label text clearer */
-    cursor: pointer;
+    margin-top: -10px; /* Pull up slightly */
 }
 
-.mcp-settings-content .setting-item input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--primary-color); /* Match primary color */
-}
-
-.mcp-settings-content .setting-item .description {
-    font-size: 0.85rem;
-    color: var(--text-color);
-    opacity: 0.6;
-    margin-left: 24px; /* Indent description */
-    margin-top: 4px;
-    line-height: 1.4;
-}
-
-
-/* MCP Server List */
 .mcp-server-list {
-    margin-top: 32px;
-    border-top: 1px solid var(--input-border);
-    padding-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
-.mcp-server-item {
-    border: 1px solid var(--input-border);
+.mcp-server-item.accordion {
+    border: 1px solid var(--mcp-border-color);
     border-radius: 8px;
-    margin-bottom: 16px;
-    background-color: var(--input-bg); /* Subtle background */
-    overflow: hidden; /* Contain borders */
+    background-color: var(--mcp-details-bg); /* Use details bg for the item */
+    overflow: hidden;
 }
 
 .mcp-server-header {
@@ -1122,85 +1051,68 @@ select.settings-input:required:invalid {
     cursor: pointer;
     transition: background-color 0.2s ease;
     gap: 10px;
+    /* Background and border are on the parent .mcp-server-item */
 }
 
 .mcp-server-header:hover {
     background-color: var(--button-hover);
 }
 
-.expand-icon {
-    font-family: monospace; /* Consistent arrow */
-    font-size: 1.1rem;
-    width: 16px; /* Fixed width */
-    text-align: center;
+.mcp-server-header .expand-icon {
+    font-size: 0.8em;
+    font-weight: bold;
+    color: var(--text-color-light);
     transition: transform 0.2s ease;
-    opacity: 0.6;
+    transform: rotate(90deg); /* Start pointing down (open) */
+    flex-shrink: 0;
 }
 
-.mcp-server-item.open > .mcp-server-header .expand-icon {
-    transform: rotate(90deg);
+.mcp-server-item:not(.open) .mcp-server-header .expand-icon {
+    transform: rotate(0deg); /* Point right when closed */
 }
 
-.server-name {
+.mcp-server-header .server-name {
+    font-weight: 600;
     flex-grow: 1;
-    font-weight: 500;
-    color: var(--text-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .server-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     margin-left: auto; /* Push controls to the right */
 }
 
-/* Basic Icon Button Style (if not globally defined) */
 .icon-button {
     background: none;
     border: none;
     padding: 4px;
     cursor: pointer;
-    color: var(--text-color);
-    opacity: 0.6;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem; /* Adjust icon size if needed */
-    width: 28px;
-    height: 28px;
+    font-size: 1.1rem; /* Adjust icon size */
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    line-height: 1; /* Ensure icon vertical alignment */
 }
 
 .icon-button:hover {
-    opacity: 0.9;
-    background-color: var(--button-hover);
+    opacity: 1;
 }
 
-.status-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-left: 6px; /* Added specific margin for spacing */
-    flex-shrink: 0; /* Prevent shrinking */
-}
+.delete-button { color: #F44336; }
+.refresh-button { color: var(--primary-color); }
 
-.status-dot.status-ok { background-color: #4CAF50; }
-.status-dot.status-error { background-color: #F44336; }
-.status-dot.status-pending { background-color: #FFC107; }
-.status-dot.status-disabled { background-color: #9E9E9E; }
-
-
-/* Switch Styles (Copied and adapted from settings.html if needed, assuming they exist) */
+/* Switch Toggle */
 .switch {
   position: relative;
   display: inline-block;
-  width: 34px; /* Smaller switch */
-  height: 20px;
-  flex-shrink: 0;
+  width: 40px; /* Smaller width */
+  height: 20px; /* Smaller height */
 }
 
-.switch input {
+.switch input { 
   opacity: 0;
   width: 0;
   height: 0;
@@ -1220,16 +1132,16 @@ select.settings-input:required:invalid {
 .slider:before {
   position: absolute;
   content: "";
-  height: 16px; /* Smaller handle */
-  width: 16px;
-  left: 2px;
-  bottom: 2px;
+  height: 14px; /* Smaller knob */
+  width: 14px;  /* Smaller knob */
+  left: 3px;   /* Adjust position */
+  bottom: 3px; /* Adjust position */
   background-color: white;
   transition: .4s;
 }
 
 input:checked + .slider {
-  background-color: var(--primary-color); /* Primary color */
+  background-color: var(--primary-color);
 }
 
 input:focus + .slider {
@@ -1237,355 +1149,355 @@ input:focus + .slider {
 }
 
 input:checked + .slider:before {
-  transform: translateX(14px); /* Adjusted translation */
+  transform: translateX(20px); /* Adjust slide distance */
 }
 
+/* Rounded sliders */
 .slider.round {
-  border-radius: 20px; /* Adjusted radius */
+  border-radius: 20px; /* Adjust roundness */
 }
 
 .slider.round:before {
   border-radius: 50%;
 }
 
+/* Status Dot */
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 4px; /* Space from switch */
+}
+.status-ok { background-color: var(--status-dot-ok); }
+.status-error { background-color: var(--status-dot-error); }
+.status-warn { background-color: var(--status-dot-warn); }
+.status-unknown { background-color: var(--status-dot-unknown); }
 
-/* MCP Server Details (Accordion Content) */
+
 .mcp-server-details {
-    display: none; /* Initially hidden */
-    padding: 16px;
-    border-top: 1px solid var(--input-border);
-    background-color: var(--bg-color); /* Match page background */
+    padding: 0 16px 16px 16px; /* No top padding, handled by header */
+    /* display: none; */ /* Controlled by JS */
 }
 
-.mcp-server-item.open > .mcp-server-details {
-    display: block; /* Show when open */
+.mcp-server-item:not(.open) .mcp-server-details {
+    display: none;
 }
 
 .details-tabs {
     display: flex;
-    gap: 4px;
+    border-bottom: 1px solid var(--mcp-border-color);
     margin-bottom: 16px;
-    border-bottom: 1px solid var(--input-border);
 }
 
 .details-tabs .tab {
     padding: 8px 12px;
     border: none;
-    background: none;
-    color: var(--text-color);
-    opacity: 0.7;
+    background-color: transparent;
     cursor: pointer;
+    color: var(--mcp-tab-text);
     font-size: 0.9rem;
+    font-weight: 500;
     border-bottom: 2px solid transparent;
-    transition: all 0.2s ease;
     margin-bottom: -1px; /* Overlap border */
+    transition: color 0.2s ease, border-color 0.2s ease;
 }
 
 .details-tabs .tab:hover {
-    opacity: 1;
-    background-color: var(--button-hover);
+    color: var(--primary-color);
 }
 
 .details-tabs .tab.active {
-    opacity: 1;
-    font-weight: 500;
+    color: var(--mcp-tab-active-text);
     border-bottom-color: var(--primary-color);
 }
 
 .details-content {
-    padding-top: 8px;
+    /* Styles for the content area below tabs */
 }
 
 .tool-details {
-    margin-bottom: 20px;
-    padding: 12px;
-    border: 1px dashed var(--input-border); /* Dashed border for distinction */
+    background-color: var(--mcp-tool-bg);
+    border: 1px solid var(--mcp-tool-border);
     border-radius: 6px;
-    background-color: rgba(127, 204, 222, 0.05); /* Subtle highlight */
+    padding: 12px;
+    margin-bottom: 12px;
 }
-
-[data-theme="dark"] .tool-details {
-     background-color: rgba(127, 204, 222, 0.1);
-}
-
 
 .tool-details h3 {
     font-size: 1rem;
-    font-weight: 500;
-    margin-bottom: 8px;
+    margin: 0 0 4px 0;
     display: inline-block; /* Align with icon */
-    margin-left: 8px;
+    margin-right: 8px;
 }
 
-.tool-icon {
-    font-size: 1.2rem;
-    opacity: 0.8;
+.tool-details .tool-icon {
+    font-size: 1.1rem;
+    margin-right: 6px;
+    display: inline-block;
+    vertical-align: middle; /* Align icon nicely */
+}
+
+.tool-details p {
+    font-size: 0.85rem;
+    color: var(--text-color-light);
+    margin: 4px 0 8px 0;
 }
 
 .tool-details label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
     font-size: 0.85rem;
-    margin-bottom: 10px;
-    color: var(--text-color);
-    opacity: 0.8;
-    cursor: pointer;
-}
-
-.tool-details label input[type="checkbox"] {
-    width: 14px;
-    height: 14px;
-}
-
-.tool-details > p { /* Description */
-    font-size: 0.85rem;
-    color: var(--text-color);
-    opacity: 0.7;
-    margin-bottom: 12px;
-    line-height: 1.4;
+    float: right; /* Position checkbox to the right */
 }
 
 .parameters {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(127, 204, 222, 0.2);
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--mcp-tool-border);
 }
 
 .parameters h4 {
     font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-color);
-    opacity: 0.6;
-    margin-bottom: 8px;
+    color: var(--text-color-light);
+    margin-bottom: 6px;
+    text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
 .parameters p {
     font-size: 0.8rem;
     color: var(--text-color);
-    opacity: 0.8;
-    margin-bottom: 4px;
+    margin: 2px 0;
     line-height: 1.4;
 }
 
 .parameters code {
-    background-color: rgba(127, 204, 222, 0.15);
+    background-color: rgba(0,0,0,0.05);
     padding: 1px 4px;
     border-radius: 3px;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 0.75rem;
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
 }
 
 [data-theme="dark"] .parameters code {
-     background-color: rgba(127, 204, 222, 0.25);
+     background-color: rgba(255,255,255,0.1);
 }
 
-/* Select dropdown in details */
-.mcp-server-details .setting-item {
-    padding-left: 0; /* Reset indent */
-    margin-top: 20px;
-}
-.mcp-server-details .setting-item label {
-     opacity: 0.7; /* Standard label opacity */
-     margin-bottom: 8px;
-}
-.mcp-server-details select {
-    /* Use existing .settings-input styles */
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--input-border);
-    border-radius: 6px;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    background: var(--input-bg);
-    color: var(--text-color);
-    appearance: none; /* Custom arrow needed */
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23333'%3E%3Cpath d='M8 11L3 6h10L8 11z'/%3E%3C/svg%3E"); /* Basic arrow */
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    background-size: 12px;
-}
-
-[data-theme="dark"] .mcp-server-details select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3E%3Cpath d='M8 11L3 6h10L8 11z'/%3E%3C/svg%3E"); /* Dark arrow */
-}
-
-.mcp-server-details select:focus {
-    border-color: var(--primary-color);
-    outline: none;
-    box-shadow: 0 0 0 2px var(--primary-color-focus-shadow);
-}
-
-.mcp-server-details .setting-item .description {
-    margin-left: 0; /* No indent needed here */
-}
-
-
-/* MCP Settings Actions */
 .mcp-settings-actions {
     display: flex;
-    gap: 12px;
-    justify-content: center; /* Center the button */
-    margin-top: 32px;
-    padding-top: 24px;
-    border-top: 1px solid var(--input-border);
-    /* margin-bottom: 24px; */ /* Removed - using padding on container instead */
+    justify-content: flex-end; /* Align button to the right */
+    margin-top: 16px;
 }
 
-/* Padding moved to original rule block */
-
-/* Keyframe Animations for Status Indicators */
-
-@keyframes orbRingPulse {
-  0% { opacity: 0.3; }
-  50% { opacity: 0.7; }
-  100% { opacity: 0.3; }
+/* Dark Mode MCP Specific */
+[data-theme="dark"] .mcp-server-item.accordion {
+    border-color: var(--mcp-border-color-dark);
+    background-color: var(--mcp-details-bg-dark);
 }
 
-[data-theme="dark"] @keyframes orbRingPulse {
-  0% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-  100% { opacity: 0.4; }
+[data-theme="dark"] .mcp-server-header:hover {
+    background-color: var(--button-hover-dark);
 }
 
-@keyframes transitionFlash {
-  0% { opacity: 0; }
-  50% { opacity: 0.15; }
-  100% { opacity: 0; }
+[data-theme="dark"] .mcp-server-header .expand-icon {
+    color: var(--text-color-dark);
+    opacity: 0.8;
 }
 
-/* Placeholder for particle burst - likely needs JS */
-@keyframes particleBurst {
-  from { transform: scale(0.5); opacity: 1; }
-  to { transform: scale(1.5); opacity: 0; }
+[data-theme="dark"] .server-controls .icon-button {
+    color: var(--text-color-dark);
+     opacity: 0.7;
+}
+[data-theme="dark"] .server-controls .delete-button { color: #E57373; } /* Lighter red */
+[data-theme="dark"] .server-controls .refresh-button { color: #81D4FA; } /* Lighter blue */
+
+[data-theme="dark"] .server-controls .icon-button:hover {
+    opacity: 1;
+}
+
+[data-theme="dark"] .status-dot {
+    /* Adjust dot colors slightly if needed for dark bg */
+}
+
+[data-theme="dark"] .details-tabs {
+    border-bottom-color: var(--mcp-border-color-dark);
+}
+
+[data-theme="dark"] .details-tabs .tab {
+    color: var(--mcp-tab-text-dark);
+}
+
+[data-theme="dark"] .details-tabs .tab:hover {
+    color: var(--primary-color); /* Keep primary color for hover */
+}
+
+[data-theme="dark"] .details-tabs .tab.active {
+    color: var(--mcp-tab-active-text-dark);
+    border-bottom-color: var(--primary-color);
+}
+
+[data-theme="dark"] .tool-details {
+    background-color: var(--mcp-tool-bg-dark);
+    border-color: var(--mcp-tool-border-dark);
+}
+
+[data-theme="dark"] .tool-details p {
+    color: var(--text-color-light); /* Keep light text for descriptions */
+}
+
+[data-theme="dark"] .parameters {
+    border-top-color: var(--mcp-tool-border-dark);
+}
+
+[data-theme="dark"] .parameters h4 {
+     color: var(--text-color-light);
+}
+
+[data-theme="dark"] .parameters p {
+    color: var(--text-color);
+}
+
+/* Dark mode styles for MCP Server page dropdowns */
+[data-theme="dark"] .mcp-server-details .setting-item select {
+    background-color: var(--settings-input-bg-dark); /* Use settings var */
+    border: 1px solid var(--settings-input-border-dark); /* Use settings var */
+    color: var(--settings-input-text-dark); /* Use settings var */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23cccccc' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.5rem; /* Make space for the arrow */
+}
+
+[data-theme="dark"] .mcp-server-details .setting-item select option {
+    background-color: var(--dropdown-option-bg-dark);
+    color: var(--settings-input-text-dark);
 }
 
 
-/* State-Specific Indicator Styles */
-
-/* --- Status Bar States --- */
-
-/* Idle State (Default) */
-.state-idle .status-icon::before {
-    content: '●'; /* Or '✓' */
-    color: #4CAF50; /* Green */
-}
-[data-theme="dark"] .state-idle .status-icon::before {
-    color: #81C784; /* Lighter Green */
+/* Dark mode style for MCP expand arrows */
+[data-theme="dark"] .mcp-server-header .expand-icon {
+    color: var(--text-color-dark);
+    opacity: 0.8;
 }
 
-/* Executing State */
-.state-executing .status-icon::before {
-    content: '⚙️';
-    color: #7E57C2; /* Purple */
-}
-[data-theme="dark"] .state-executing .status-icon::before {
-    color: #9575CD; /* Lighter Purple */
+
+/* Styles for collapsible settings groups */
+.settings-group.accordion {
+    border: 1px solid var(--settings-group-border, #eee); /* Use specific var */
+    border-radius: 8px;
+    margin-bottom: 16px;
+    background-color: var(--settings-group-bg, #fff); 
+    overflow: hidden;
 }
 
-/* Processing State */
-.state-processing .status-icon::before {
-    content: '...'; /* Simple ellipsis */
-    /* Consider animation for ellipsis dots if desired */
-    color: inherit; /* Use default text color */
+.settings-group-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    /* background-color removed */
+    border-bottom: 1px solid var(--settings-group-border, #eee); /* Use specific var */
+    transition: background-color 0.2s ease;
+    gap: 10px;
 }
 
-/* Notifying State (Icon might be temporary via JS) */
-.state-notifying .status-icon::before {
-    content: '🔔';
-    color: #42A5F5; /* Blue */
-}
-[data-theme="dark"] .state-notifying .status-icon::before {
-    color: #64B5F6; /* Lighter Blue */
-}
-/* Muted State - Simplified for better visibility */
-.state-muted .status-icon::before {
-    content: '🔇'; /* Single unicode muted speaker icon */
-    color: #FFA726; /* Orange */
-    text-shadow: 0 0 3px rgba(0, 0, 0, 0.5); /* Better visibility on all backgrounds */
+.settings-group.accordion:not(.open) .settings-group-header {
+     border-bottom: none; /* Remove border when closed */
 }
 
-/* Add a red decorative underline for emphasis */
-.state-muted .status-text {
-    position: relative;
-    color: #F44336; /* Red */
-    font-weight: 500; /* Semi-bold */
+.settings-group-header:hover {
+    background-color: var(--settings-group-header-hover-bg, #f0f0f0);
 }
 
-/* Add a highlight glow for dark mode */
-[data-theme="dark"] .state-muted .status-icon::before {
-    color: #FFB74D; /* Lighter Orange */
-    text-shadow: 0 0 4px rgba(255, 255, 255, 0.3); /* Light glow for dark mode */
+.settings-group-header .expand-icon {
+    font-size: 0.8em;
+    font-weight: bold;
+    color: var(--text-color-light, #666);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+    transform: rotate(90deg); /* Start pointing down (open) */
 }
 
-[data-theme="dark"] .state-muted .status-text {
-    color: #FF7043; /* Brighter red-orange in dark mode */
-}
-}
-
-/* Disconnected State */
-.state-disconnected .status-icon::before {
-    content: '❌';
-    color: #F44336; /* Red */
-}
-.state-disconnected .status-text {
-    color: #F44336; /* Red */
-}
-[data-theme="dark"] .state-disconnected .status-icon::before,
-[data-theme="dark"] .state-disconnected .status-text {
-    color: #E57373; /* Lighter Red */
+.settings-group.accordion:not(.open) .settings-group-header .expand-icon {
+    transform: rotate(0deg); /* Point right when closed */
 }
 
-/* --- Orb Effect States --- */
-
-/* Executing State - Ring */
-.state-executing .orb-status-ring {
-    border-color: #7E57C2; /* Purple */
-    opacity: 1; /* Make visible */
-    animation: orbRingPulse 2s infinite ease-in-out;
-}
-[data-theme="dark"] .state-executing .orb-status-ring {
-    border-color: #9575CD; /* Lighter Purple */
-}
-
-/* Processing State - Swirl (Requires modifying existing orb animation - Placeholder) */
-/* .state-processing .orb .some-inner-element { animation-duration: 0.5s; } */
-
-/* Disconnected State - Grayscale Orb */
-.state-disconnected .orb {
-    filter: grayscale(100%);
-    /* Add !important if needed to override existing animations */
-    /* animation: none !important; */ 
+.settings-group-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--settings-header-text, #333);
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-/* Notifying State - Particles (Handled by JS potentially) */
-/* .state-notifying .particle { animation: particleBurst 0.5s ease-out forwards; } */
-
-/* Transition Flash (Applied temporarily via JS) */
-.transitioning .orb::after { /* Example using pseudo-element */
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.7); /* Light mode flash */
-    border-radius: 50%;
-    animation: transitionFlash 0.15s ease-out forwards;
-    z-index: 5; /* Above orb content */
-}
-[data-theme="dark"] .transitioning .orb::after {
-    background: rgba(50, 50, 50, 0.7); /* Dark mode flash */
+.settings-group-details {
+    padding: 16px;
 }
 
-/* Placeholder for processing swirl - modify existing orb animation */
-
-/* Placeholder for status text/icon fade */
-@keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+.settings-group.accordion:not(.open) .settings-group-details {
+   display: none; /* Simple hide/show for now */
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* Dark mode adjustments for settings accordion */
+[data-theme="dark"] .settings-group.accordion {
+    border-color: var(--settings-group-border-dark, #444); /* Use specific var */
+    background-color: var(--settings-group-bg-dark, #2c2c2c);
 }
 
+[data-theme="dark"] .settings-group-header {
+    border-bottom-color: var(--settings-group-border-dark, #444); /* Use specific var */
+}
+
+[data-theme="dark"] .settings-group.accordion:not(.open) .settings-group-header {
+     border-bottom: none; /* Remove border when closed */
+}
+
+
+[data-theme="dark"] .settings-group-header:hover {
+    background-color: var(--settings-group-header-hover-bg-dark, #3a3a3a);
+}
+
+[data-theme="dark"] .settings-group-header .expand-icon {
+    color: var(--text-color-dark, #ccc);
+    opacity: 0.8;
+}
+
+[data-theme="dark"] .settings-group-header h2 {
+    color: var(--settings-header-text-dark, #eee);
+}
+
+/* ADDED: Dark mode styles for settings inputs/select */
+[data-theme="dark"] .settings-input,
+[data-theme="dark"] .setting-item select {
+    background-color: var(--settings-input-bg-dark);
+    border-color: var(--settings-input-border-dark);
+    color: var(--settings-input-text-dark);
+}
+
+[data-theme="dark"] .setting-item select {
+     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23cccccc' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E"); /* Dark arrow */
+}
+
+[data-theme="dark"] .theme-toggle {
+    border-color: var(--settings-input-border-dark);
+    background-color: var(--settings-input-bg-dark);
+}
+
+[data-theme="dark"] .theme-radio {
+    color: var(--text-color-dark);
+}
+
+[data-theme="dark"] .theme-option:hover .theme-radio {
+     background-color: rgba(82, 158, 218, 0.15); /* Darker primary hint */
+}
+[data-theme="dark"] .theme-option input[type="radio"]:checked:hover + .theme-radio {
+     background-color: var(--primary-color-hover);
+}
+
+
+/*# sourceMappingURL=app.css.map */
