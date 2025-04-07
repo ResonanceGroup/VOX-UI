@@ -14,7 +14,7 @@ class Settings {
         // Initialize settings
         this.load();
         this.setupListeners();
-        this.applyTheme();
+        // Apply theme only after loading settings (handled in load())
 
         // Handle system theme changes
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
@@ -34,7 +34,7 @@ class Settings {
             if (!response.ok) throw new Error('Failed to load settings');
             const data = await response.json();
             this.settings = { ...this.settings, ...data };
-            this.log('Successfully loaded settings:', this.settings);
+            this.log('Successfully loaded settings:', this.settings); // Restore original log
         } catch (e) {
             console.error('Error loading settings:', e);
             // Keep using defaults
@@ -106,9 +106,9 @@ class Settings {
         // Settings form
         const settingsForm = document.querySelector('.settings-form');
         if (settingsForm) {
-            settingsForm.addEventListener('submit', (e) => {
+            settingsForm.addEventListener('submit', async (e) => { // Make listener async
                 e.preventDefault();
-                this.saveSettings();
+                await this.saveSettings(); // Await the save operation
                 window.location.href = 'index.html';
             });
         }
@@ -134,7 +134,7 @@ class Settings {
     }
 
     saveSettings() {
-        this.save();
+        return this.save(); // Return the promise from save()
     }
 }
 
