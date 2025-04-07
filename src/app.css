@@ -37,17 +37,17 @@
   --send-button-hover-bg-dark: #2a6194;
   --send-button-hover-color: #5a9fde;
   --send-button-hover-color-dark: #fff;
-  --settings-bg: #f9f9f9;
+  --settings-bg: #ffffff; /* Should be white like chat page */
   --settings-bg-dark: #1e1e1e;
-  --settings-container-bg: #fff;
+  --settings-container-bg: #f9f9f9; /* Container should be light gray */
   --settings-container-bg-dark: #252526;
   --settings-border-color: #ddd; /* Default border for settings container */
   --settings-border-color-dark: #444;
   --settings-group-bg: #fff; /* Default background for settings group */
   --settings-group-bg-dark: #2c2c2c;
-  --settings-group-border: #eee; /* Default border for settings group accordion */
+  --settings-group-border: #ccc; /* Use darker border like input controls */
   --settings-group-border-dark: #444;
-  --settings-group-header-hover-bg: #f0f0f0;
+  --settings-group-header-hover-bg: #e9e9e9; /* Darken hover slightly */
   --settings-group-header-hover-bg-dark: #3a3a3a;
   --settings-header-text: #333;
   --settings-header-text-dark: #eee;
@@ -804,9 +804,9 @@ main {
     overflow-y: auto; /* Allow scrolling */
     padding: 24px;
     background-color: var(--settings-bg);
-    display: flex; /* Added for centering */
-    flex-direction: column; /* Added for centering */
-    align-items: center; /* Added for centering */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center content horizontally */
 }
 
 .settings-container {

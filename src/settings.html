@@ -48,11 +48,11 @@
 
         <main class="settings-main">
             <div class="settings-container" style="opacity: 1; transform: none;">
-                <form class="settings-form" style="opacity: 1;">
+                <form id="settings-form-id" class="settings-form" style="opacity: 1;"> <!-- Added ID -->
 
                     <div class="settings-group accordion open"> <!-- Add accordion classes, start open -->
                         <div class="settings-group-header"> <!-- New header -->
-                            <span class="expand-icon">></span>
+                            <svg class="expand-icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"></path></svg>
                             <h2>Voice Agent</h2>
                         </div>
                         <div class="settings-group-details"> <!-- Wrap existing content -->
@@ -89,7 +89,7 @@
 
                     <div class="settings-group accordion"> <!-- Add accordion classes, start closed -->
                         <div class="settings-group-header"> <!-- New header -->
-                            <span class="expand-icon">></span>
+                            <svg class="expand-icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"></path></svg>
                             <h2>MCP</h2>
                         </div>
                         <div class="settings-group-details" style="display: none;"> <!-- Wrap existing content, hide -->
@@ -104,7 +104,7 @@
 
                     <div class="settings-group accordion"> <!-- Add accordion classes, start closed -->
                          <div class="settings-group-header"> <!-- New header -->
-                            <span class="expand-icon">></span>
+                            <svg class="expand-icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"></path></svg>
                             <h2>n8n Integration</h2>
                         </div>
                         <div class="settings-group-details" style="display: none;"> <!-- Wrap existing content, hide -->
@@ -119,7 +119,7 @@
 
                     <div class="settings-group accordion"> <!-- Add accordion classes, start closed -->
                         <div class="settings-group-header"> <!-- New header -->
-                            <span class="expand-icon">></span>
+                            <svg class="expand-icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"></path></svg>
                             <h2>General UI</h2>
                         </div>
                         <div class="settings-group-details" style="display: none;"> <!-- Wrap existing content, hide -->
@@ -145,13 +145,12 @@
                         </div> <!-- Close settings-group-details -->
                     </div>
 
-                    <div class="settings-actions">
-                        <a href="index.html" class="button secondary">Cancel</a>
-                        <button type="submit" class="button primary">Save Changes</button>
-                    </div>
-                    <div style="height: 24px;"></div> <!-- Spacer div -->
-                    <!-- Removed extra br tag -->
                 </form>
+                <div class="settings-actions">
+                    <a href="index.html" class="button secondary">Cancel</a>
+                    <button type="submit" form="settings-form-id" class="button primary">Save Changes</button> <!-- Added form attribute -->
+                </div>
+                <!-- Removed extra br tag -->
             </div>
         </main>
     </div>
