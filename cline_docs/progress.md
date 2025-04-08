@@ -18,6 +18,8 @@
 - **UI Finalization - Phase B: MCP Page Integration**
     - Identified MCP Icon (`server` Codicon).
     - Integrated icon and link into sidebars (`index.html`, `settings.html`, `mcp_settings.html`).
+- **UI Finalization - Phase C: Theme Persistence Bug Fix**
+    - Resolved issue preventing global theme application after saving.
 
 ## Backend Planning (Original Plan - Deferred)
 - Architecture design completed (for old plan)
@@ -27,16 +29,16 @@
 
 # In Progress (New Plan - April 2025)
 
-## UI Finalization - Phase C: Theme Persistence Bug Fix
-- **Goal:** Diagnose and fix the global theme application issue. (Next Step)
+## Phase 3 (Original Plan): Backend Implementation
+- **Goal:** Design and implement backend architecture to support the MCP-centric UI and communication with Roo Code.
+- **Tasks:**
+    1. Design robust backend architecture. (Next Step)
+    2. Implement backend code for UI features.
 
 # Upcoming Tasks (New Plan)
 
 ## Phase 2 (Original Plan): Enhance Visualizations (Deferred)
 - **Goal:** Improve visual feedback in the main chat UI (Status Indicators, etc.).
-
-## Phase 3 (Original Plan): Backend Implementation (Deferred)
-- **Goal:** Design and implement backend architecture.
 
 ## Phase 4 (Original Plan): MCP Server for Roo Code (Deferred)
 - **Goal:** Build the specific MCP server for Roo Code interaction.
