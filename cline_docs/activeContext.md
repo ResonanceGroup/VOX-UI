@@ -4,35 +4,45 @@
 - **Project Direction Shift:** The project's focus has pivoted from building a standalone voice assistant backend (RunPod/UltraVox/Kokoro) to creating a voice UI (VOX UI) that acts as a frontend controller for the Roo Code VSCode extension via the Model Context Protocol (MCP).
 - **Previous Backend Work Deferred:** All work related to the RunPod infrastructure, UltraVox, and Kokoro TTS integration is now deferred indefinitely.
 - **Phase 1 (MCP Page HTML/CSS) Complete:** The initial HTML structure and CSS styling for the MCP Server settings page (`src/mcp_settings.html`) are complete, including sample data. JS logic and minor CSS tweaks deferred.
-- **UI Finalization - Phase A Complete:** Settings Page Overhaul (`src/settings.html`) completed with new sections (Voice Agent, MCP, n8n, General UI) and controls.
-- **UI Finalization - Phase B Complete:** MCP Icon (`server` Codicon) identified and integrated into sidebars of `index.html`, `settings.html`, and `mcp_settings.html`.
-- **UI Finalization - Phase C Complete:** Theme persistence bug fixed.
+- **UI Finalization - Phases A, B, C Complete:** Settings page overhaul, MCP icon integration, and theme persistence bug fixed.
+- **Backend Plan - Phase 1 Complete:** Research & Definition for backend architecture, interfaces, and protocols completed and documented.
+- **Backend Plan - Phase 2 Complete:** Core backend implementation in Node.js finished, including modularized Settings API, WebSocket handler, Agent Lifecycle Management, Message Routing, and MCP Client logic.
 
-## Current Focus: Phase 3 - Backend Implementation
+## Current Focus: Phase 3 - Frontend Implementation
 
-Following the plan outlined in `cline_docs/ui_finalization_plan.md` (Phases A, B, C now complete):
+Following the plan outlined in `cline_docs/backend_implementation_plan.md`:
 
-### Phase A: Settings Page Overhaul (Complete)
-- **Status:** `src/settings.html` restructured with new sections and controls.
+### UI Finalization (Phases A, B, C) (Complete)
+- **Status:** Settings page updated, MCP icon integrated, theme bug fixed.
 
-### Phase B: MCP Page Integration (Complete)
-- **Status:** Sidebar links updated across pages with the correct Codicon.
+### Backend Plan - Phase 1: Research & Definition (Complete)
+- **Status:** Interfaces, protocols, and settings structures defined.
 
-### Phase C: Theme Persistence Bug Fix (Complete)
-- **Status:** Theme now applies globally after saving.
+### Backend Plan - Phase 2: Core Backend Implementation (Complete)
+- **Status:** Node.js server logic implemented (Settings API, WS Handler, Agent Manager, Message Routing, MCP Client).
 
-### Phase 2 (Original Plan): Enhance Visualizations (Deferred)
-- This phase (including status indicators) will be addressed after the UI Finalization Plan is complete.
-
-### Phase 3 (Original Plan): Backend Implementation (In Progress)
-- **Goal:** Design and implement backend architecture to support the MCP-centric UI and communication with Roo Code.
+### Backend Plan - Phase 3: Frontend Implementation (In Progress)
+- **Goal:** Implement the frontend JavaScript logic to communicate with the backend via WebSockets and manage UI state.
 - **Tasks:**
-    1. Design robust backend architecture (communication flow, data handling, MCP interaction). (Next Step)
-    2. Implement backend code needed for UI features (MCP config handling, command relay, status updates).
+    1. Implement WebSocket Client connection logic in `src/app.js`. (Next Step)
+    2. Implement MCP Settings Page Logic (`src/mcp_settings.html` JS).
+    3. Implement UI State Updates based on `status_indicator_design.md` and WebSocket messages.
+    4. Implement Real-time Audio Handling (capture, streaming to backend, playback from backend).
+    5. Implement Settings Page save/load logic using WebSocket or updated API.
 
-### Phase 4 (Original Plan): MCP Server for Roo Code (Deferred)
-- Build the specific MCP server required to interact with Roo Code's WebSocket API.
+### Backend Plan - Phase 4: Voice Agent Module Implementation (Deferred)
+- Implement specific `IVoiceAgent` modules (UltraVox, Phi4, Qwen).
+
+### Backend Plan - Phase 5: Integration & Testing (Deferred)
+- End-to-end testing.
+
+### Original Plan - Phase 2: Enhance Visualizations (Deferred)
+- Further UI enhancements deferred.
+
+### Original Plan - Phase 4: MCP Server for Roo Code (Deferred)
+- Building the dedicated Roo Code MCP server deferred.
+
 
 # Next Steps
 
-1.  **Begin Phase 3:** Design the backend architecture, focusing on how the VOX UI frontend will communicate with Roo Code (likely via MCP) and how settings/status will be managed.
+1.  **Begin Backend Plan - Phase 3:** Implement the frontend WebSocket client connection logic in `src/app.js`.

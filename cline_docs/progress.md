@@ -27,18 +27,42 @@
 - Integration points identified (for old plan)
 - Data flow patterns defined (for old plan)
 
+## Backend Plan - Phase 1: Research & Definition
+- Researched MCP client implementation.
+- Researched Voice Agent APIs (UltraVox/Kokoro, Phi4, Qwen).
+- Defined `IVoiceAgent` interface (`src/interfaces/IVoiceAgent.ts`).
+- Defined WebSocket protocol (`cline_docs/websocket_protocol.md`).
+- Defined `settings.json` structure.
+- Aligned UI states with WebSocket protocol.
+
+## Backend Plan - Phase 2: Core Backend Implementation
+- Enhanced Settings API (`src/server/settingsApi.js`).
+- Implemented WebSocket Server (`server.js`, `src/server/webSocketHandler.js`).
+- Implemented Agent Lifecycle Management (`src/server/webSocketHandler.js`).
+- Implemented Message Routing & Agent Interaction (`src/server/webSocketHandler.js`).
+- Implemented MCP Client (`src/server/mcpClient.js`, `mcp_config.json`).
+
 # In Progress (New Plan - April 2025)
 
-## Phase 3 (Original Plan): Backend Implementation
-- **Goal:** Design and implement backend architecture to support the MCP-centric UI and communication with Roo Code.
+## Backend Plan - Phase 3: Frontend Implementation
+- **Goal:** Implement the frontend JavaScript logic to communicate with the backend via WebSockets and manage UI state.
 - **Tasks:**
-    1. Design robust backend architecture. (Next Step)
-    2. Implement backend code for UI features.
+    1. Implement WebSocket Client connection logic in `src/app.js`. (Next Step)
+    2. Implement MCP Settings Page Logic (`src/mcp_settings.html` JS).
+    3. Implement UI State Updates based on `status_indicator_design.md` and WebSocket messages.
+    4. Implement Real-time Audio Handling (capture, streaming to backend, playback from backend).
+    5. Implement Settings Page save/load logic using WebSocket or updated API.
 
 # Upcoming Tasks (New Plan)
 
-## Phase 2 (Original Plan): Enhance Visualizations (Deferred)
+## Backend Plan - Phase 4: Voice Agent Module Implementation (Deferred)
+- **Goal:** Implement specific `IVoiceAgent` modules.
+
+## Backend Plan - Phase 5: Integration & Testing (Deferred)
+- **Goal:** End-to-end testing.
+
+## Original Plan - Phase 2: Enhance Visualizations (Deferred)
 - **Goal:** Improve visual feedback in the main chat UI (Status Indicators, etc.).
 
-## Phase 4 (Original Plan): MCP Server for Roo Code (Deferred)
+## Original Plan - Phase 4: MCP Server for Roo Code (Deferred)
 - **Goal:** Build the specific MCP server for Roo Code interaction.

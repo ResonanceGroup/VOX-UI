@@ -3,45 +3,22 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 const fs = require('fs');
+const settingsApiRouter = require('./src/server/settingsApi'); // Import the settings API router
+const WebSocket = require('ws');
+const initializeWebSocketHandling = require('./src/server/webSocketHandler'); // Import the WebSocket handler
 const app = express();
 
 // Add JSON body parser
 app.use(express.json());
 
-// Settings file path
-const SETTINGS_FILE = path.join(__dirname, 'settings.json');
+// Mount the settings API router
+app.use('/api/settings', settingsApiRouter);
 
-// Initialize settings file if it doesn't exist
-if (!fs.existsSync(SETTINGS_FILE)) {
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify({
-        theme: 'light',
-        n8nwebhook: '',
-        ultravoxurl: ''
-    }));
-}
+// Settings file path is now managed in src/server/settingsApi.js
 
-// Load settings
-app.get('/api/settings', (req, res) => {
-    try {
-        const settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
-        res.json(settings);
-    } catch (err) {
-        console.error('Error loading settings:', err);
-        res.status(500).json({ error: 'Failed to load settings' });
-    }
-});
-
-// Save settings
-app.post('/api/settings', (req, res) => {
-    try {
-        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(req.body, null, 2));
-        res.json({ success: true });
-    } catch (err) {
-        console.error('Error saving settings:', err);
-        res.status(500).json({ error: 'Failed to save settings' });
-    }
-});
-
+// Settings initialization is now handled in src/server/settingsApi.js
+// Settings GET endpoint is now handled by src/server/settingsApi.js
+// Settings POST endpoint is now handled by src/server/settingsApi.js
 // SSL configuration
 const sslOptions = {
     key: fs.readFileSync(path.join(__dirname, 'cert', 'key.pem')),
@@ -106,7 +83,8 @@ http.createServer(app).listen(HTTP_PORT, '0.0.0.0', () => {
 });
 
 // HTTPS Server (for production/mobile)
-https.createServer(sslOptions, app).listen(HTTPS_PORT, '0.0.0.0', () => {
+const httpsServer = https.createServer(sslOptions, app); // Get a reference to the server
+httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
     const ifaces = require('os').networkInterfaces();
     console.log(`\nHTTPS Server running at:`);
     console.log(`- Local: https://localhost:${HTTPS_PORT}`);
@@ -119,4 +97,12 @@ https.createServer(sslOptions, app).listen(HTTPS_PORT, '0.0.0.0', () => {
     });
 });
 
+
+// WebSocket Server Setup
+const wss = new WebSocket.Server({ server: httpsServer });
+
+// Initialize WebSocket handling using the dedicated module
+initializeWebSocketHandling(wss);
+
+console.log(`WebSocket Server attached to HTTPS server on port ${HTTPS_PORT}`);
 console.log('\nStatic files served from:', path.join(__dirname, 'src'));
