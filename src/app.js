@@ -138,9 +138,102 @@ class Settings {
     }
 }
 
+// WebSocket Client Class
+class WebSocketClient {
+    constructor(url) {
+        this.url = url;
+        this.ws = null;
+        this.reconnectInterval = 5000; // 5 seconds
+        this.debug = true; // Enable logging
+        this.log('WebSocketClient initialized.');
+        this.connect();
+    }
+
+    log(...args) {
+        if (this.debug) {
+            console.log('[WebSocketClient]', ...args);
+        }
+    }
+
+    connect() {
+        this.log(`Attempting to connect WebSocket to ${this.url}...`);
+        try {
+            this.ws = new WebSocket(this.url);
+        } catch (error) {
+            console.error('[WebSocketClient] Error creating WebSocket:', error);
+            this.scheduleReconnect();
+            return;
+        }
+
+
+        this.ws.onopen = () => {
+            this.log('Connection established.');
+            // Future: Send init_session message here
+            // this.sendMessage('init_session', {});
+        };
+
+        this.ws.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                this.log('Message received:', message);
+                // TODO: Add logic to handle different message types based on protocol
+            } catch (error) {
+                console.error('[WebSocketClient] Failed to parse message:', error, 'Raw data:', event.data);
+            }
+        };
+
+        this.ws.onerror = (error) => {
+            console.error('[WebSocketClient] WebSocket error:', error);
+            // onclose will likely be called next, triggering reconnection.
+        };
+
+        this.ws.onclose = (event) => {
+            this.log(`Connection closed. Code: ${event.code}, Reason: '${event.reason}'. Reconnecting in ${this.reconnectInterval / 1000}s...`);
+            this.ws = null; // Clear the old socket object
+            this.scheduleReconnect();
+        };
+    }
+
+    scheduleReconnect() {
+         // Avoid multiple reconnect timers
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+        }
+        this.reconnectTimer = setTimeout(() => {
+            this.log('Attempting reconnect...');
+            this.connect();
+        }, this.reconnectInterval);
+    }
+
+    sendMessage(type, payload) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            try {
+                const message = JSON.stringify({ type, payload });
+                this.log('Sending message:', { type, payload });
+                this.ws.send(message);
+            } catch (error) {
+                 console.error('[WebSocketClient] Error sending message:', error, { type, payload });
+            }
+        } else {
+            console.error('[WebSocketClient] WebSocket not open. Cannot send message:', { type, payload });
+            // Optional: Implement message queuing if needed
+        }
+    }
+}
+
 // Initialize when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.settings = new Settings();
+    // Initialize WebSocket Client
+    console.log('Initializing WebSocket client...');
+    const websocketUrl = `wss://${window.location.hostname}:3002`; // Use hostname and specific port
+    // Fallback for local development if hostname isn't resolving correctly or for file:// protocol
+    // const websocketUrl = 'wss://localhost:3002'; 
+    window.wsClient = new WebSocketClient(websocketUrl);
+    // Helper for easy console access
+    window.sendWebSocketMessage = (type, payload) => window.wsClient.sendMessage(type, payload);
+    console.log('WebSocket client setup complete. Access via window.wsClient or sendWebSocketMessage(type, payload).');
+
     
     // Get UI elements
     const menuButton = document.querySelector('.menu-button');
