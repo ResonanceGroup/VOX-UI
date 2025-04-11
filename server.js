@@ -6,6 +6,7 @@ const fs = require('fs');
 const settingsApiRouter = require('./src/server/settingsApi'); // Import the settings API router
 const WebSocket = require('ws');
 const initializeWebSocketHandling = require('./src/server/webSocketHandler'); // Import the WebSocket handler
+const mcpApiRouter = require('./src/server/mcpApi'); // Import the MCP API router
 const app = express();
 
 // Add JSON body parser
@@ -14,6 +15,7 @@ app.use(express.json());
 // Mount the settings API router
 app.use('/api/settings', settingsApiRouter);
 
+app.use('/api/mcp', mcpApiRouter); // Mount the MCP API router
 // Settings file path is now managed in src/server/settingsApi.js
 
 // Settings initialization is now handled in src/server/settingsApi.js

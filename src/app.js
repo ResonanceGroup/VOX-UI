@@ -168,8 +168,31 @@ class WebSocketClient {
 
         this.ws.onopen = () => {
             this.log('Connection established.');
-            // Future: Send init_session message here
-            // this.sendMessage('init_session', {});
+
+            // Send the init_session message using loaded settings
+            try {
+                if (!window.settings || !window.settings.settings) {
+                    throw new Error('Settings not available on window object.');
+                }
+                const settingsData = window.settings.settings;
+                const agentType = settingsData.active_voice_agent;
+                const agentConfig = settingsData.voice_agent_config?.[agentType] || {}; // Use optional chaining and default to empty object
+
+                if (!agentType) {
+                     console.warn('[WebSocketClient] No active_voice_agent found in settings. Cannot send init_session.');
+                     return; // Don't send if no agent type is set
+                }
+
+                this.log(`Sending init_session for agentType: ${agentType}`, agentConfig);
+                this.sendMessage('init_session', {
+                    agentType: agentType,
+                    config: agentConfig
+                });
+
+            } catch (error) {
+                console.error('[WebSocketClient] Error preparing or sending init_session message:', error);
+                // Optionally, close the connection or notify the user
+            }
         };
 
         this.ws.onmessage = (event) => {
@@ -224,36 +247,29 @@ class WebSocketClient {
 // Initialize when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.settings = new Settings();
-    // Initialize WebSocket Client
-    console.log('Initializing WebSocket client...');
-    const websocketUrl = `wss://${window.location.hostname}:3002`; // Use hostname and specific port
-    // Fallback for local development if hostname isn't resolving correctly or for file:// protocol
-    // const websocketUrl = 'wss://localhost:3002'; 
-    window.wsClient = new WebSocketClient(websocketUrl);
-    // Helper for easy console access
-    window.sendWebSocketMessage = (type, payload) => window.wsClient.sendMessage(type, payload);
-    console.log('WebSocket client setup complete. Access via window.wsClient or sendWebSocketMessage(type, payload).');
+
+    // Load settings first, then initialize WebSocket and the rest of the UI logic
+    window.settings.load().then(() => {
+        console.log('Settings loaded, initializing WebSocket client...');
+        const websocketUrl = `wss://${window.location.hostname}:3002`; // Use hostname and specific port
+        // Fallback for local development if hostname isn't resolving correctly or for file:// protocol
+        // const websocketUrl = 'wss://localhost:3002';
+        window.wsClient = new WebSocketClient(websocketUrl);
+        // Helper for easy console access
+        window.sendWebSocketMessage = (type, payload) => window.wsClient.sendMessage(type, payload);
+        console.log('WebSocket client setup complete. Access via window.wsClient or sendWebSocketMessage(type, payload).');
 
     
-    // Get UI elements
-    const menuButton = document.querySelector('.menu-button');
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.querySelector('.overlay');
-
+    // Get UI elements (declarations moved inside .then())
 
 
     
-    // Handle sidebar toggle
-    function toggleSidebar() {
-        sidebar.classList.toggle('open');
-        overlay.classList.toggle('visible');
-    }
-    
-    menuButton?.addEventListener('click', toggleSidebar);
-    overlay?.addEventListener('click', toggleSidebar);
+    // Handle sidebar toggle (logic moved inside .then())
+    // function toggleSidebar() { ... } // Definition moved
+    // menuButton?.addEventListener('click', toggleSidebar); // Listener moved
+    // overlay?.addEventListener('click', toggleSidebar); // Listener moved
 
-    // Set active sidebar item based on current page
-    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    // Set active sidebar item based on current page (declaration moved inside .then())
     document.querySelectorAll('.sidebar-item').forEach(item => {
         const itemPage = item.getAttribute('href').split('/').pop();
         if (itemPage === currentPage) {
@@ -283,4 +299,57 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentPage === 'index.html' && window.AudioVisualizer) {
         window.audioVisualizer = new AudioVisualizer();
     }
+        // --- Start: Moved original DOMContentLoaded logic inside .then() ---
+        
+        // Get UI elements
+        const menuButton = document.querySelector('.menu-button');
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.overlay');
+
+        // Handle sidebar toggle
+        function toggleSidebar() {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('visible');
+        }
+        
+        menuButton?.addEventListener('click', toggleSidebar);
+        overlay?.addEventListener('click', toggleSidebar);
+
+        // Set active sidebar item based on current page
+        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        document.querySelectorAll('.sidebar-item').forEach(item => {
+            const itemPage = item.getAttribute('href').split('/').pop();
+            if (itemPage === currentPage) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+
+
+        // Accordion logic for settings page
+        document.querySelectorAll('.settings-group-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const group = header.closest('.settings-group.accordion');
+                if (group) {
+                    group.classList.toggle('open');
+                    const details = group.querySelector('.settings-group-details');
+                    if (details) {
+                        // Toggle display based on 'open' class presence
+                        details.style.display = group.classList.contains('open') ? 'block' : 'none';
+                    }
+                }
+            });
+        });
+
+        // Initialize audio visualizer if on chat page
+        if (currentPage === 'index.html' && window.AudioVisualizer) {
+            window.audioVisualizer = new AudioVisualizer();
+        }
+        // --- End: Moved original DOMContentLoaded logic inside .then() ---
+
+    }).catch(error => {
+        console.error("Failed to load settings before initializing WebSocket:", error);
+        // Consider showing an error message to the user here
+    });
 });
