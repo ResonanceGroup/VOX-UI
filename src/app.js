@@ -199,6 +199,16 @@ class WebSocketClient {
             try {
                 const message = JSON.parse(event.data);
                 this.log('Message received:', message);
+                if (message.type === 'status_update') {
+                    // Call the UI update function (defined outside the class)
+                    if (typeof updateUIState === 'function') {
+                        updateUIState(message.payload);
+                    } else {
+                        console.error('[WebSocketClient] updateUIState function not found.');
+                    }
+                } else {
+                    // Original TODO removed as logic is now handled above
+                }
                 // TODO: Add logic to handle different message types based on protocol
             } catch (error) {
                 console.error('[WebSocketClient] Failed to parse message:', error, 'Raw data:', event.data);
@@ -258,6 +268,92 @@ document.addEventListener('DOMContentLoaded', () => {
         // Helper for easy console access
         window.sendWebSocketMessage = (type, payload) => window.wsClient.sendMessage(type, payload);
         console.log('WebSocket client setup complete. Access via window.wsClient or sendWebSocketMessage(type, payload).');
+
+
+        // --- UI State Update Logic ---
+        const statusDisplay = document.getElementById('status-display');
+        const statusIcon = statusDisplay?.querySelector('.status-icon');
+        const statusText = statusDisplay?.querySelector('.status-text');
+        const bodyElement = document.body;
+        const allStateClasses = ['state-idle', 'state-listening', 'state-processing', 'state-speaking', 'state-muted', 'state-error', 'state-thinking', 'state-interrupted']; // Add all possible states
+
+        function updateUIState(payload) {
+            if (!statusDisplay || !statusIcon || !statusText) {
+                console.error('Status display elements not found.');
+                return;
+            }
+
+            const { status, context } = payload;
+            const newStateClass = `state-${status}`;
+            let iconContent = '';
+            let textContent = '';
+            let addEllipsisClass = false;
+
+            // Remove existing state classes
+            bodyElement.classList.remove(...allStateClasses);
+            statusDisplay.classList.remove('ellipsis-active'); // Remove ellipsis class specifically
+
+            // Determine new state content
+            switch (status) {
+                case 'idle':
+                    iconContent = '●';
+                    textContent = 'Ready to assist...';
+                    break;
+                case 'listening':
+                    iconContent = '🎙️';
+                    textContent = 'Listening...';
+                    break;
+                case 'processing':
+                    // Icon might be hidden via CSS for processing, or set a specific one
+                    iconContent = '⚙️'; // Example: gear icon
+                    textContent = context?.label || 'Processing...';
+                    addEllipsisClass = true; // Activate ellipsis animation
+                    break;
+                case 'speaking':
+                    iconContent = '🔊';
+                    textContent = context?.label || 'Speaking...';
+                    break;
+                case 'muted':
+                    iconContent = '🎙️🚫';
+                    textContent = 'Microphone Muted';
+                    break;
+                case 'error':
+                    iconContent = '❌';
+                    textContent = context?.label || 'An error occurred.';
+                    break;
+                case 'thinking': // Assuming 'thinking' state exists
+                    iconContent = '🤔'; 
+                    textContent = context?.label || 'Thinking...';
+                    break;
+                case 'interrupted': // Assuming 'interrupted' state exists
+                    iconContent = '🔔';
+                    textContent = context?.label || 'Interrupted.';
+                    break;
+                default:
+                    console.warn(`Unknown status received: ${status}`);
+                    iconContent = '?'; // Default unknown icon
+                    textContent = `Status: ${status}`; 
+            }
+
+            // Apply new state class to body
+            if (allStateClasses.includes(newStateClass)) {
+                 bodyElement.classList.add(newStateClass);
+            } else {
+                console.warn(`Attempted to add unknown state class: ${newStateClass}`);
+            }
+
+            // Update status bar content
+            statusIcon.textContent = iconContent;
+            statusText.textContent = textContent;
+
+            // Add ellipsis class if needed
+            if (addEllipsisClass) {
+                statusDisplay.classList.add('ellipsis-active');
+            }
+            
+            console.log(`[UI Update] Status: ${status}, Context:`, context);
+        }
+        // --- End UI State Update Logic ---
 
     
     // Get UI elements (declarations moved inside .then())
