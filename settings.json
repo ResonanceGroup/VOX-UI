@@ -1,5 +1,10 @@
 {
   "theme": "light",
-  "n8nwebhook": "https://test-n8n-webhook.example.com",
-  "ultravoxurl": ""
+  "mcp_config_path": "",
+  "active_voice_agent": "ultravox",
+  "voice_agent_config": {
+    "ultravox": {},
+    "phi4": {},
+    "qwen": {}
+  }
 }

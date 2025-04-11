@@ -1,203 +1,111 @@
-# VOX UI Backend Architecture &amp; Implementation Plan
+# VOX UI Backend Architecture & Implementation Plan
 
-**Version:** 1.0
-**Date:** 2025-04-08
+**Version:** 1.1
+**Date:** 2025-04-10
 
-**Overall Goal:** Build a robust Node.js backend for VOX UI that manages WebSocket connections with the frontend, interacts with swappable Voice Agents via a common interface, and leverages MCP servers for enhanced capabilities.
+**Overall Goal:** Build a robust, modular Node.js backend for VOX UI that manages WebSocket connections with the frontend, interacts with swappable Voice Agents via a common interface, and leverages MCP servers for enhanced capabilities.
 
-**Core Architecture:**
--   **Frontend:** HTML/CSS/JS (`src/`) served by Node.js. Communicates via WebSocket.
--   **Backend:** Node.js/Express (`server.js`) acting as:
-    -   WebSocket Gateway for Frontend.
-    -   Voice Agent Manager (using `IVoiceAgent` abstraction).
-    -   MCP Client (connecting to servers defined in `mcp_config.json`).
--   **Voice Agents:** Pluggable modules (UltraVox+Kokoro, Phi4, Qwen, etc.) implementing `IVoiceAgent`.
--   **MCP Servers:** External servers (including future Roo Code server) providing tools/resources accessible via the backend.
-
-**Diagram:**
-
-```mermaid
-sequenceDiagram
-    participant FE as Frontend (Browser)
-    participant BE as Backend (Node.js)
-    participant VA as Active Voice Agent (e.g., UltraVox)
-    participant MCP as External MCP Server(s)
-    participant RC as Roo Code MCP (Future)
-
-    Note over FE, BE: Initial Setup &amp; Session Start
-    FE->>BE: Establish WebSocket
-    BE-->>FE: WebSocket Opened
-    FE->>BE: start_session (config: use UltraVox)
-    BE->>VA: Initialize UltraVox Agent
-    VA-->>BE: Agent Ready
-    BE->>MCP: Connect to configured MCP Servers (reads mcp_config.json)
-    MCP-->>BE: MCP Connections Ready
-    BE-->>FE: session_started (agent: UltraVox)
-
-    Note over FE, BE, VA: User Sends Voice Input
-    FE->>BE: audio_chunk (via WebSocket)
-    BE->>VA: processAudioStream(chunk)
-    Note right of VA: Agent processes audio (STT)
-    VA->>BE: Request: Use 'brave_search' MCP tool (query: "weather")
-    BE->>MCP: use_mcp_tool(server: 'brave', tool: 'brave_web_search', args: {query: "weather"})
-    MCP-->>BE: MCP Tool Result (weather info)
-    BE->>VA: provideToolResult(weather info)
-    Note right of VA: Agent incorporates result, generates response (TTS)
-    VA->>BE: audio_response_chunk
-    BE-->>FE: audio_chunk (via WebSocket)
-    FE->>FE: Play TTS Audio
-
-    Note over FE, BE, RC: User sends command for Roo Code (via Text)
-    FE->>BE: text_input (command: "Roo: read file main.py")
-    BE->>VA: processText("Roo: read file main.py")
-    Note right of VA: Agent identifies Roo Code target
-    VA->>BE: Request: Use 'roo_code' MCP tool (tool: 'read_file', args: {path: 'main.py'})
-    BE->>RC: use_mcp_tool(server: 'roo_code_server', tool: 'read_file', args: {path: 'main.py'})
-    RC-->>BE: MCP Tool Result (file content)
-    BE->>VA: provideToolResult(file content)
-    VA->>BE: text_response ("Okay, here is main.py: ...")
-    BE-->>FE: text_response (via WebSocket)
-```
+**Guiding Principle:** Favor breaking functionality into smaller, separate files/modules (e.g., WebSocket handling, Agent management, MCP client logic, Settings API) rather than putting everything in `server.js`.
 
 ---
 
-## Phased Implementation Plan
+## Phase 1: Research & Definition (Complete)
 
-### Phase 1: Research &amp; Definition (Laying the Groundwork)
+*   **(Tasks 1.1-1.6):** Research conducted, interfaces (`IVoiceAgent.ts`), protocols (`websocket_protocol.md`), and settings structures (`settings.json`) defined. Research summaries available in `cline_docs/research/`.
 
-*   **Objective:** Gather necessary information and define the core interfaces and data structures before implementation begins.
+---
 
-*   **Task 1.1: Research MCP Protocol**
-    *   **Goal:** Understand MCP client best practices (connection, tool use, resource access, status, errors) relevant to this project.
-    *   **Instructions for Delegation (Researcher Mode):**
-        ```
-        Research the Model Context Protocol (MCP). Focus on the client-side perspective. Find official documentation or reliable resources explaining:
-        1. How an MCP client connects to an MCP server (including handling configuration files).
-        2. The standard way to invoke tools (`use_mcp_tool`) and handle responses/errors.
-        3. The standard way to access resources (`access_mcp_resource`).
-        4. How status updates might be pushed from server to client (if defined in the protocol).
-        5. Common error handling patterns.
-        Summarize findings in a markdown document, highlighting aspects relevant for a Node.js client facilitating tool use for a voice agent.
-        ```
-    *   **Deliverable:** Markdown document summarizing MCP client implementation details.
+## Phase 2: Core Backend Implementation (Next)
 
-*   **Task 1.2: Research Voice Agent Implementations**
-    *   **Goal:** Document technical interaction details for each target voice agent.
-    *   **Instructions for Delegation (Researcher Mode - potentially 3 separate tasks):**
-        *   **Task 1.2.1 (UltraVox+Kokoro):**
-            ```
-            Research how to interact with UltraVox (for STT) and Kokoro TTS from a Node.js application. Identify:
-            1. APIs, SDKs, or libraries available.
-            2. Connection methods (HTTP, WebSockets, local process?).
-            3. Data formats for sending audio (for STT) and text (for TTS).
-            4. Data formats for receiving text (from STT) and audio (from TTS).
-            5. Methods for real-time streaming input/output.
-            6. Configuration options required.
-            Summarize findings in a markdown document suitable for guiding the implementation of a Node.js module. Include code snippets if available.
-            ```
-        *   **Task 1.2.2 (Phi-4 Multimodal):**
-            ```
-            Research how to interact with the Phi-4 Multimodal model from a Node.js application, focusing on voice/text interaction. Identify:
-            1. Official APIs, SDKs, or libraries.
-            2. Authentication methods.
-            3. Data formats for sending audio/text prompts.
-            4. Data formats for receiving text/audio responses.
-            5. Methods for real-time streaming input/output if supported.
-            6. Key configuration parameters.
-            Summarize findings in a markdown document suitable for guiding the implementation of a Node.js module. Include code snippets if available.
-            ```
-        *   **Task 1.2.3 (Qwen2.5-Omni-7B):**
-            ```
-            Research how to interact with the Qwen2.5-Omni-7B model from a Node.js application, focusing on voice/text interaction. Identify:
-            1. Available APIs, SDKs, or libraries (e.g., via Hugging Face, specific providers).
-            2. Authentication/connection methods.
-            3. Data formats for sending audio/text prompts.
-            4. Data formats for receiving text/audio responses.
-            5. Methods for real-time streaming input/output if supported.
-            6. Configuration requirements (model endpoints, parameters).
-            Summarize findings in a markdown document suitable for guiding the implementation of a Node.js module. Include code snippets if available.
-            ```
-    *   **Deliverable:** Separate markdown documents for each voice agent detailing interaction methods.
+**Objective:** Implement the central Node.js server logic based on Phase 1 definitions, emphasizing modularity.
 
-*   **Task 1.3: Define `IVoiceAgent` Interface**
-    *   **Goal:** Create a stable TypeScript/JavaScript interface contract for all voice agent modules.
-    *   **Instructions for Delegation (Code Mode):**
-        ```
-        Based on the research from Tasks 1.1 and 1.2 (results will be provided), and considering the need for real-time audio streaming and MCP tool integration, define a detailed TypeScript interface named `IVoiceAgent`. It should include:
-        - Constructor signature (accepting agent-specific config).
-        - Methods for initialization and shutdown.
-        - Methods to process incoming text messages and audio chunks/streams.
-        - An event emitter mechanism (`on`, `off`) to signal:
-            - `status_update` (e.g., 'listening', 'processing', 'speaking')
-            - `text_response`
-            - `audio_response_chunk`
-            - `request_mcp_tool` (payload should include requestId, serverName, toolName, arguments)
-            - `error`
-        - A method to receive results from executed MCP tools (`provideMcpToolResult(requestId, result)`).
-        Document the interface with TSDoc comments explaining each method and event. Place the definition in a suitable new file (e.g., `src/interfaces/IVoiceAgent.ts`).
-        ```
-    *   **Deliverable:** `src/interfaces/IVoiceAgent.ts` file containing the interface definition.
+1.  **Settings API Enhancement:**
+    *   **Action:** Update the `/api/settings` GET and POST endpoints in `server.js` (or a dedicated `settingsApi.js` module).
+    *   **Details:** Modify endpoints to read/write the new `settings.json` structure (including `active_voice_agent`, nested `voice_agent_config`).
+2.  **WebSocket Server Setup:**
+    *   **Action:** Integrate `ws` library with Express in `server.js` (or a dedicated `webSocketServer.js` module).
+    *   **Details:** Handle connections, disconnections, basic message listening, and errors.
+3.  **Agent Lifecycle Management:**
+    *   **Action:** Implement logic (e.g., in an `agentManager.js` module) to manage the active voice agent based on WebSocket messages.
+    *   **Details:** Handle `init_session` (load module, instantiate, call `initialize`), handle `close`/`terminate_session` (call `shutdown`).
+4.  **Message Routing & Agent Interaction:**
+    *   **Action:** Implement logic (likely within the WebSocket handler or `agentManager.js`) to route messages between FE and the active agent.
+    *   **Details:** Parse incoming messages (`text_input`, `audio_chunk`, `end_audio_stream`) and call corresponding agent methods. Listen for agent events (`status_update`, `text_response`, `audio_response_chunk`, `error`, `request_mcp_tool`) and forward formatted messages to the FE via WebSocket.
+5.  **MCP Client Implementation:**
+    *   **Action:** Implement core MCP client logic (e.g., in an `mcpClient.js` module).
+    *   **Details:**
+        *   Load/parse MCP config file (path from `settings.json`). Define config structure (array of server objects: name, command/url, enabled).
+        *   Manage connections to enabled servers (child processes/HTTP/WS clients). Handle errors/retries, capability negotiation.
+        *   Implement `tools/list`, `resources/list` discovery and store results.
+        *   Handle `request_mcp_tool` event from agent: find server, validate, send `tools/call`, handle response/errors, call `agent.provideMcpToolResult`.
+        *   Implement basic `resources/read`.
+        *   Handle incoming notifications (`notifications/message`, etc.) and log/forward.
+        *   Implement robust JSON-RPC error handling.
 
-*   **Task 1.4: Define WebSocket Communication Protocol**
-    *   **Goal:** Specify message types and structures for Frontend <-> Backend communication.
-    *   **Instructions for Delegation (Architect/Code Mode):**
-        ```
-        Define the JSON message structures for the WebSocket communication between the VOX UI frontend and the Node.js backend. Cover the following interactions:
-        - Session initiation (FE -> BE): Specify agent type, config.
-        - Session confirmation (BE -> FE): Confirm agent started.
-        - Text input (FE -> BE).
-        - Audio input streaming (FE -> BE): `audio_chunk`, `end_audio_stream`.
-        - Text response (BE -> FE).
-        - Audio response streaming (BE -> FE): `audio_chunk`.
-        - Agent status updates (BE -> FE): Align with states needed for UI (`status_indicator_design.md`).
-        - MCP Tool results (BE -> FE): How results are relayed if needed directly by FE (or confirm if only agent needs them).
-        - Error reporting (BE -> FE).
-        - Settings updates (FE -> BE).
-        Document this protocol clearly in a markdown file (e.g., `cline_docs/websocket_protocol.md`).
-        ```
-    *   **Deliverable:** `cline_docs/websocket_protocol.md` detailing the message formats.
+---
 
-*   **Task 1.5: Define `settings.json` Structure**
-    *   **Goal:** Finalize the JSON structure for persistent settings.
-    *   **Instructions for Delegation (Architect/Code Mode):**
-        ```
-        Define the definitive JSON structure for the `settings.json` file. It must include:
-        - `theme`: string ('light', 'dark', 'system')
-        - `mcp_config_path`: string (absolute or relative path)
-        - `active_voice_agent`: string (e.g., 'ultravox', 'phi4', 'qwen')
-        - `voice_agent_config`: object (nested object where keys are agent identifiers like 'ultravox', 'phi4', etc., and values are agent-specific configuration objects).
-        Provide an example `settings.json` file content based on this structure. Update the existing `settings.json` file with this new structure and sensible defaults (leave agent configs empty initially).
-        ```
-    *   **Deliverable:** Updated `settings.json` file.
+## Phase 3: Frontend Implementation
 
-*   **Task 1.6: Define UI State Mapping &amp; Protocol Alignment**
-    *   **Goal:** Validate `status_indicator_design.md` against agent states and ensure the WebSocket protocol enables triggering these UI states.
-    *   **Instructions for Delegation (Architect/Code Mode):**
-        ```
-        Review `cline_docs/status_indicator_design.md` and the proposed WebSocket protocol definition (from Task 1.4).
-        1. Verify that the agent status updates defined in the WebSocket protocol directly map to the UI states described in the design doc (Idle, Executing Tools, Processing, Disconnected, etc.).
-        2. Identify any gaps or mismatches.
-        3. Update either the WebSocket protocol definition or propose minor adjustments to the UI state design doc if necessary for alignment.
-        Document findings or confirmations in a markdown file or as comments in the relevant documents.
-        ```
-    *   **Deliverable:** Confirmation of alignment or documented adjustments needed.
+**Objective:** Implement the frontend logic to interact with the backend.
 
-### Phase 2: Core Backend Implementation
+*   **(Tasks 3.1-3.4 - Original):** Implement WebSocket Client, UI State Updates (based on `status_indicator_design.md`), Real-time Audio Handling.
+*   **Task 3.5: MCP Settings Page Logic (`mcp_settings.html`):**
+    *   **Action:** Implement JS logic for the MCP settings page.
+    *   **Details:** Fetch server list (`/api/mcp/servers`), populate list, implement accordion, enable/disable toggle, refresh button. Implement "Edit MCP Servers" button (trigger opening config file). Fetch/display discovered tools/resources. *(Delete functionality removed)*.
+*   **Task 3.6: Backend API for MCP UI:**
+    *   **Action:** Create API endpoints in `server.js` (or `mcpApi.js`).
+    *   **Details:**
+        *   `/api/mcp/servers` (GET): Return server list from config + status/discovery info.
+        *   `/api/mcp/servers/:serverName/toggle` (POST): Enable/disable server.
+        *   `/api/mcp/servers/:serverName/refresh` (POST): Trigger rediscovery.
+        *   `/api/mcp/config/open` (POST): Trigger opening config file. *(DELETE endpoint removed)*.
 
-*   **Objective:** Implement the central Node.js server logic.
-*   **(Tasks 2.1-2.5):** Implement WebSocket Server, MCP Client, Agent Lifecycle, Settings API, MCP Facilitation based on Phase 1 definitions. *(Delegate to Code Mode)*
+---
 
-### Phase 3: Frontend Implementation
+## Phase 4: Voice Agent Module Implementation
 
-*   **Objective:** Implement the frontend logic.
-*   **(Tasks 3.1-3.4):** Implement WebSocket Client, Settings Page, UI State Updates (based on `status_indicator_design.md`), Real-time Audio Handling. *(Delegate to Code Mode)*
+**Objective:** Create the specific agent modules.
+*   **(Tasks 4.1-4.3):** Implement `UltraVoxKokoroAgent`, `Phi4Agent`, `QwenAgent` modules adhering to `IVoiceAgent`.
 
-### Phase 4: Voice Agent Module Implementation
+---
 
-*   **Objective:** Create the specific agent modules.
-*   **(Tasks 4.1-4.3):** Implement `UltraVoxKokoroAgent`, `Phi4Agent`, `QwenAgent` modules adhering to `IVoiceAgent`. *(Delegate to Code Mode, potentially one per agent)*
+## Phase 5: Integration & Testing
 
-### Phase 5: Integration &amp; Testing
+**Objective:** Ensure all components work together.
+*   **(Tasks 5.1-5.4):** End-to-end testing, agent switching tests, settings tests, MCP integration tests.
 
-*   **Objective:** Ensure all components work together.
-*   **(Tasks 5.1-5.4):** End-to-end testing, agent switching tests, settings tests, MCP integration tests. *(Delegate to Code/Debug Mode)*
+---
+
+## Conceptual Backend Diagram
+
+```mermaid
+graph TD
+    subgraph Node.js Backend
+        direction LR
+        ServerCore[server.js/Express]
+        WSHandler[webSocketHandler.js]
+        AgentMgr[agentManager.js]
+        MCPClient[mcpClient.js]
+        SettingsAPI[settingsApi.js]
+        MCPApi[mcpApi.js]
+        Store[settings.json]
+        MCPConf[mcp_config.json]
+
+        ServerCore --> WSHandler;
+        ServerCore --> SettingsAPI;
+        ServerCore --> MCPApi;
+        WSHandler <--> AgentMgr;
+        AgentMgr -- Instantiates --> Agent(Active IVoiceAgent);
+        Agent -- Emits Events --> AgentMgr;
+        AgentMgr -- Calls Methods --> Agent;
+        AgentMgr --> MCPClient;
+        MCPClient -- Reads --> MCPConf;
+        MCPClient -- Calls --> Agent(provideMcpToolResult);
+        SettingsAPI -- Reads/Writes --> Store;
+        MCPApi -- Uses --> MCPClient;
+        MCPApi -- Reads/Writes --> MCPConf;
+
+
+    end
+
+    FE[Frontend (app.js)] -- WebSocket --> WSHandler;
