@@ -7,7 +7,7 @@
 - Settings page structure (basic)
 - Navigation controls
 - **Phase 1: MCP Server Page UI (HTML/CSS)**
-    - HTML structure created (`src/mcp_settings.html`).
+    - HTML structure created (`src/mcp_servers.html`). *(Corrected filename)*
     - CSS styling applied (`src/app.css`).
     - Sample server data included.
     - *Note: JS functionality deferred.*
@@ -17,9 +17,15 @@
     - Updated inputs (Model dropdown, Textarea height).
 - **UI Finalization - Phase B: MCP Page Integration**
     - Identified MCP Icon (`server` Codicon).
-    - Integrated icon and link into sidebars (`index.html`, `settings.html`, `mcp_settings.html`).
+    - Integrated icon and link into sidebars (`index.html`, `settings.html`, `mcp_servers.html`). *(Corrected filename)*
 - **UI Finalization - Phase C: Theme Persistence Bug Fix**
     - Resolved issue preventing global theme application after saving.
+- **Backend Plan - Phase 3: Frontend Implementation**
+    - Implemented WebSocket Client Setup (`src/app.js`).
+    - Implemented MCP Servers Page Logic (`src/mcp_servers.js` using HTTP API). *(Corrected filename)*
+    - Implemented UI State Updates (`src/app.js` handling `status_update`).
+    - Implemented Real-time Audio Handling (`src/app.js` - capture, streaming, playback, auto-start).
+    - Refactored Settings Page save/load logic to use WebSockets (`src/app.js`).
 
 ## Backend Planning (Original Plan - Deferred)
 - Architecture design completed (for old plan)
@@ -42,21 +48,26 @@
 - Implemented Message Routing & Agent Interaction (`src/server/webSocketHandler.js`).
 - Implemented MCP Client (`src/server/mcpClient.js`, `mcp_config.json`).
 
+## Backend Plan - Phase 4: Voice Agent Module Implementation
+- Implemented basic `EchoAgent.js` for testing.
+
+## Code Review Fixes
+- Fixed `_cleanupPendingRequests` bug in `src/server/mcpClient.js`.
+- Renamed `src/mcp_settings.js` to `src/mcp_servers.js` and updated HTML link.
+- Addressed potential race condition in `src/app.js` settings load using message queuing.
+
 # In Progress (New Plan - April 2025)
 
-## Backend Plan - Phase 3: Frontend Implementation
-- **Goal:** Implement the frontend JavaScript logic to communicate with the backend via WebSockets and manage UI state.
-- **Tasks:**
-    1. Implement WebSocket Client connection logic in `src/app.js`. (Next Step)
-    2. Implement MCP Settings Page Logic (`src/mcp_settings.html` JS).
-    3. Implement UI State Updates based on `status_indicator_design.md` and WebSocket messages.
-    4. Implement Real-time Audio Handling (capture, streaming to backend, playback from backend).
-    5. Implement Settings Page save/load logic using WebSocket or updated API.
+## Backend Plan - Phase 4: Voice Agent Module Implementation
+- **Goal:** Implement specific `IVoiceAgent` modules (UltraVox, Phi4, Qwen).
+- **Completed Tasks:**
+    1. Implemented `EchoAgent.js` for testing.
+    2. Fixed bugs identified in code review.
+- **Remaining Tasks:**
+    1. Implement the first *real* Voice Agent module (UltraVoxKokoroAgent recommended). (Next Step)
+    2. Implement other desired agent modules (Phi4, Qwen).
 
 # Upcoming Tasks (New Plan)
-
-## Backend Plan - Phase 4: Voice Agent Module Implementation (Deferred)
-- **Goal:** Implement specific `IVoiceAgent` modules.
 
 ## Backend Plan - Phase 5: Integration & Testing (Deferred)
 - **Goal:** End-to-end testing.

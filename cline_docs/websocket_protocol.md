@@ -9,12 +9,12 @@ This document defines the JSON-based message protocol used for real-time communi
 
 ## General Principles
 
--   All messages are JSON objects.
--   Each message MUST have a `type` field indicating the message category.
--   Payload structures are defined for each message type.
--   Binary data (like audio chunks) should be Base64 encoded strings.
--   The protocol directly supports the methods and events defined in `src/interfaces/IVoiceAgent.ts`.
--   Status updates from the backend are designed to map clearly to the UI states defined in `cline_docs/status_indicator_design.md`.
+- All messages are JSON objects.
+- Each message MUST have a `type` field indicating the message category.
+- Payload structures are defined for each message type.
+- Binary data (like audio chunks) should be Base64 encoded strings.
+- The protocol directly supports the methods and events defined in `src/interfaces/IVoiceAgent.ts`.
+- Status updates from the backend are designed to map clearly to the UI states defined in `cline_docs/status_indicator_design.md`.
 
 ## Message Flow Diagram
 
@@ -395,6 +395,95 @@ Confirms that the agent session has been shut down. *Note: May not be needed if 
 {
   "type": "session_terminated",
   "payload": {}
+}
+```
+
+---
+
+---
+
+### 12. `get_settings` (FE -> BE)
+
+Requests the current application settings from the backend.
+
+**Payload:**
+
+```json
+{
+  "type": "get_settings",
+  "payload": {}
+}
+```
+
+---
+
+### 13. `settings_data` (BE -> FE)
+
+Sends the complete current application settings object to the frontend in response to `get_settings` or potentially after an update.
+
+**Payload:**
+
+```json
+{
+  "type": "settings_data",
+  "payload": {
+    "settings": {
+      "theme": "string",
+      "mcp_config_path": "string",
+      "active_voice_agent": "string",
+      "voice_agent_config": {
+        // Agent-specific configs keyed by agentType
+        "ultravox": { /* ... */ },
+        "phi4": { /* ... */ }
+      }
+      // ... any other settings ...
+    }
+  }
+}
+```
+
+---
+
+### 14. `update_settings` (FE -> BE)
+
+Sends the complete, updated settings object from the frontend to be saved by the backend.
+
+**Payload:**
+
+```json
+{
+  "type": "update_settings",
+  "payload": {
+    "settings": {
+      "theme": "string",
+      "mcp_config_path": "string",
+      "active_voice_agent": "string",
+      "voice_agent_config": {
+         // Agent-specific configs keyed by agentType
+        "ultravox": { /* ... */ },
+        "phi4": { /* ... */ }
+      }
+      // ... any other settings ...
+    }
+  }
+}
+```
+
+---
+
+### 15. `settings_update_ack` (BE -> FE)
+
+Acknowledges whether the `update_settings` request was successful.
+
+**Payload:**
+
+```json
+{
+  "type": "settings_update_ack",
+  "payload": {
+    "success": "boolean", // True if saved successfully, false otherwise
+    "error": "string | null" // Error message if success is false
+  }
 }
 ```
 

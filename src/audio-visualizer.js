@@ -9,6 +9,11 @@ class AudioVisualizer {
         this.testMode = false;
         this.testStartTime = 0;
         
+        // External analyzer integration
+        this.externalAnalyser = null;
+        this.isUsingExternalAnalyser = false;
+        this.externalDataArray = null;
+        
         // Get DOM elements
         this.orbElement = document.querySelector('.orb');
         this.talkButton = document.querySelector('.talk-button');
@@ -179,15 +184,51 @@ class AudioVisualizer {
         return sum / (endIndex - startIndex + 1) / 255;
     }
     
-    startVisualization() {
-        if (!this.isInitialized) return;
+    // Method to connect an external analyser node
+    connectExternalAnalyser(externalAnalyser) {
+        if (!externalAnalyser) return false;
         
+        console.log('AudioVisualizer: Connecting external analyser node');
+        this.externalAnalyser = externalAnalyser;
+        this.isUsingExternalAnalyser = true;
+        
+        // Create the data array for the external analyser
+        const bufferLength = this.externalAnalyser.frequencyBinCount;
+        this.externalDataArray = new Uint8Array(bufferLength);
+        
+        // If visualization is not running, start it
+        if (!this.animationFrame) {
+            this.startVisualization();
+        }
+        
+        return true;
+    }
+    
+    startVisualization() {
         const updateVisuals = () => {
-            this.analyser.getByteFrequencyData(this.dataArray);
+            let dataArrayToUse;
+            let analyserToUse;
             
-            const bass = this.getFrequencyRangeValue(this.dataArray, ...this.frequencyRanges.bass);
-            const midrange = this.getFrequencyRangeValue(this.dataArray, ...this.frequencyRanges.midrange);
-            const treble = this.getFrequencyRangeValue(this.dataArray, ...this.frequencyRanges.treble);
+            // Choose which analyser to use
+            if (this.isUsingExternalAnalyser && this.externalAnalyser) {
+                analyserToUse = this.externalAnalyser;
+                dataArrayToUse = this.externalDataArray;
+            } else if (this.isInitialized && this.analyser) {
+                analyserToUse = this.analyser;
+                dataArrayToUse = this.dataArray;
+            } else {
+                // No valid analyser available
+                this.animationFrame = requestAnimationFrame(updateVisuals);
+                return;
+            }
+            
+            // Get frequency data from the active analyser
+            analyserToUse.getByteFrequencyData(dataArrayToUse);
+            
+            // Calculate energy values
+            const bass = this.getFrequencyRangeValue(dataArrayToUse, ...this.frequencyRanges.bass);
+            const midrange = this.getFrequencyRangeValue(dataArrayToUse, ...this.frequencyRanges.midrange);
+            const treble = this.getFrequencyRangeValue(dataArrayToUse, ...this.frequencyRanges.treble);
             
             const weightedEnergy = (bass * 0.2 + midrange * 0.6 + treble * 0.2);
             

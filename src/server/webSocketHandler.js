@@ -1,24 +1,45 @@
 // src/server/webSocketHandler.js
 const path = require('path');
-const WebSocket = require('ws'); // Ensure WebSocket is available if needed, though usually passed in
+const WebSocket = require('ws');
+const fs = require('fs').promises; // Use promises API for async file reading
 const { MCPClientManager } = require('./mcpClient'); // Import the MCP manager
-const settingsApi = require('../utils/settingsApi'); // Assuming settings API location
+// Removed incorrect settingsApi import
+const settingsApi = require('./settingsApi'); // Import settings functions
 
-function initializeWebSocketHandling(wss) {
+async function initializeWebSocketHandling(wss) { // Make the function async
     console.log('Initializing WebSocket connection handling...');
 
     // --- MCP Client Setup ---
-    let mcpClientManager;
+    let mcpClientManager = null; // Initialize as null
+    const SETTINGS_FILE = path.join(__dirname, '..', '..', 'settings.json');
+    const DEFAULT_SETTINGS = { theme: 'light', mcp_config_path: '', active_voice_agent: null, voice_agent_config: {} }; // Define defaults here or import if shared
+
     try {
-        const settings = settingsApi.loadSettings(); // Load settings
+        // --- Load Settings Asynchronously ---
+        let settings = {};
+        try {
+            const fileContent = await fs.readFile(SETTINGS_FILE, 'utf8');
+            settings = fileContent ? JSON.parse(fileContent) : {};
+        } catch (readError) {
+            if (readError.code === 'ENOENT') {
+                console.warn(`Settings file not found at ${SETTINGS_FILE}. Using defaults.`);
+                settings = {}; // Use defaults if file doesn't exist
+            } else {
+                throw readError; // Re-throw other read errors
+            }
+        }
+        const completeSettings = { ...DEFAULT_SETTINGS, ...settings };
+        // --- End Settings Loading ---
+
         // Ensure the path is absolute or correctly relative from project root if needed
-        const configPath = path.resolve(__dirname, '../../', settings.mcp_config_path || 'mcp_config.json'); // Default to root mcp_config.json
+        const configPath = path.resolve(__dirname, '../../', completeSettings.mcp_config_path || 'mcp_config.json'); // Default to root mcp_config.json
         console.log(`[WebSocketHandler] Resolved MCP Config Path: ${configPath}`);
-        mcpClientManager = new MCPClientManager({ ...settings, mcp_config_path: configPath });
-        mcpClientManager.initializeConnections().catch(err => {
-            console.error("[WebSocketHandler] Failed to initialize MCP connections on startup:", err);
-            // Decide if server should fail to start or just log the error
-        });
+
+        // --- Initialize MCP Client Manager Asynchronously ---
+        mcpClientManager = new MCPClientManager({ ...completeSettings, mcp_config_path: configPath });
+        await mcpClientManager.initializeConnections(); // Await initialization
+        console.log("[WebSocketHandler] MCP connections initialized successfully.");
+
     } catch (error) {
         console.error("[WebSocketHandler] Failed to instantiate MCPClientManager:", error);
         // Handle error appropriately - maybe the server shouldn't start without MCP?
@@ -175,8 +196,31 @@ function initializeWebSocketHandling(wss) {
                     }));
                 }
             } 
-            // --- Handle other message types (Routing) ---
-            else if (ws.voiceAgent) { // Check if agent exists *first*
+            else if (parsedMessage.type === 'get_settings') { // Handle settings retrieval
+                console.log('Handling get_settings request...');
+                try {
+                    const settings = await settingsApi.loadSettingsAsync();
+                    console.log('Settings loaded successfully.');
+                    ws.send(JSON.stringify({ type: 'settings_data', payload: { settings } }));
+                } catch (error) {
+                    console.error('Error loading settings:', error);
+                    ws.send(JSON.stringify({ type: 'error_message', payload: { message: 'Failed to load settings', error: error.message } }));
+                }
+            } else if (parsedMessage.type === 'update_settings') { // Handle settings update
+                console.log('Handling update_settings request...');
+                try {
+                    const { settings } = parsedMessage.payload;
+                    if (!settings || typeof settings !== 'object') {
+                        throw new Error('Invalid settings payload received.');
+                    }
+                    await settingsApi.saveSettingsAsync(settings);
+                    console.log('Settings saved successfully.');
+                    ws.send(JSON.stringify({ type: 'settings_update_ack', payload: { success: true } }));
+                } catch (error) {
+                    console.error('Error saving settings:', error);
+                    ws.send(JSON.stringify({ type: 'settings_update_ack', payload: { success: false, error: error.message } }));
+                }
+            } else if (ws.voiceAgent) { // Check if agent exists *after* handling general messages
                 // Agent is initialized, route message based on type
                 console.log(`Routing message type '${parsedMessage.type}' to active agent: ${ws.voiceAgent.constructor.name}`);
                 try {

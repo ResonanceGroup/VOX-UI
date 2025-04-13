@@ -300,18 +300,17 @@ class MCPClientManager {
         console.warn(`[MCPClientManager] Cleaning up pending requests for disconnected/errored server '${serverName}'...`);
         const requestsToClean = [];
         for (const [requestId, pending] of this.pendingRequests.entries()) {
-            // Assuming request IDs or some context allows linking to the server
-            // This might need refinement if request IDs aren't server-specific
-            // For now, we'll clear all if *any* server disconnects, which isn't ideal.
-            // A better approach: Store serverName with the pending request.
-             requestsToClean.push({ requestId, pending });
+            // Only clean up requests associated with the specified serverName
+            if (pending.serverName === serverName) {
+                requestsToClean.push({ requestId, pending });
+            }
         }
 
-        for(const { requestId, pending } of requestsToClean) {
-             console.warn(`[MCPClientManager] Rejecting pending request ${requestId} due to server '${serverName}' issue.`);
-             clearTimeout(pending.timeout);
-             pending.reject(error);
-             this.pendingRequests.delete(requestId);
+        for (const { requestId, pending } of requestsToClean) {
+            console.warn(`[MCPClientManager] Rejecting pending request ${requestId} due to server '${serverName}' issue.`);
+            clearTimeout(pending.timeout);
+            pending.reject(error);
+            this.pendingRequests.delete(requestId);
         }
     }
 
@@ -348,7 +347,7 @@ class MCPClientManager {
             }, timeoutMs);
 
             // Store the pending request details
-            this.pendingRequests.set(requestId, { resolve, reject, timeout });
+            this.pendingRequests.set(requestId, { resolve, reject, timeout, serverName });
 
             try {
                 if (connection.type === 'stdio' && connection.process && connection.process.stdin) {
