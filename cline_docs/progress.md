@@ -50,6 +50,8 @@
 
 ## Backend Plan - Phase 4: Voice Agent Module Implementation
 - Implemented basic `EchoAgent.js` for testing.
+- Implemented `UltraVoxKokoroAgent.js` (networked version).
+- Created `gpu_server_setup.sh` script.
 
 ## Code Review Fixes
 - Fixed `_cleanupPendingRequests` bug in `src/server/mcpClient.js`.
@@ -58,19 +60,17 @@
 
 # In Progress (New Plan - April 2025)
 
-## Backend Plan - Phase 4: Voice Agent Module Implementation
-- **Goal:** Implement specific `IVoiceAgent` modules (UltraVox, Phi4, Qwen).
-- **Completed Tasks:**
-    1. Implemented `EchoAgent.js` for testing.
-    2. Fixed bugs identified in code review.
-- **Remaining Tasks:**
-    1. Implement the first *real* Voice Agent module (UltraVoxKokoroAgent recommended). (Next Step)
-    2. Implement other desired agent modules (Phi4, Qwen).
+*(No tasks currently in progress)*
 
 # Upcoming Tasks (New Plan)
 
 ## Backend Plan - Phase 5: Integration & Testing (Deferred)
-- **Goal:** End-to-end testing.
+- **Goal:** End-to-end testing. (Next Step - Requires GPU server setup)
+
+## Backend Plan - Phase 4: Voice Agent Module Implementation (Continued - Deferred)
+- **Goal:** Implement specific `IVoiceAgent` modules.
+- **Remaining Tasks:**
+    1. Implement other desired agent modules (Phi4, Qwen).
 
 ## Original Plan - Phase 2: Enhance Visualizations (Deferred)
 - **Goal:** Improve visual feedback in the main chat UI (Status Indicators, etc.).

@@ -54,16 +54,21 @@ class Settings {
     }
 
     save() {
-        this.log('Saving settings via WebSocket:', this.settings);
-        // Check if WebSocket is connected and ready
+        this.log('Saving settings...');
+        // Always save to localStorage as a fallback
+        try {
+            localStorage.setItem('voxui_settings', JSON.stringify(this.settings));
+            this.log('Settings saved to localStorage:', this.settings);
+        } catch (e) {
+            console.error('Failed to save settings to localStorage:', e);
+        }
+        // If WebSocket is connected, also send to server
         if (window.wsClient && window.wsClient.ws && window.wsClient.ws.readyState === WebSocket.OPEN) {
             window.wsClient.sendMessage('update_settings', { settings: this.settings });
             // Note: Confirmation comes via 'settings_update_ack' message
         } else {
-            console.error('WebSocket not ready when trying to save settings.');
-            // TODO: Maybe queue the save request or show an error to the user?
+            console.warn('WebSocket not ready when trying to save settings. Settings saved locally only.');
         }
-        // This method no longer needs to be async as it just sends a message
     }
 
     updateInputs() {
@@ -822,11 +827,17 @@ document.addEventListener('DOMContentLoaded', () => {
     window.settings = new Settings();
     
     // Initialize AudioVisualizer first so it's available for AudioManager
-    window.audioVisualizer = new AudioVisualizer();
-    console.log('AudioVisualizer initialized. Access via window.audioVisualizer.');
+    if (typeof AudioVisualizer !== "undefined") {
+        window.audioVisualizer = new AudioVisualizer();
+        console.log('AudioVisualizer initialized. Access via window.audioVisualizer.');
+    } else {
+        window.audioVisualizer = null;
+        console.log('AudioVisualizer not available on this page.');
+    }
 
     // Load settings first, then initialize WebSocket and the rest of the UI logic
     window.settings.load().then(() => {
+        window.settings.applyTheme();
         console.log('Settings loaded, initializing WebSocket client...');
         const websocketUrl = `wss://${window.location.hostname}:3002`; // Use hostname and specific port
         // Fallback for local development if hostname isn't resolving correctly or for file:// protocol
