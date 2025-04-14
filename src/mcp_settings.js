@@ -111,158 +111,227 @@ document.querySelectorAll('input[name="theme"]').forEach(radio => {
 // --- MCP Config Editor Logic ---
 // --- MCP Config Editor Logic (Refactored) ---
 (function() {
-    const mcpTextarea = document.getElementById('mcp-config-textarea');
+    let editor = null;
+    let originalConfig = '';
     const saveBtn = document.getElementById('save-mcp-config-btn');
     const cancelBtn = document.getElementById('cancel-mcp-config-btn');
     const copyBtn = document.getElementById('copy-mcp-config-btn');
-    const highlightPre = document.getElementById('mcp-config-highlight');
-    let originalConfig = '';
 
-    function highlightJSON(json) {
-        const escapedJson = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const propertyColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
-        const stringColor = getComputedStyle(document.documentElement).getPropertyValue('--settings-input-text').trim();
-        const keywordColor = propertyColor;
-        const numberColor = stringColor;
-
-        return escapedJson
-            .replace(/("[^"]+":)/g, `<span style="color:${propertyColor}">$1</span>`)
-            .replace(/("[^"]*")/g, `<span style="color:${stringColor}">$1</span>`)
-            .replace(/\b(true|false|null)\b/g, `<span style="color:${keywordColor}">$1</span>`)
-            .replace(/\b(-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)\b/g, `<span style="color:${numberColor}">$1</span>`);
-    }
-
-    function syncHighlight() {
-        if (highlightPre && mcpTextarea) {
-            highlightPre.innerHTML = highlightJSON(mcpTextarea.value);
-            highlightPre.scrollTop = mcpTextarea.scrollTop;
-        }
-    }
-
-    function setupMcpConfigEditor() {
-        if (!(mcpTextarea && saveBtn && cancelBtn && copyBtn)) return;
-        fetch('/api/mcp/config')
-            .then(async res => { // Make async to potentially read text body on error
-                if (!res.ok) {
-                    // Attempt to get more specific error text from the response body
-                    let errorText = `HTTP error! status: ${res.status}`;
-                    try {
-                        const text = await res.text(); // Read body as text
-                        errorText = `${errorText} - ${text}`;
-                    } catch (e) { /* Ignore if reading text fails */ }
-                    throw new Error(errorText); // Throw an error to be caught below
-                }
-                // Check content type before parsing JSON
-                const contentType = res.headers.get("content-type");
-                if (contentType && contentType.indexOf("application/json") !== -1) {
-                    return res.json(); // Only parse if it's JSON
-                } else {
-                    // Handle non-JSON responses if necessary, or throw error
-                    const text = await res.text();
-                    console.warn('Received non-JSON response from /api/mcp/config:', text);
-                    // Treat as empty config or show specific message? For now, treat as empty.
-                    return {}; // Return empty object or handle as error
-                    // throw new Error('Received non-JSON response from server');
-                }
-            })
-            .then(config => {
-                // Ensure config is an object before stringifying
-                const configText = (typeof config === 'object' && config !== null)
-                                    ? JSON.stringify(config, null, 2)
-                                    : '{}'; // Default to empty JSON object if not valid object
-                mcpTextarea.value = configText;
-                originalConfig = configText;
-                saveBtn.disabled = true;
-                syncHighlight();
-            })
-            .catch(err => {
-                console.error('Error fetching MCP config:', err); // Log the full error
-                mcpTextarea.value = `// Failed to load MCP config:\n// ${err.message}`; // Show detailed error
-                saveBtn.disabled = true;
-                syncHighlight();
-            });
-        mcpTextarea.addEventListener('input', () => {
-            saveBtn.disabled = (mcpTextarea.value === originalConfig);
-            syncHighlight();
-        });
-        saveBtn.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            let configObj;
-            try {
-                configObj = JSON.parse(mcpTextarea.value);
-            } catch (e) {
-                alert('Invalid JSON: ' + e.message);
-                return;
+    function setupMonaco() {
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            // Set Monaco options based on current theme
+            const isDark = document.documentElement.dataset.theme === 'dark';
+            
+            // Override Monaco editor default styles for dark mode
+            if (isDark) {
+                monaco.editor.defineTheme('custom-dark', {
+                    base: 'vs-dark',
+                    inherit: true,
+                    rules: [
+                        { token: '', foreground: 'd4d4d4' },
+                        { token: 'string', foreground: 'ce9178' },
+                        { token: 'number', foreground: 'b5cea8' },
+                        { token: 'keyword', foreground: '569cd6' }
+                    ],
+                    colors: {
+                        'editor.background': '#1e1e1e',
+                        'editor.foreground': '#d4d4d4',
+                        'editorCursor.foreground': '#d4d4d4',
+                        'editor.lineHighlightBackground': '#2a2d2e',
+                        'editorLineNumber.foreground': '#858585'
+                    }
+                });
             }
-            fetch('/api/mcp/config', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(configObj)
-            })
-            .then(async res => {
-                if (!res.ok) {
-                    let errorText = `HTTP error! status: ${res.status}`;
-                    try {
-                        const text = await res.text();
-                        errorText = `${errorText} - ${text}`;
-                    } catch (e) {}
-                    throw new Error(errorText);
+            
+            // Create the editor
+            editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+                language: 'json',
+                theme: isDark ? 'custom-dark' : 'vs',
+                automaticLayout: true,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                formatOnPaste: true,
+                formatOnType: true,
+                fontSize: 14,
+                lineNumbers: 'on',
+                renderLineHighlight: 'all',
+                scrollbar: {
+                    vertical: 'auto',
+                    horizontal: 'auto',
+                    verticalScrollbarSize: 10,
+                    horizontalScrollbarSize: 10,
+                    verticalHasArrows: false,
+                    horizontalHasArrows: false,
+                    useShadows: false
                 }
-                const contentType = res.headers.get("content-type");
-                if (contentType && contentType.indexOf("application/json") !== -1) {
+            });
+
+            // Load initial config
+            fetch('/api/mcp/config')
+                .then(async res => {
+                    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                     return res.json();
+                })
+                .then(config => {
+                    originalConfig = JSON.stringify(config, null, 2);
+                    editor.setValue(originalConfig);
+            // Handle editor focus events
+            editor.onDidFocusEditorText(() => {
+                const wrapper = document.querySelector('.editor-wrapper');
+                if (wrapper) {
+                    wrapper.style.borderColor = 'var(--settings-input-focus-border, #3498db)';
+                    wrapper.style.boxShadow = '0 0 0 3px var(--settings-input-focus-shadow, rgba(52, 152, 219, 0.2))';
                 }
-                return { success: true };
-            })
-            .then(result => {
-                if (result.success) {
-                    originalConfig = mcpTextarea.value;
-                    saveBtn.disabled = true;
-                    if (typeof showToast === 'function') showToast('MCP config saved successfully!');
-                } else {
-                    alert('Failed to save config: ' + (result.error || 'Save operation reported failure.'));
-                }
-            })
-            .catch(err => {
-                console.error('Error saving MCP config:', err);
-                alert('Failed to save config: ' + err.message);
             });
-        });
-        cancelBtn.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            mcpTextarea.value = originalConfig;
-            saveBtn.disabled = true;
-            syncHighlight();
-        });
-        copyBtn.addEventListener('click', () => {
-            mcpTextarea.select();
-            document.execCommand('copy');
-            copyBtn.classList.add('copied');
-            setTimeout(() => copyBtn.classList.remove('copied'), 1000);
-        });
-        mcpTextarea.addEventListener('input', syncHighlight);
-        mcpTextarea.addEventListener('scroll', () => {
-            if (highlightPre) highlightPre.scrollTop = mcpTextarea.scrollTop;
-        });
-        syncHighlight();
-        mcpTextarea.addEventListener('keydown', function(e) {
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                const start = this.selectionStart;
-                const end = this.selectionEnd;
-                const value = this.value;
-                this.value = value.substring(0, start) + '    ' + value.substring(end);
-                this.selectionStart = this.selectionEnd = start + 4;
-                syncHighlight();
-            }
+            
+            editor.onDidBlurEditorText(() => {
+                const wrapper = document.querySelector('.editor-wrapper');
+                if (wrapper) {
+                    wrapper.style.borderColor = 'var(--settings-input-border, #ccc)';
+                    wrapper.style.boxShadow = 'none';
+                }
+            });
+
+                    monaco.editor.getModelMarkers().forEach(marker => {
+                        if (marker.severity === monaco.MarkerSeverity.Error) {
+                            if (typeof showToast === 'function') showToast('Invalid JSON in config file');
+                        }
+                    });
+                    saveBtn.disabled = true;
+                    cancelBtn.disabled = true;
+                })
+                .catch(err => {
+                    console.error('Error fetching MCP config:', err);
+                    editor.setValue('// Failed to load MCP config:\n// ' + err.message);
+                    if (typeof showToast === 'function') showToast('Failed to load config: ' + err.message);
+                });
+
+            // Handle changes
+            editor.onDidChangeModelContent(() => {
+                const currentValue = editor.getValue();
+                const modified = currentValue !== originalConfig;
+                saveBtn.disabled = !modified;
+                cancelBtn.disabled = !modified;
+            });
+
+            // Save button handler
+            saveBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                try {
+                    const content = editor.getValue();
+                    const configObj = JSON.parse(content);
+                    fetch('/api/mcp/config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(configObj)
+                    })
+                    .then(res => res.json())
+                    .then(result => {
+                        if (result.success) {
+                            originalConfig = content;
+                            saveBtn.disabled = true;
+                            cancelBtn.disabled = true;
+                            if (typeof showToast === 'function') showToast('MCP config saved successfully!');
+                        } else {
+                            throw new Error(result.error || 'Save operation failed');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error saving MCP config:', err);
+                        if (typeof showToast === 'function') showToast('Failed to save config: ' + err.message);
+                    });
+                } catch (e) {
+                    if (typeof showToast === 'function') showToast('Invalid JSON: ' + e.message);
+                }
+            });
+
+            // Revert button handler
+            cancelBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                // Reload the config from the backend without page navigation
+                fetch('/api/mcp/config')
+                    .then(async res => {
+                        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                        return res.json();
+                    })
+                    .then(config => {
+                        originalConfig = JSON.stringify(config, null, 2);
+                        editor.setValue(originalConfig);
+                        saveBtn.disabled = true;
+                        cancelBtn.disabled = true;
+                        if (typeof showToast === 'function') showToast('MCP config reverted.');
+                    })
+                    .catch(err => {
+                        console.error('Error fetching MCP config:', err);
+                        if (typeof showToast === 'function') showToast('Failed to reload config: ' + err.message);
+                    });
+            });
+
+            // Copy button handler
+            copyBtn.addEventListener('click', () => {
+                const content = editor.getValue();
+                navigator.clipboard.writeText(content).then(() => {
+                    copyBtn.classList.add('copied');
+                    setTimeout(() => copyBtn.classList.remove('copied'), 1000);
+                    if (typeof showToast === 'function') showToast('Config copied to clipboard!');
+                });
+            });
+
+            // Theme change handler
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.attributeName === 'data-theme') {
+                        const isDark = document.documentElement.dataset.theme === 'dark';
+                        
+                        // Define custom dark theme if it's dark mode
+                        if (isDark) {
+                            monaco.editor.defineTheme('custom-dark', {
+                                base: 'vs-dark',
+                                inherit: true,
+                                rules: [
+                                    { token: '', foreground: 'd4d4d4' },
+                                    { token: 'string', foreground: 'ce9178' },
+                                    { token: 'number', foreground: 'b5cea8' },
+                                    { token: 'keyword', foreground: '569cd6' }
+                                ],
+                                colors: {
+                                    'editor.background': '#1e1e1e',
+                                    'editor.foreground': '#d4d4d4',
+                                    'editorCursor.foreground': '#d4d4d4',
+                                    'editor.lineHighlightBackground': '#2a2d2e',
+                                    'editorLineNumber.foreground': '#858585'
+                                }
+                            });
+                            monaco.editor.setTheme('custom-dark');
+                        } else {
+                            monaco.editor.setTheme('vs');
+                        }
+                        
+                        // Update the wrapper styles for theme changes with !important flag
+                        const wrapper = document.querySelector('.editor-wrapper');
+                        if (wrapper) {
+                            if (isDark) {
+                                wrapper.style.setProperty('border-color', '#555', 'important');
+                                wrapper.style.setProperty('background-color', '#1e1e1e', 'important');
+                            } else {
+                                wrapper.style.setProperty('border-color', '#ccc', 'important');
+                                wrapper.style.setProperty('background-color', '#fff', 'important');
+                            }
+                        }
+                    }
+                });
+            });
+            observer.observe(document.documentElement, { attributes: true });
         });
     }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupMcpConfigEditor);
+        document.addEventListener('DOMContentLoaded', setupMonaco);
     } else {
-        setupMcpConfigEditor();
+        setupMonaco();
     }
 })();
 

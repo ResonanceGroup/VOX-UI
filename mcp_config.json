@@ -14,7 +14,7 @@
     },
     {
       "name": "test-server-2",
-      "enabled": false,
+      "enabled": true,
       "command": "python test-server-2.py",
       "tools": [],
       "resources": [

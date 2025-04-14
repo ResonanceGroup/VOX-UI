@@ -9,6 +9,7 @@
     <title>Settings - AI Assistant</title>
     <link rel="stylesheet" href="app.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
     <script>
         // Inline script to apply theme immediately from localStorage to prevent flash
         (function() {
@@ -120,16 +121,17 @@
                           <div class="settings-section">
                         <div class="setting-item">
                             <label>MCP Config (JSON)</label>
-                            <div style="position:relative;">
-                                <div style="position:relative;">
-                                    <pre id="mcp-config-highlight" style="position:absolute;top:0;left:0;width:100%;height:100%;margin:0;padding:1rem;pointer-events:none;z-index:1;overflow:auto;font-family:monospace;font-size:1rem;border-radius:4px;background:transparent;"></pre>
-                                    <textarea id="mcp-config-textarea" class="settings-input" style="width:100%;height:200px;resize:vertical;position:relative;z-index:2;font-family:monospace;"></textarea>
-                                    <button class="button icon-button copy-btn" id="copy-mcp-config-btn" title="Copy to clipboard" style="position:absolute;top:8px;right:8px;z-index:3;"><i class="codicon codicon-copy"></i></button>
+                            <div class="editor-wrapper" style="border: 1px solid #555; border-radius: 6px; overflow: hidden;">
+                                <div class="monaco-container" style="border: none; overflow: hidden;">
+                                    <div id="monaco-editor" style="width:100%; height:400px;"></div>
                                 </div>
                             </div>
-                            <div class="settings-actions mcp-actions" style="margin-top:0.5rem;">
+                            <div class="mcp-actions" style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
+                                <button type="button" class="button icon-button" id="copy-mcp-config-btn" title="Copy to clipboard" style="color: var(--text-color); margin-right: auto;">
+                                    <i class="codicon codicon-copy" style="color: inherit;"></i>
+                                </button>
                                 <button type="button" class="button primary" id="save-mcp-config-btn" disabled>Save</button>
-                                <button type="button" class="button secondary" id="cancel-mcp-config-btn">Revert</button>
+                                <button type="button" class="button secondary" id="cancel-mcp-config-btn" disabled>Revert</button>
                             </div>
                         </div>
                         </div>

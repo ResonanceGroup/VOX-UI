@@ -905,37 +905,6 @@ textarea.settings-input {
     min-height: 80px;
 }
 
-#mcp-config-textarea.settings-input {
-    color: var(--settings-input-text);
-    background-color: var(--settings-input-bg);
-    font-family: monospace;
-    font-size: 1rem;
-    position: relative;
-    z-index: 2;
-}
-[data-theme="dark"] #mcp-config-textarea.settings-input {
-    color: var(--settings-input-text-dark);
-    background-color: var(--settings-input-bg-dark);
-}
-
-#mcp-config-highlight {
-    color: var(--settings-input-text);
-    background-color: var(--settings-input-bg);
-    font-family: monospace;
-    font-size: 1rem;
-    border-radius: 4px;
-    z-index: 1;
-    pointer-events: none;
-    white-space: pre-wrap;
-    word-break: break-word;
-    opacity: 1;
-    transition: color 0.2s, background 0.2s;
-}
-[data-theme="dark"] #mcp-config-highlight {
-    color: var(--settings-input-text-dark);
-    background-color: var(--settings-input-bg-dark);
-}
-
 
 .theme-toggle {
     display: flex;
@@ -945,6 +914,7 @@ textarea.settings-input {
     padding: 4px;
     background-color: var(--settings-input-bg);
     width: fit-content;
+
 }
 
 .theme-option {
@@ -970,6 +940,148 @@ textarea.settings-input {
     background-color: var(--primary-color);
     color: #fff;
     font-weight: 500;
+/* Monaco Editor styling */
+/* Container for the Monaco editor with proper borders */
+.monaco-container {
+    border: 1px solid var(--settings-input-border);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    height: 400px;
+    margin-bottom: 8px;
+}
+
+[data-theme="dark"] .monaco-container {
+    border-color: var(--settings-input-border-dark);
+}
+
+/* MCP actions/buttons container */
+.mcp-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+#monaco-editor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* Remove Monaco's default borders */
+.monaco-editor .overflow-guard {
+    border-radius: 0 !important;
+}
+
+/* Completely reset Monaco scrollbar styles for better UI integration */
+.monaco-scrollable-element > .scrollbar,
+.monaco-scrollable-element > .scrollbar > .slider {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Hide scrollbar track for cleaner appearance */
+.monaco-scrollable-element > .scrollbar {
+    background-color: transparent !important;
+}
+
+/* Style scrollbar slider for light mode */
+.monaco-scrollable-element > .scrollbar > .slider {
+    background: rgba(100, 100, 100, 0.2) !important;
+    border-radius: 4px !important;
+}
+
+/* Dark mode scrollbar styles */
+[data-theme="dark"] .monaco-scrollable-element > .scrollbar > .slider {
+    background: rgba(200, 200, 200, 0.2) !important;
+}
+
+/* Fix scrollbar corner element that shows as a white box */
+.monaco-scrollable-element > .scrollbar.vertical > .slider,
+.monaco-scrollable-element > .scrollbar.horizontal > .slider {
+    border-radius: 4px !important;
+}
+
+.monaco-scrollable-element > .scrollbar-corner {
+    background-color: transparent !important;
+}
+
+/* Editor wrapper to match input styling */
+.editor-wrapper {
+    border: 1px solid var(--settings-input-border);
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: var(--settings-input-bg);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Dark mode editor wrapper styles */
+[data-theme="dark"] .editor-wrapper {
+    border-color: #444 !important;
+    background-color: #1e1e1e !important;
+}
+
+.editor-wrapper:focus-within {
+    border-color: var(--settings-input-focus-border);
+    box-shadow: 0 0 0 3px var(--settings-input-focus-shadow);
+}
+
+/* Monaco container should be borderless inside the wrapper */
+.monaco-container {
+    border: none;
+    overflow: hidden;
+}
+
+/* Force dark colors for Monaco editor components */
+[data-theme="dark"] .monaco-editor,
+[data-theme="dark"] .monaco-editor .monaco-editor-background,
+[data-theme="dark"] .monaco-editor .margin,
+[data-theme="dark"] .monaco-editor .inputarea.ime-input {
+    background-color: #1e1e1e !important;
+    color: #d4d4d4 !important;
+}
+
+/* Override Monaco's scrollbars in dark mode */
+[data-theme="dark"] .monaco-scrollable-element > .scrollbar > .slider {
+    background: rgba(121, 121, 121, 0.4) !important;
+}
+
+/* Fix text color in Monaco editor for dark mode */
+[data-theme="dark"] .monaco-editor .mtk1 {
+    color: #d4d4d4 !important;
+}
+
+/* Fix the scrollbar corners in dark mode */
+[data-theme="dark"] .monaco-scrollable-element > .scrollbar > .slider,
+[data-theme="dark"] .monaco-scrollable-element > .scrollbar,
+[data-theme="dark"] .monaco-scrollable-element {
+    background-color: #1e1e1e !important;
+}
+
+[data-theme="dark"] .monaco-editor .scroll-decoration {
+    box-shadow: none !important;
+}
+
+/* Fix copy icon color in dark mode */
+.icon-button .codicon-copy {
+    color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .icon-button .codicon-copy {
+    color: var(--text-color-dark) !important;
+}
+
+/* MCP Editor button alignment */
+.mcp-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+}
+
 }
 
 .theme-option:hover .theme-radio {
@@ -986,7 +1098,7 @@ textarea.settings-input {
     gap: 12px;
     margin-top: 16px;
     padding-top: 24px;
-    border-top: 1px solid var(--settings-border-color);
+    border-top: 1px solid #555;
 }
 .mcp-actions {
   display: flex;

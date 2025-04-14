@@ -110,7 +110,8 @@ function showToast(message, duration = 3000) {
     toast.style.transition = 'opacity 0.5s ease-in-out';
 
     // Add to body and fade in
-    document.body.appendChild(toast);
+    // Use document.documentElement to avoid body overflow/position issues
+    (document.documentElement || document.body).appendChild(toast);
     setTimeout(() => { toast.style.opacity = '1'; }, 50); // Small delay for transition
 
     // Fade out and remove after duration
