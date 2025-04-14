@@ -110,30 +110,31 @@
                         </div> <!-- Close settings-group-details -->
                     </div>
 
-                    <div class="settings-group accordion" id="mcp-settings-group"> <!-- Add accordion classes, start closed, ADDED ID -->
-                        <div class="settings-group-header"> <!-- New header -->
-                            <svg class="expand-icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"></path></svg>
-                            <h2>MCP</h2>
-                        </div>
-                        <div class="settings-group-details"> <!-- Wrap existing content -->
-                             <div class="settings-section">
-                            <div class="setting-item">
-                                <label>MCP Config (JSON)</label>
-                                <div style="position:relative;">
-                                    <div style="position:relative;">
-                                        <pre id="mcp-config-highlight" style="position:absolute;top:0;left:0;width:100%;height:100%;margin:0;padding:1rem;pointer-events:none;z-index:1;overflow:auto;font-family:monospace;font-size:1rem;border-radius:4px;background:transparent;"></pre>
-                                        <textarea id="mcp-config-textarea" class="settings-input" style="width:100%;height:200px;resize:vertical;position:relative;z-index:2;font-family:monospace;"></textarea>
-                                        <button class="button icon-button copy-btn" id="copy-mcp-config-btn" title="Copy to clipboard" style="position:absolute;top:8px;right:8px;z-index:3;"><i class="codicon codicon-copy"></i></button>
-                                    </div>
-                                </div>
-                                <div style="margin-top:0.5rem;">
-                                    <button class="button secondary" id="cancel-mcp-config-btn">Revert</button>
-                                    <button class="button primary" id="save-mcp-config-btn" disabled>Save</button>
-                                </div>
-                            </div>
-                            </div>
-                        </div> <!-- Close settings-group-details -->
+                </form>
+                <div class="settings-group accordion" id="mcp-settings-group"> <!-- Add accordion classes, start closed, ADDED ID -->
+                    <div class="settings-group-header"> <!-- New header -->
+                        <svg class="expand-icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"></path></svg>
+                        <h2>MCP</h2>
                     </div>
+                    <div class="settings-group-details"> <!-- Wrap existing content -->
+                          <div class="settings-section">
+                        <div class="setting-item">
+                            <label>MCP Config (JSON)</label>
+                            <div style="position:relative;">
+                                <div style="position:relative;">
+                                    <pre id="mcp-config-highlight" style="position:absolute;top:0;left:0;width:100%;height:100%;margin:0;padding:1rem;pointer-events:none;z-index:1;overflow:auto;font-family:monospace;font-size:1rem;border-radius:4px;background:transparent;"></pre>
+                                    <textarea id="mcp-config-textarea" class="settings-input" style="width:100%;height:200px;resize:vertical;position:relative;z-index:2;font-family:monospace;"></textarea>
+                                    <button class="button icon-button copy-btn" id="copy-mcp-config-btn" title="Copy to clipboard" style="position:absolute;top:8px;right:8px;z-index:3;"><i class="codicon codicon-copy"></i></button>
+                                </div>
+                            </div>
+                            <div class="settings-actions mcp-actions" style="margin-top:0.5rem;">
+                                <button type="button" class="button primary" id="save-mcp-config-btn" disabled>Save</button>
+                                <button type="button" class="button secondary" id="cancel-mcp-config-btn">Revert</button>
+                            </div>
+                        </div>
+                        </div>
+                    </div> <!-- Close settings-group-details -->
+                </div>
 
                     <div class="settings-group accordion"> <!-- Add accordion classes, start closed -->
                          <div class="settings-group-header"> <!-- New header -->

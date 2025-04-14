@@ -33,6 +33,33 @@ async function writeMcpConfig(config) {
         throw new Error('Could not write MCP config file.');
     }
 }
+/**
+ * GET /api/mcp/config - Retrieve the full MCP config JSON
+ */
+router.get('/config', async (req, res) => {
+    try {
+        const mcpConfig = await readMcpConfig();
+        res.json(mcpConfig);
+    } catch (error) {
+        console.error('GET /api/mcp/config error:', error.message);
+        res.status(500).json({ error: `Failed to get MCP config: ${error.message}` });
+    }
+});
+
+/**
+ * POST /api/mcp/config - Save the full MCP config JSON
+ */
+router.post('/config', async (req, res) => {
+    try {
+        const newConfig = req.body;
+        await writeMcpConfig(newConfig);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('POST /api/mcp/config error:', error.message);
+        res.status(500).json({ error: `Failed to save MCP config: ${error.message}` });
+    }
+});
+
 
 // GET /api/mcp/servers - Retrieve MCP server configurations
 router.get('/servers', async (req, res) => {

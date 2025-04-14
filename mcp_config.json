@@ -1,1 +1,28 @@
-[]
+{
+  "servers": [
+    {
+      "name": "test-server-15",
+      "enabled": true,
+      "command": "node test-server-1.js",
+      "tools": [
+        {
+          "name": "tool_one",
+          "description": "Does the first thing."
+        }
+      ],
+      "resources": []
+    },
+    {
+      "name": "test-server-2",
+      "enabled": false,
+      "command": "python test-server-2.py",
+      "tools": [],
+      "resources": [
+        {
+          "uri": "doc://readme",
+          "description": "Server 2 readme."
+        }
+      ]
+    }
+  ]
+}

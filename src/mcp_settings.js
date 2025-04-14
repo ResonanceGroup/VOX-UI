@@ -42,7 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.querySelector('.settings-form');
     if (form) {
         form.addEventListener('submit', function (e) {
-            e.preventDefault();
+            // Only prevent default if we're not in the MCP settings group
+            if (!e.target.closest('#mcp-settings-group')) {
+                e.preventDefault();
+            }
             // Gather settings from form
             const theme = document.querySelector('input[name="theme"]:checked')?.value || 'light';
             const url = document.getElementById('voice-agent-url')?.value || '';
@@ -116,13 +119,17 @@ document.querySelectorAll('input[name="theme"]').forEach(radio => {
     let originalConfig = '';
 
     function highlightJSON(json) {
-        let html = json
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/("[^"]+":)/g, '<span style="color:#9cdcfe;">$1</span>')
-            .replace(/("[^"]*")/g, '<span style="color:#ce9178;">$1</span>')
-            .replace(/\b(true|false|null)\b/g, '<span style="color:#569cd6;">$1</span>')
-            .replace(/\b(-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)\b/g, '<span style="color:#b5cea8;">$1</span>');
-        return html;
+        const escapedJson = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const propertyColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+        const stringColor = getComputedStyle(document.documentElement).getPropertyValue('--settings-input-text').trim();
+        const keywordColor = propertyColor;
+        const numberColor = stringColor;
+
+        return escapedJson
+            .replace(/("[^"]+":)/g, `<span style="color:${propertyColor}">$1</span>`)
+            .replace(/("[^"]*")/g, `<span style="color:${stringColor}">$1</span>`)
+            .replace(/\b(true|false|null)\b/g, `<span style="color:${keywordColor}">$1</span>`)
+            .replace(/\b(-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)\b/g, `<span style="color:${numberColor}">$1</span>`);
     }
 
     function syncHighlight() {
@@ -171,7 +178,6 @@ document.querySelectorAll('input[name="theme"]').forEach(radio => {
             .catch(err => {
                 console.error('Error fetching MCP config:', err); // Log the full error
                 mcpTextarea.value = `// Failed to load MCP config:\n// ${err.message}`; // Show detailed error
-                mcpTextarea.style.color = 'red';
                 saveBtn.disabled = true;
                 syncHighlight();
             });
@@ -179,7 +185,9 @@ document.querySelectorAll('input[name="theme"]').forEach(radio => {
             saveBtn.disabled = (mcpTextarea.value === originalConfig);
             syncHighlight();
         });
-        saveBtn.addEventListener('click', () => {
+        saveBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
             let configObj;
             try {
                 configObj = JSON.parse(mcpTextarea.value);
@@ -192,45 +200,38 @@ document.querySelectorAll('input[name="theme"]').forEach(radio => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(configObj)
             })
-            .then(async res => { // Make async to read body on error
+            .then(async res => {
                 if (!res.ok) {
-                    // Attempt to get more specific error text from the response body
                     let errorText = `HTTP error! status: ${res.status}`;
                     try {
-                        const text = await res.text(); // Read body as text
+                        const text = await res.text();
                         errorText = `${errorText} - ${text}`;
-                    } catch (e) { /* Ignore if reading text fails */ }
-                    throw new Error(errorText); // Throw an error to be caught below
+                    } catch (e) {}
+                    throw new Error(errorText);
                 }
-                 // Check content type before parsing JSON, although success should be JSON
                 const contentType = res.headers.get("content-type");
                 if (contentType && contentType.indexOf("application/json") !== -1) {
-                    return res.json(); // Only parse if it's JSON
-                } else {
-                    // Handle unexpected non-JSON success response if necessary
-                     const text = await res.text();
-                     console.warn('Received non-JSON success response when saving MCP config:', text);
-                     // Assume success based on status code, but log warning
-                     return { success: true }; // Or handle differently
+                    return res.json();
                 }
+                return { success: true };
             })
             .then(result => {
                 if (result.success) {
-                    originalConfig = mcpTextarea.value; // Update original config on successful save
+                    originalConfig = mcpTextarea.value;
                     saveBtn.disabled = true;
-                    if (typeof showToast === 'function') showToast('MCP config saved!');
+                    if (typeof showToast === 'function') showToast('MCP config saved successfully!');
                 } else {
-                    // Use the error message from the JSON result if available
                     alert('Failed to save config: ' + (result.error || 'Save operation reported failure.'));
                 }
             })
             .catch(err => {
-                 console.error('Error saving MCP config:', err); // Log the full error
-                // Display the detailed error message from the thrown Error
+                console.error('Error saving MCP config:', err);
                 alert('Failed to save config: ' + err.message);
             });
         });
-        cancelBtn.addEventListener('click', () => {
+        cancelBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
             mcpTextarea.value = originalConfig;
             saveBtn.disabled = true;
             syncHighlight();
