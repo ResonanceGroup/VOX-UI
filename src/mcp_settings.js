@@ -136,4 +136,3 @@ document.querySelectorAll('input[name="theme"]').forEach(radio => {
             // document.getElementById('hidden-file-input')?.click();
         });
     }
-});

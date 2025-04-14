@@ -206,6 +206,16 @@ class AudioVisualizer {
     
     startVisualization() {
         const updateVisuals = () => {
+            // Check if muted via AudioManager
+            if (window.audioManager && window.audioManager.isMuted) {
+                // If muted, ensure orb is in a static state and skip audio analysis
+                if (this.orbElement) {
+                    delete this.orbElement.dataset.audioLevel;
+                    this.orbElement.style.removeProperty('--intensity');
+                }
+                this.animationFrame = requestAnimationFrame(updateVisuals); // Keep animation frame running
+                return; // Skip audio processing and orb modulation
+            }
             let dataArrayToUse;
             let analyserToUse;
             

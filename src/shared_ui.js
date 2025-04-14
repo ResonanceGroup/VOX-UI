@@ -20,6 +20,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// --- Accordion Logic ---
+(function() {
+    const accordionStateKey = 'voxui_accordion_state';
+    const groups = document.querySelectorAll('.settings-group.accordion');
+
+    // Load initial state
+    let accordionStates = {};
+    try {
+        const storedState = localStorage.getItem(accordionStateKey);
+        if (storedState) {
+            accordionStates = JSON.parse(storedState);
+        }
+    } catch (e) {
+        console.error('Error reading accordion state from localStorage:', e);
+    }
+
+    groups.forEach((group, index) => {
+        const header = group.querySelector('.settings-group-header');
+        const details = group.querySelector('.settings-group-details');
+        const groupId = group.id || `accordion-${index}`; // Use ID or index as key
+
+        if (header && details) {
+            // Apply stored state or default (first one open)
+            const initialStateOpen = accordionStates[groupId] !== undefined ? accordionStates[groupId] : (index === 0); // Default first open
+            group.classList.toggle('open', initialStateOpen);
+            details.style.display = initialStateOpen ? '' : 'none';
+
+            header.addEventListener('click', () => {
+                const isOpen = group.classList.toggle('open');
+                details.style.display = isOpen ? '' : 'none';
+                // Save state
+                accordionStates[groupId] = isOpen;
+                try {
+                    localStorage.setItem(accordionStateKey, JSON.stringify(accordionStates));
+                } catch (e) {
+                    console.error('Error saving accordion state to localStorage:', e);
+                }
+            });
+        }
+    });
+})();
+
+
 // --- Toast Notification Logic ---
 function showToast(message, duration = 3000) {
     // Remove existing toast if any

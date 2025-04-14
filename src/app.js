@@ -450,9 +450,18 @@ class AudioManager {
         };
     }
 
-    toggleMute() {
-        this.isMuted = !this.isMuted;
-        this.log(`Mute toggled. New state: ${this.isMuted}`);
+    toggleMute(forceState = null) {
+        const newState = (forceState !== null) ? !!forceState : !this.isMuted;
+        if (newState === this.isMuted) return; // No change needed
+
+        this.isMuted = newState;
+        this.log(`Mute set to: ${this.isMuted}`);
+        // Persist mute state
+        try {
+            localStorage.setItem('voxui_mute_state', JSON.stringify(this.isMuted));
+        } catch (e) {
+            console.warn('Failed to save mute state to localStorage:', e);
+        }
         if (this.isMuted && this.isRecording) {
             this.log('Muting while recording, stopping recording.');
             this.stopRecording();
@@ -474,6 +483,7 @@ class WebSocketClient {
         this.reconnectInterval = 5000; // 5 seconds
         this.debug = true; // Enable logging
         this.messageQueue = []; // Queue for messages sent before connection is open
+        this.sessionConfirmed = false; // Flag to track if session is active
         this.log('WebSocketClient initialized.');
         this.connect();
     }
@@ -577,8 +587,9 @@ class WebSocketClient {
                         // Display text response if needed (future expansion)
                         console.log('[WebSocketClient] Text response received:', payload.text);
                         break;
-                     case 'session_confirmed':
+                     case 'session_confirmed': // ADDED THIS CASE BACK
                         console.log('[WebSocketClient] Session confirmed');
+                        this.sessionConfirmed = true; // Set flag
                         // Potentially update UI to show connected status
                         break;
 
@@ -591,18 +602,18 @@ class WebSocketClient {
                             window.settings.log('Updated settings from WebSocket:', window.settings.settings);
                             window.settings.updateInputs(); // Update form fields
                             if (typeof applyTheme === 'function') applyTheme(window.settings.settings.theme); // Apply theme using shared function
-// After applying settings, check if voice agent config is valid
-const settingsData = window.settings.settings;
-const agentType = settingsData.active_voice_agent;
-const agentConfig = settingsData.voice_agent_config?.[agentType];
-const isAgentValid = agentType && agentConfig && agentConfig.model && agentConfig.url;
+                            // After applying settings, check if voice agent config is valid
+                            const settingsData = window.settings.settings;
+                            const agentType = settingsData.active_voice_agent;
+                            const agentConfig = settingsData.voice_agent_config?.[agentType];
+                            const isAgentValid = agentType && agentConfig && agentConfig.model && agentConfig.url;
 
-if (isAgentValid) {
-    this.log('Voice agent config is valid. Sending init_session...');
-    this.sendMessage('init_session', {
-        agentType: agentType,
-        config: agentConfig
-    });
+                            if (isAgentValid) {
+                                this.log('Voice agent config is valid. Sending init_session...');
+                                this.sendMessage('init_session', {
+                                    agentType: agentType,
+                                    config: agentConfig
+                                });
                             } else {
                                 this.log('Voice agent config is missing or invalid. Not sending init_session.');
                                 if (typeof updateUIState === 'function') {
@@ -662,6 +673,15 @@ if (isAgentValid) {
 
         this.ws.onerror = (error) => {
             console.error('[WebSocketClient] WebSocket error:', error);
+            // If session wasn't confirmed, force mute
+            if (!this.sessionConfirmed && window.audioManager) {
+                console.warn('[WebSocketClient] WebSocket error before session confirmed. Forcing mute.');
+                window.audioManager.toggleMute(true);
+                // Also update UI state if possible
+                 if (typeof updateUIState === 'function') {
+                    updateUIState('disconnected', 'Connection error');
+                 }
+            }
             // Fallback: If settings not loaded from backend, load from localStorage
             const s = window.settings && window.settings.settings;
             if (s && (!s.active_voice_agent || !s.voice_agent_config)) {
@@ -673,193 +693,182 @@ if (isAgentValid) {
 
         this.ws.onclose = (event) => {
             this.log(`Connection closed. Code: ${event.code}, Reason: '${event.reason}'. Reconnecting in ${this.reconnectInterval / 1000}s...`);
+            // If session wasn't confirmed, force mute
+            if (!this.sessionConfirmed && window.audioManager) {
+                console.warn('[WebSocketClient] WebSocket closed before session confirmed. Forcing mute.');
+                window.audioManager.toggleMute(true);
+                // Also update UI state if possible
+                 if (typeof updateUIState === 'function') {
+                    updateUIState('disconnected', 'Connection closed');
+                 }
+            }
             // Fallback: If settings not loaded from backend, load from localStorage
             const s = window.settings && window.settings.settings;
             if (s && (!s.active_voice_agent || !s.voice_agent_config)) {
                 console.warn('[WebSocketClient] WebSocket closed before settings loaded. Falling back to localStorage.');
                 window.settings.load('WebSocketErrorFallback');
             }
+            this.sessionConfirmed = false; // Reset flag on close
             this.ws = null; // Clear the old socket object
             this.scheduleReconnect();
         };
     }
 
     scheduleReconnect() {
-         // Avoid multiple reconnect timers
-        if (this.reconnectTimer) {
-            clearTimeout(this.reconnectTimer);
-        }
-        this.reconnectTimer = setTimeout(() => {
-            this.log('Attempting reconnect...');
+        this.log(`Scheduling reconnect in ${this.reconnectInterval / 1000}s...`);
+        setTimeout(() => {
+            this.log('Attempting to reconnect...');
             this.connect();
         }, this.reconnectInterval);
     }
 
     sendMessage(type, payload) {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            try {
-                const message = JSON.stringify({ type, payload });
-                this.log('Sending message:', { type, payload });
-                this.ws.send(message);
-            } catch (error) {
-                 console.error('[WebSocketClient] Error sending message:', error, { type, payload });
-            }
-        } else {
-            // Queue the message to be sent when the connection is open
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            this.log(`WebSocket not open. Queuing message: ${type}`, payload);
             this.messageQueue.push({ type, payload });
-            if (this.debug) {
-                this.log('WebSocket not open. Queuing message:', { type, payload });
-            }
+            return;
+        }
+        try {
+            const message = JSON.stringify({ type, payload });
+            this.log(`Sending message: ${type}`, payload);
+            this.ws.send(message);
+        } catch (error) {
+            console.error('[WebSocketClient] Error sending message:', error);
         }
     }
 }
 
-// Global state variables for UI coordination
-let currentAIState = 'idle'; // Tracks current UI state
-let underlyingAIState = 'idle'; // Stores state before mute/notify
 
-// Notification animation and UI functions
+// --- Particle Effect ---
 function createParticles(orbParticles) {
     if (!orbParticles) return;
-    
-    // Clear any existing particles
-    orbParticles.innerHTML = '';
-    
-    // Create 5-7 particles
-    const particleCount = Math.floor(Math.random() * 3) + 7; // 7-10 particles
-    
+    const particleCount = 15;
     for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement('div');
-        particle.className = 'particle';
+        particle.classList.add('particle');
         
-        // Random angle for trajectory
-        const angle = Math.random() * Math.PI * 2;
-        // Random distance (40-100px)
-        const distance = 40 + Math.random() * 60;
+        // Random position within the orb's bounds (approximate)
+        const angle = Math.random() * 2 * Math.PI;
+        const radius = Math.random() * 40; // Adjust radius as needed
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
         
-        // Calculate x,y destination based on angle and distance
-        const x = Math.cos(angle) * distance;
-        const y = Math.sin(angle) * distance;
-        
-        // Set random color from options
-        const colors = ['#42A5F5', '#64B5F6', '#29B6F6', '#03A9F4', '#00BCD4'];
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        
-        // Apply styles
+        // Set initial position relative to center
         particle.style.setProperty('--x', `${x}px`);
         particle.style.setProperty('--y', `${y}px`);
-        particle.style.backgroundColor = color;
         
-        // Larger particles (8-16px)
-        const size = 8 + Math.random() * 8;
+        // Random size and duration
+        const size = Math.random() * 5 + 2; // 2px to 7px
+        const duration = Math.random() * 800 + 400; // 400ms to 1200ms
+        
         particle.style.width = `${size}px`;
         particle.style.height = `${size}px`;
+        particle.style.backgroundColor = 'var(--notify-color, rgba(33, 150, 243, 0.8))'; // Use notify color
         
-        // Animation duration (500-700ms)
-        const duration = 500 + Math.random() * 200;
+        // Apply animation
         particle.style.animation = `particle-burst ${duration}ms forwards ease-out`;
         
-        // Add to container
         orbParticles.appendChild(particle);
+        
+        // Remove particle after animation
+        setTimeout(() => {
+            particle.remove();
+        }, duration);
     }
-    
-    // Create a flash effect
-    const flash = document.createElement('div');
-    flash.className = 'notification-flash';
-    flash.style.position = 'absolute';
-    flash.style.inset = '0';
-    flash.style.backgroundColor = 'rgba(100, 181, 246, 0.3)';
-    flash.style.borderRadius = '50%';
-    flash.style.animation = 'fade-out 400ms forwards';
-    orbParticles.appendChild(flash);
-    
-    // Create expanding wave effect
-    const wave = document.createElement('div');
-    wave.className = 'notification-wave';
-    wave.style.position = 'absolute';
-    wave.style.top = '50%';
-    wave.style.left = '50%';
-    wave.style.transform = 'translate(-50%, -50%)';
-    wave.style.width = '100%';
-    wave.style.height = '100%';
-    wave.style.borderRadius = '50%';
-    wave.style.border = '3px solid rgba(100, 181, 246, 0.8)';
-    wave.style.boxShadow = '0 0 15px rgba(100, 181, 246, 0.6)';
-    wave.style.animation = 'expand-wave 1s forwards ease-out';
-    orbParticles.appendChild(wave);
 }
 
+// --- Transition Effect ---
 function triggerTransitionEffect(body) {
     if (!body) return;
     body.classList.add('transitioning');
-    setTimeout(() => body.classList.remove('transitioning'), 150);
+    setTimeout(() => {
+        body.classList.remove('transitioning');
+    }, 150); // Duration of the flash animation
 }
 
+// --- Ensure Animation Styles ---
 function ensureAnimationStyles() {
-    if (document.querySelector('#animation-styles')) return;
-    
+    if (document.getElementById('vox-animation-styles')) return; // Already added
+
     const style = document.createElement('style');
-    style.id = 'animation-styles';
+    style.id = 'vox-animation-styles';
     style.textContent = `
-        @keyframes fade-out {
-            from { opacity: 1; }
-            to { opacity: 0; }
+        /* Orb Status Ring Glow */
+        .orb-status-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px 5px var(--orb-glow-color, rgba(33, 150, 243, 0.5));
+            opacity: 0.5;
+            transition: box-shadow 0.3s ease-out, opacity 0.3s ease-out;
+            pointer-events: none; /* Allow clicks to pass through */
         }
-        
-        @keyframes expand-wave {
-            0% {
-                width: 100%;
-                height: 100%;
-                opacity: 0.8;
-            }
-            100% {
-                width: 200%;
-                height: 200%;
-                opacity: 0;
-            }
+
+        /* State-specific Glow Adjustments */
+        .state-listening .orb-status-ring { opacity: 0.7; box-shadow: 0 0 15px 7px var(--orb-glow-color); }
+        .state-processing .orb-status-ring { opacity: 0.7; box-shadow: 0 0 15px 7px var(--orb-glow-color); }
+        .state-speaking .orb-status-ring { opacity: 0.7; box-shadow: 0 0 15px 7px var(--orb-glow-color); }
+        .state-error .orb-status-ring { opacity: 0.7; box-shadow: 0 0 15px 7px var(--orb-glow-color); }
+        .state-muted .orb-status-ring { opacity: 0.3; }
+        .state-notifying .orb-status-ring { opacity: 0.8; box-shadow: 0 0 20px 10px var(--orb-glow-color); }
+
+        /* Particle Container */
+        .orb-particles {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
         }
-        
+
+        /* Individual Particle */
+        .particle {
+            position: absolute;
+            top: 50%; left: 50%;
+            border-radius: 50%;
+            transform-origin: center center;
+        }
+
+        /* Particle Animation */
         @keyframes particle-burst {
             0% { transform: translate(0, 0) scale(1); opacity: 1; }
             100% { transform: translate(var(--x), var(--y)) scale(0); opacity: 0; }
         }
-        
-        @keyframes ellipsis-animation {
-            0% { content: '.'; }
-            33% { content: '..'; }
-            66% { content: '...'; }
-            100% { content: '.'; }
-        }
-        
+
+        /* Processing Ellipsis Animation */
         .processing-container {
-            display: inline-flex;
+            display: flex;
             justify-content: center;
             align-items: center;
         }
-        
         .processing-text {
-            display: inline;
+            margin-right: 2px;
             white-space: nowrap;
         }
-        
         .ellipsis-dots {
             display: inline-block;
-            width: 18px;
+            width: 18px; /* Adjust width based on font size */
             text-align: left;
-            overflow: hidden;
         }
-        
         .ellipsis-dots::after {
             content: '.';
             display: inline-block;
             margin-left: 2px;  /* Space between text and dots */
             animation: ellipsis-animation 1.5s infinite;
         }
-        
+        @keyframes ellipsis-animation {
+            0% { content: '.'; }
+            33% { content: '..'; }
+            66% { content: '...'; }
+            100% { content: '.'; }
+        }
+
+        /* Transition Flash Animation */
         .transitioning .orb-status-ring {
             animation: transition-flash 0.15s ease-out;
         }
-        
         @keyframes transition-flash {
             0%, 100% { box-shadow: 0 0 10px 5px var(--orb-glow-color); opacity: 0.5; }
             50% { box-shadow: 0 0 20px 10px var(--orb-glow-color); opacity: 1; }
@@ -921,6 +930,23 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('WebSocket client setup complete. Access via window.wsClient or sendWebSocketMessage(type, payload).');
 
         window.audioManager = new AudioManager(window.wsClient);
+        // Restore mute state from localStorage
+        try {
+            const storedMute = localStorage.getItem('voxui_mute_state');
+            if (storedMute !== null) {
+                const isMuted = JSON.parse(storedMute);
+                window.audioManager.toggleMute(!!isMuted);
+                // Update mute button UI if present
+                const muteButton = document.querySelector('.mute-button');
+                if (muteButton) {
+                    muteButton.classList.toggle('muted', !!isMuted);
+                    muteButton.title = isMuted ? 'Unmute microphone' : 'Mute microphone';
+                    muteButton.querySelector('svg path')?.setAttribute('d', isMuted ? micOffIcon : micOnIcon);
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to restore mute state from localStorage:', e);
+        }
         console.log('AudioManager initialized. Access via window.audioManager.');
 
         // Automatically start recording after initialization
