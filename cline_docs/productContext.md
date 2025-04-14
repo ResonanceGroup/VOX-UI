@@ -21,8 +21,9 @@ A web-based interface designed primarily to act as a voice interface for the Roo
   - Viewing configured MCP servers and their status
   - Enabling/disabling servers
   - Configuring server details (tools, resources, permissions)
-  - Editing the underlying MCP configuration file
-- Persistent settings storage (for themes, potentially MCP config path)
+  - Editing the underlying MCP configuration file (via file path - deprecated)
+  - Inline editing of MCP configuration JSON directly within the Settings page
+- Persistent settings storage (for themes, potentially MCP config path - deprecated)
 
 ### Visual Elements
 - Interactive orb visualization

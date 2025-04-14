@@ -10,8 +10,13 @@
 - **Backend Plan - Phase 3 Complete:** Frontend implementation finished (WebSocket client, MCP page logic, UI state updates, Audio handling, Settings save/load via WebSocket).
 - **Backend Plan - Phase 4 (Tasks 1 & 2):** Implemented `EchoAgent.js` and `UltraVoxKokoroAgent.js` (networked version). Created `gpu_server_setup.sh`.
 - **Code Review Fixes:** Addressed issues found in code review (MCP client cleanup bug, JS filename inconsistency (`mcp_servers.js`), `app.js` race condition).
+- **Sidebar Menu Fixes:** Added missing `id="sidebar-toggle"` to buttons and missing `<script src="script.js">` includes in `index.html`, `settings.html`, and `mcp_servers.html`.
+- **Inline MCP Editor Added:** Added a textbox to `src/settings.html` for direct editing of MCP config JSON (replaces file path input).
+- **Session Logic Refactor (Attempted):** Started refactoring `src/app.js` for improved WebSocket/settings initialization timing (task cancelled, state may be partial).
+- **New Bug:** Accordion groups on Settings page (`src/settings.html`) are no longer expanding/collapsing.
+- **Existing Backend Error:** `mcp_config_path not found in settings.json` error persists when loading MCP Servers page (likely related to inline editor change).
 
-## Current Focus: Phase 5 - Integration & Testing
+## Current Focus: Debugging UI Issues & MCP Config Flow
 
 Following the plan outlined in `cline_docs/backend_implementation_plan.md`:
 
@@ -53,4 +58,8 @@ Following the plan outlined in `cline_docs/backend_implementation_plan.md`:
 
 # Next Steps
 
-1.  **Begin Backend Plan - Phase 5:** Set up the cloud GPU environment and configure VOX UI for end-to-end testing with the `UltraVoxKokoroAgent`.
+1.  Fix broken accordion groups on Settings page (`src/settings.html`).
+2.  Implement navigation link from "Edit MCP Servers" button (`src/mcp_servers.html`) to the editor section on `src/settings.html`.
+3.  Investigate and fix backend error `mcp_config_path not found in settings.json`.
+4.  Verify/complete `src/app.js` session/settings initialization refactor.
+5.  Resume Phase 5 testing (GPU setup, end-to-end tests) once UI/config issues are resolved.

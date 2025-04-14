@@ -131,11 +131,7 @@ if (muteButton) {
     if (header && details) {
       header.addEventListener('click', () => {
         const isOpen = group.classList.toggle('open');
-        if (isOpen) {
-          details.style.display = '';
-        } else {
-          details.style.display = 'none';
-        }
+        // Style manipulation removed - CSS handles visibility via .open class
       });
       // Ensure initial state matches class
       if (!group.classList.contains('open')) {

@@ -1451,6 +1451,10 @@ input:checked + .slider:before {
    display: none; /* Simple hide/show for now */
 }
 
+.settings-group.accordion.open .settings-group-details {
+    display: block; /* Explicitly show when open */
+}
+
 /* Dark mode adjustments for settings accordion */
 [data-theme="dark"] .settings-group.accordion {
     border-color: var(--settings-group-border-dark, #444); /* Use specific var */

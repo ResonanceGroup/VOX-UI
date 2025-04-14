@@ -7,7 +7,7 @@
 - Settings page structure (basic)
 - Navigation controls
 - **Phase 1: MCP Server Page UI (HTML/CSS)**
-    - HTML structure created (`src/mcp_servers.html`). *(Corrected filename)*
+    - HTML structure created (`src/mcp_servers.html`).
     - CSS styling applied (`src/app.css`).
     - Sample server data included.
     - *Note: JS functionality deferred.*
@@ -17,15 +17,20 @@
     - Updated inputs (Model dropdown, Textarea height).
 - **UI Finalization - Phase B: MCP Page Integration**
     - Identified MCP Icon (`server` Codicon).
-    - Integrated icon and link into sidebars (`index.html`, `settings.html`, `mcp_servers.html`). *(Corrected filename)*
+    - Integrated icon and link into sidebars (`index.html`, `settings.html`, `mcp_servers.html`).
 - **UI Finalization - Phase C: Theme Persistence Bug Fix**
     - Resolved issue preventing global theme application after saving.
 - **Backend Plan - Phase 3: Frontend Implementation**
     - Implemented WebSocket Client Setup (`src/app.js`).
-    - Implemented MCP Servers Page Logic (`src/mcp_servers.js` using HTTP API). *(Corrected filename)*
+    - Implemented MCP Servers Page Logic (`src/mcp_servers.js` using HTTP API).
     - Implemented UI State Updates (`src/app.js` handling `status_update`).
     - Implemented Real-time Audio Handling (`src/app.js` - capture, streaming, playback, auto-start).
     - Refactored Settings Page save/load logic to use WebSockets (`src/app.js`).
+- **Sidebar Menu Fixes:**
+    - Added missing `id="sidebar-toggle"` to menu buttons in `index.html`, `settings.html`, `mcp_servers.html`.
+    - Added missing `<script src="script.js">` includes to `index.html`, `settings.html`, `mcp_servers.html`.
+- **Inline MCP Config Editor:**
+    - Added textbox to `src/settings.html` for direct editing of MCP config JSON.
 
 ## Backend Planning (Original Plan - Deferred)
 - Architecture design completed (for old plan)
@@ -53,19 +58,24 @@
 - Implemented `UltraVoxKokoroAgent.js` (networked version).
 - Created `gpu_server_setup.sh` script.
 
-## Code Review Fixes
+## Code Review Fixes & Refactors
 - Fixed `_cleanupPendingRequests` bug in `src/server/mcpClient.js`.
 - Renamed `src/mcp_settings.js` to `src/mcp_servers.js` and updated HTML link.
 - Addressed potential race condition in `src/app.js` settings load using message queuing.
+- **Session Logic Refactor (Attempted):** Started refactoring `src/app.js` for improved WebSocket/settings initialization timing (task cancelled, state may be partial).
 
-# In Progress (New Plan - April 2025)
+# In Progress (Debugging UI & Config)
 
-*(No tasks currently in progress)*
+- Debugging UI issues on Settings page (`src/settings.html`).
+- Investigating backend MCP config error.
 
 # Upcoming Tasks (New Plan)
 
-## Backend Plan - Phase 5: Integration & Testing (Deferred)
-- **Goal:** End-to-end testing. (Next Step - Requires GPU server setup)
+1.  **Fix Settings Accordion:** Resolve bug preventing accordion groups from expanding/collapsing on `src/settings.html`.
+2.  **Link MCP Edit Button:** Implement navigation from "Edit MCP Servers" button (`src/mcp_servers.html`) to the editor section on `src/settings.html`.
+3.  **Fix Backend Config Error:** Resolve `mcp_config_path not found in settings.json` error.
+4.  **Complete Session Logic Refactor:** Verify and finish the refactor of `src/app.js` for robust session/settings initialization.
+5.  **Backend Plan - Phase 5: Integration & Testing (Deferred):** Resume end-to-end testing once current issues are resolved.
 
 ## Backend Plan - Phase 4: Voice Agent Module Implementation (Continued - Deferred)
 - **Goal:** Implement specific `IVoiceAgent` modules.
