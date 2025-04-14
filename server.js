@@ -11,6 +11,8 @@ const app = express();
 // Add JSON body parser
 app.use(express.json());
 
+const settingsApiRouter = require('./src/server/settingsApi');
+app.use('/api/settings', settingsApiRouter);
 // Mount the settings API router
 
 app.use('/api/mcp', mcpApiRouter); // Mount the MCP API router

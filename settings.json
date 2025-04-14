@@ -1,10 +1,14 @@
 {
-  "theme": "light",
+  "theme": "dark",
   "mcp_config_path": "",
   "active_voice_agent": "ultravox",
   "voice_agent_config": {
-    "ultravox": {},
-    "phi4": {},
-    "qwen": {}
+    "ultravox": {
+      "model": "ultravox",
+      "url": "ws://localhost:5005",
+      "prompt": "Test Prompt",
+      "voice": "en_US/amy",
+      "language": "en"
+    }
   }
 }

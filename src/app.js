@@ -10,8 +10,6 @@ class Settings {
         // Default settings
         this.settings = {
             theme: 'system',
-            n8nwebhook: '',
-            ultravoxurl: ''
         };
 
         this.debug = true;
@@ -24,9 +22,7 @@ class Settings {
         // Apply theme only after loading settings (handled in load())
 
         // Handle system theme changes
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-            this.applyTheme();
-        });
+        // System theme change listener moved to shared_ui.js
     }
 
     log(...args) {
@@ -55,12 +51,12 @@ class Settings {
                         this.log('Loaded settings from localStorage:', JSON.stringify(this.settings));
                         this.log(`Theme value after localStorage load: ${this.settings.theme}`);
                         this.updateInputs();
-                        this.applyTheme();
+                        if (typeof applyTheme === 'function') applyTheme(this.settings.theme);
                         resolve(this.settings);
                     } else {
                         this.log('No settings found in localStorage, using defaults.');
                         this.updateInputs();
-                        this.applyTheme();
+                        if (typeof applyTheme === 'function') applyTheme(this.settings.theme);
                         resolve(this.settings);
                     }
                 } catch (e) {
@@ -73,6 +69,23 @@ class Settings {
 
     save() {
         this.log('Saving settings...');
+        // Validate agent config before saving
+        const vac = this.settings.voice_agent_config;
+        let valid = true;
+        if (!vac || typeof vac !== 'object') valid = false;
+        else {
+            for (const [agent, config] of Object.entries(vac)) {
+                if (!config || typeof config !== 'object' || !config.model || !config.url) {
+                    valid = false;
+                    break;
+                }
+            }
+        }
+        if (!valid) {
+            this.log('Invalid settings: each agent config must have model and url.');
+            alert('Invalid settings: each agent config must have model and url.');
+            return;
+        }
         // Always save to localStorage as a fallback
         try {
             localStorage.setItem('voxui_settings', JSON.stringify(this.settings));
@@ -94,14 +107,7 @@ class Settings {
         const n8nInput = document.getElementById('n8n-webhook');
         const ultravoxInput = document.getElementById('ultravox-url');
         
-        if (n8nInput) {
-            n8nInput.value = this.settings.n8nwebhook || '';
-            this.log('Updated n8n webhook input:', n8nInput.value);
-        }
-        if (ultravoxInput) {
-            ultravoxInput.value = this.settings.ultravoxurl || '';
-            this.log('Updated ultravox URL input:', ultravoxInput.value);
-        }
+        // Removed legacy n8nwebhook and ultravoxurl input updates
         
         // Update theme radio inputs
         const themeInput = document.querySelector(`input[name="theme"][value="${this.settings.theme}"]`);
@@ -111,14 +117,7 @@ class Settings {
         }
     }
 
-    applyTheme() {
-        const theme = this.settings.theme;
-        const effectiveTheme = theme === 'system' ? 
-            window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-            : theme;
-        document.documentElement.dataset.theme = effectiveTheme;
-        this.log('Applied theme:', theme, '(effective:', effectiveTheme, ')');
-    }
+    // applyTheme method removed, logic moved to shared_ui.js
 
     setupListeners() {
         // Theme switching
@@ -126,7 +125,7 @@ class Settings {
             radio.addEventListener('change', () => {
                 if (radio.checked) {
                     this.settings.theme = radio.value;
-                    this.applyTheme();
+                    if (typeof applyTheme === 'function') applyTheme(radio.value);
                     this.log('Theme radio changed. this.settings.theme is now:', this.settings.theme); // ADDED LOG
                 }
             });
@@ -507,30 +506,9 @@ class WebSocketClient {
                 this.messageQueue = [];
             }
 
-            // Send the init_session message using loaded settings
-            try {
-                if (!window.settings || !window.settings.settings) {
-                    throw new Error('Settings not available on window object.');
-                }
-                const settingsData = window.settings.settings;
-                const agentType = settingsData.active_voice_agent;
-                const agentConfig = settingsData.voice_agent_config?.[agentType] || {}; // Use optional chaining and default to empty object
-
-                if (!agentType) {
-                     console.warn('[WebSocketClient] No active_voice_agent found in settings. Cannot send init_session.');
-                     return; // Don't send if no agent type is set
-                }
-
-                this.log(`Sending init_session for agentType: ${agentType}`, agentConfig);
-                this.sendMessage('init_session', {
-                    agentType: agentType,
-                    config: agentConfig
-                });
-
-            } catch (error) {
-                console.error('[WebSocketClient] Error preparing or sending init_session message:', error);
-                // Optionally, close the connection or notify the user
-            }
+            // Request settings from backend as the primary source
+            this.log('Requesting settings from backend via get_settings...');
+            this.sendMessage('get_settings', {});
         };
 
         this.ws.onmessage = (event) => {
@@ -612,7 +590,25 @@ class WebSocketClient {
                             window.settings.settings = { ...window.settings.settings, ...payload.settings };
                             window.settings.log('Updated settings from WebSocket:', window.settings.settings);
                             window.settings.updateInputs(); // Update form fields
-                            window.settings.applyTheme();   // Apply theme
+                            if (typeof applyTheme === 'function') applyTheme(window.settings.settings.theme); // Apply theme using shared function
+// After applying settings, check if voice agent config is valid
+const settingsData = window.settings.settings;
+const agentType = settingsData.active_voice_agent;
+const agentConfig = settingsData.voice_agent_config?.[agentType];
+const isAgentValid = agentType && agentConfig && agentConfig.model && agentConfig.url;
+
+if (isAgentValid) {
+    this.log('Voice agent config is valid. Sending init_session...');
+    this.sendMessage('init_session', {
+        agentType: agentType,
+        config: agentConfig
+    });
+                            } else {
+                                this.log('Voice agent config is missing or invalid. Not sending init_session.');
+                                if (typeof updateUIState === 'function') {
+                                    updateUIState('disconnected', 'Voice agent not configured');
+                                }
+                            }
 
                             // Resolve the promise from the load() call
                             if (typeof window.settings._loadPromiseResolve === 'function') {
@@ -627,6 +623,27 @@ class WebSocketClient {
                     case 'settings_update_ack':
                         if (payload.success) {
                             this.log('Settings update successful (acknowledged by server).');
+                            // After settings are saved, if we were previously disconnected due to missing voice agent config,
+                            // and the new config is now valid, send init_session.
+                            try {
+                                const prevState = window.currentAIState;
+                                const settingsData = window.settings.settings;
+                                const agentType = settingsData.active_voice_agent;
+                                const agentConfig = settingsData.voice_agent_config?.[agentType];
+                                const isAgentValid = agentType && agentConfig && agentConfig.model && agentConfig.url;
+                                if (
+                                    prevState === 'disconnected' &&
+                                    isAgentValid
+                                ) {
+                                    this.log('Settings updated: previously disconnected, now valid agent config. Sending init_session...');
+                                    this.sendMessage('init_session', {
+                                        agentType: agentType,
+                                        config: agentConfig
+                                    });
+                                }
+                            } catch (e) {
+                                console.error('Error checking for auto-init_session after settings update:', e);
+                            }
                             // Optional: Add user feedback (e.g., toast notification)
                         } else {
                             console.error('Settings update failed (acknowledged by server):', payload.error || 'Unknown error');
@@ -645,11 +662,23 @@ class WebSocketClient {
 
         this.ws.onerror = (error) => {
             console.error('[WebSocketClient] WebSocket error:', error);
+            // Fallback: If settings not loaded from backend, load from localStorage
+            const s = window.settings && window.settings.settings;
+            if (s && (!s.active_voice_agent || !s.voice_agent_config)) {
+                console.warn('[WebSocketClient] WebSocket error before settings loaded. Falling back to localStorage.');
+                window.settings.load('WebSocketErrorFallback');
+            }
             // onclose will likely be called next, triggering reconnection.
         };
 
         this.ws.onclose = (event) => {
             this.log(`Connection closed. Code: ${event.code}, Reason: '${event.reason}'. Reconnecting in ${this.reconnectInterval / 1000}s...`);
+            // Fallback: If settings not loaded from backend, load from localStorage
+            const s = window.settings && window.settings.settings;
+            if (s && (!s.active_voice_agent || !s.voice_agent_config)) {
+                console.warn('[WebSocketClient] WebSocket closed before settings loaded. Falling back to localStorage.');
+                window.settings.load('WebSocketErrorFallback');
+            }
             this.ws = null; // Clear the old socket object
             this.scheduleReconnect();
         };
@@ -844,7 +873,7 @@ function ensureAnimationStyles() {
 console.log('[app.js] DOMContentLoaded handler registered');
 document.addEventListener('DOMContentLoaded', () => {
     window.settings = new Settings();
-    
+
     // Initialize AudioVisualizer first so it's available for AudioManager
     if (typeof AudioVisualizer !== "undefined") {
         window.audioVisualizer = new AudioVisualizer();
@@ -854,13 +883,35 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('AudioVisualizer not available on this page.');
     }
 
-    // Load settings first, then initialize WebSocket and the rest of the UI logic
-    console.log('[DOMContentLoaded] Calling settings.load()');
-    window.settings.load('DOMContentLoaded').then(() => {
-        console.log('[DOMContentLoaded] Settings loaded. Current theme:', window.settings.settings.theme);
-        window.settings.applyTheme();
-        console.log('[DOMContentLoaded] applyTheme() called.');
-        console.log('Settings loaded, initializing WebSocket client...');
+    // Fetch latest settings via HTTP first for faster initial load
+    console.log('[DOMContentLoaded] Fetching initial settings via HTTP...');
+    fetch('/api/settings')
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+        })
+        .then(settings => {
+            console.log('[DOMContentLoaded] Initial settings loaded via HTTP:', settings);
+            window.settings.settings = { ...window.settings.settings, ...settings }; // Merge with defaults/existing
+            if (typeof applyTheme === 'function') {
+                applyTheme(window.settings.settings.theme); // Apply fetched theme
+            } else {
+                 console.warn('applyTheme function not found when applying HTTP settings.');
+            }
+            // Now initialize WebSocket
+            initializeMainAppLogic();
+        })
+        .catch(err => {
+            console.error('[DOMContentLoaded] Failed to fetch initial settings via HTTP. Falling back to WebSocket/localStorage:', err);
+            // Proceed with WebSocket initialization anyway, it will handle fallback
+            initializeMainAppLogic();
+        });
+
+    // Function to contain the rest of the initialization logic
+    function initializeMainAppLogic() {
+        console.log('[DOMContentLoaded] Initializing WebSocket client and main app logic...');
         const websocketUrl = `wss://${window.location.hostname}:3002`; // Use hostname and specific port
         // Fallback for local development if hostname isn't resolving correctly or for file:// protocol
         // const websocketUrl = 'wss://localhost:3002';
@@ -988,12 +1039,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             console.error('Error initializing audio visualizer:', err);
                         });
                     }
-                    break;
-                    
+                    break; // Missing break for 'listening' case
+
                 case 'speaking':
                     if (statusText) statusText.textContent = 'Speaking...';
                     break;
-                    
+
                 case 'processing':
                     const label = context.label || 'Processing';
                     if (statusText) {
@@ -1004,12 +1055,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
                     }
                     break;
-                    
+
                 case 'error':
                     if (statusText) statusText.textContent = context.label || 'Error';
                     console.error('UI Error State:', context);
                     break;
-                    
+
                 case 'notifying':
                     createNotificationEffect();
                     // Automatically revert to previous state after notification
@@ -1017,12 +1068,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         updateUIState(underlyingAIState || 'idle');
                     }, 1500);
                     break;
-                    
+
                 case 'muted':
                     if (statusText) statusText.textContent = 'Muted';
                     break;
-            }
-            
+            } // End switch
+
             // Update orb glow color based on state
             if (statusRing) {
                 let glowColor = '';
@@ -1037,14 +1088,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 statusRing.style.setProperty('--orb-glow-color', glowColor);
             }
-        }
+        } // End updateUIState function
 
         // Make updateUIState accessible from within WebSocket messages
         window.updateUIState = updateUIState;
-        
-    }).catch(error => {
-        console.error("Failed to load settings before initializing WebSocket:", error);
-        // Show user-friendly error
-        document.body.classList.add('state-error');
-    });
-});  // Close the DOMContentLoaded event handler
+
+    } // End of initializeMainAppLogic
+
+}); // End of DOMContentLoaded

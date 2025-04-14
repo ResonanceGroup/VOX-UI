@@ -120,43 +120,7 @@ if (muteButton) {
     });
 }
 
-// Sidebar toggle
-function toggleSidebar() {
-    isSidebarOpen = !isSidebarOpen;
-    sidebar.classList.toggle('open', isSidebarOpen);
-    overlay.classList.toggle('visible', isSidebarOpen);
-    sidebarToggle.setAttribute('aria-expanded', isSidebarOpen);
-}
-
-if (sidebarToggle && overlay && sidebar) {
-    sidebarToggle.addEventListener('click', toggleSidebar);
-    overlay.addEventListener('click', toggleSidebar);
-}
-
-// Sidebar items
-if (sidebarItems && sidebarItems.length > 0 && typeof toggleSidebar === 'function') {
-    sidebarItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const section = item.title ? item.title.toLowerCase() : '';
-            if (section === activeSection) {
-                toggleSidebar();
-                return;
-            }
-
-            // Update active state
-            sidebarItems.forEach(btn => btn.classList.remove('active'));
-            item.classList.add('active');
-            activeSection = section;
-
-            // Show status message and close sidebar
-            updateStatus(`${item.title} section will be available in a future update`);
-            setTimeout(() => {
-                updateStatus('Ready to assist...');
-            }, 2000);
-            toggleSidebar();
-        });
-    });
-}
+// Sidebar logic moved to shared_ui.js
 
 // Accordion expand/collapse for settings groups
 (function() {

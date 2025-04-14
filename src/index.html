@@ -9,6 +9,29 @@
     <title>AI Assistant</title>
     <link rel="stylesheet" href="app.css">
     <link rel="stylesheet" href="orb.css">
+    <script>
+        // Inline script to apply theme immediately from localStorage to prevent flash
+        (function() {
+            function applyTheme(theme) {
+                const effectiveTheme = theme === 'system' ?
+                    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+                    : theme;
+                document.documentElement.dataset.theme = effectiveTheme;
+            }
+            try {
+                const storedSettings = localStorage.getItem('voxui_settings');
+                if (storedSettings) {
+                    const settings = JSON.parse(storedSettings);
+                    applyTheme(settings.theme || 'system'); // Default to system if theme is missing
+                } else {
+                    applyTheme('system'); // Default to system if no settings found
+                }
+            } catch (e) {
+                console.error('Error applying initial theme:', e);
+                applyTheme('system'); // Fallback to system theme on error
+            }
+        })();
+    </script>
 </head>
 <body>
     <div class="container">
@@ -103,6 +126,7 @@
     </div>
     <script src="app.js"></script>
     <script src="audio-visualizer.js"></script>
+    <script src="shared_ui.js"></script>
     <script src="script.js"></script>
     <script>
 

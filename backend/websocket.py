@@ -22,6 +22,12 @@ class WebSocketManager:
         self.active_connections: Set[WebSocket] = set()
         self.ultravox = UltraVoxHandler(ultravox_api_key)
         self.kokoro = KokoroTTSHandler(kokoro_voice)
+        # Simple settings store (replace with file/db as needed)
+        self.settings = {
+            "theme": "system",
+            "active_voice_agent": "",
+            "voice_agent_config": {}
+        }
 
     async def connect(self, websocket: WebSocket):
         """
@@ -47,13 +53,28 @@ class WebSocketManager:
     async def process_message(self, websocket: WebSocket, message_data: bytes) -> None:
         """
         Process incoming WebSocket messages.
-        
-        Args:
-            websocket: WebSocket connection
-            message_data: Raw message data
         """
         try:
-            # Process audio with UltraVox
+            # Try to decode as JSON for message type routing
+            try:
+                msg = json.loads(message_data)
+            except Exception:
+                msg = None
+
+            if msg and isinstance(msg, dict) and "type" in msg:
+                msg_type = msg["type"]
+                if msg_type == "get_settings":
+                    # Respond with current settings
+                    await websocket.send_json({
+                        "type": "settings_data",
+                        "payload": {
+                            "settings": self.settings
+                        }
+                    })
+                    return
+                # Add more message types here as needed
+
+            # Fallback: Process audio with UltraVox (legacy path)
             response = await self.ultravox.process_audio(message_data)
             
             if not response or not self.ultravox.validate_response(response):
