@@ -5,26 +5,9 @@ const { exec } = require('child_process'); // For opening the config file
 
 const router = express.Router();
 
-// Helper function to get the MCP config path from settings.json
-async function getMcpConfigPath() {
-    try {
-        const settingsPath = path.join(__dirname, '..', '..', 'settings.json'); // Adjust path relative to mcpApi.js
-        const settingsData = await fs.readFile(settingsPath, 'utf8');
-        const settings = JSON.parse(settingsData);
-        if (!settings.mcp_config_path) {
-            throw new Error('mcp_config_path not found in settings.json');
-        }
-        // Assuming mcp_config_path is relative to the project root
-        return path.join(__dirname, '..', '..', settings.mcp_config_path);
-    } catch (error) {
-        console.error('Error reading settings.json:', error);
-        throw new Error('Could not retrieve MCP config path from settings.'); // Rethrow a more specific error
-    }
-}
-
 // Helper function to read MCP config
 async function readMcpConfig() {
-    const configPath = await getMcpConfigPath();
+    const configPath = path.join(__dirname, '..', '..', 'mcp_config.json');
     try {
         const configData = await fs.readFile(configPath, 'utf8');
         return JSON.parse(configData);
@@ -42,7 +25,7 @@ async function readMcpConfig() {
 
 // Helper function to write MCP config
 async function writeMcpConfig(config) {
-    const configPath = await getMcpConfigPath();
+    const configPath = path.join(__dirname, '..', '..', 'mcp_config.json');
     try {
         await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf8');
     } catch (error) {
@@ -108,7 +91,7 @@ router.post('/servers/:serverName/refresh', async (req, res) => {
 // POST /api/mcp/config/open - Open the MCP config file
 router.post('/config/open', async (req, res) => {
     try {
-        const configPath = await getMcpConfigPath();
+        const configPath = path.join(__dirname, '..', '..', 'mcp_config.json');
         let command;
 
         // Determine the command based on the OS

@@ -662,6 +662,35 @@ class WebSocketClient {
                         }
                         break;
                     // --- END NEW SETTINGS HANDLERS ---
+                    case 'mcp_config_content':
+                        console.log('[WebSocket] Received MCP config content');
+                        const mcpTextarea = document.getElementById('mcp-config-textarea');
+                        if (mcpTextarea) {
+                            mcpTextarea.value = parsedMessage.payload.content;
+                            if (typeof window.updateMcpConfigHighlight === 'function') {
+                                window.updateMcpConfigHighlight();
+                            }
+                            const saveBtn = document.getElementById('save-mcp-config-btn');
+                            if (saveBtn) saveBtn.disabled = true;
+                        } else {
+                            console.error('MCP config textarea not found');
+                        }
+                        break;
+                    case 'mcp_config_error':
+                        console.error('[WebSocket] Error loading MCP config:', parsedMessage.payload.error);
+                        alert(`Error loading MCP config: ${parsedMessage.payload.error}`);
+                        break;
+                    case 'mcp_config_saved':
+                        console.log('[WebSocket] MCP config saved successfully');
+                        alert('MCP Config saved successfully.');
+                        const saveBtnSuccess = document.getElementById('save-mcp-config-btn');
+                        if (saveBtnSuccess) saveBtnSuccess.disabled = true;
+                        break;
+                    case 'mcp_config_save_error':
+                        console.error('[WebSocket] Error saving MCP config:', parsedMessage.payload.error);
+                        alert(`Error saving MCP config: ${parsedMessage.payload.error}`);
+                        break;
+                    
 
                     default:
                         this.log(`Received unhandled message type: ${message.type}`);
@@ -968,6 +997,81 @@ function handleSettingsHashNavigation() {
         try {
             const storedMute = localStorage.getItem('voxui_mute_state');
             if (storedMute !== null) {
+
+        // --- MCP Config Editor Logic (Settings Page Only) ---
+        if (window.location.pathname.includes('settings.html')) {
+            console.log('[App] Running settings page specific logic for MCP Editor');
+            const mcpTextarea = document.getElementById('mcp-config-textarea');
+            const saveMcpBtn = document.getElementById('save-mcp-config-btn');
+            const revertMcpBtn = document.getElementById('cancel-mcp-config-btn'); // Corrected ID
+            const copyMcpBtn = document.getElementById('copy-mcp-config-btn');
+
+            if (mcpTextarea && saveMcpBtn && revertMcpBtn) {
+                // 1. Request initial config
+                if (window.wsClient && window.wsClient.ws && window.wsClient.ws.readyState === WebSocket.OPEN) {
+                    console.log('[App] Requesting initial MCP config...');
+                    window.wsClient.sendMessage('get_mcp_config');
+                } else {
+                    console.warn('[App] WebSocket not ready, cannot request initial MCP config.');
+                    // Optionally display a message or retry later
+                }
+
+                // 2. Save Button Listener
+                saveMcpBtn.addEventListener('click', () => {
+                    console.log('[App] Save MCP Config button clicked.');
+                    const configContent = mcpTextarea.value;
+                    // Basic validation: Check if it's potentially valid JSON
+                    try {
+                        JSON.parse(configContent); // Try parsing
+                        // If parse succeeds, send to server
+                        if (window.wsClient && window.wsClient.ws && window.wsClient.ws.readyState === WebSocket.OPEN) {
+                            window.wsClient.sendMessage('save_mcp_config', { content: configContent });
+                        } else {
+                            alert('Error: WebSocket connection is not active. Cannot save.');
+                        }
+                    } catch (e) {
+                        console.error('[App] Invalid JSON in MCP config textarea:', e);
+                        alert('Invalid JSON format. Please correct the MCP configuration before saving.');
+                        // Optionally highlight the error area or provide more specific feedback
+                    }
+                });
+
+                // 3. Revert Button Listener
+                revertMcpBtn.addEventListener('click', () => {
+                    console.log('[App] Revert MCP Config button clicked.');
+                    if (window.wsClient && window.wsClient.ws && window.wsClient.ws.readyState === WebSocket.OPEN) {
+                        // Just ask the server for the current config again
+                        window.wsClient.sendMessage('get_mcp_config');
+                    } else {
+                        alert('Error: WebSocket connection is not active. Cannot revert.');
+                    }
+                });
+
+                // 4. Enable Save button on change (might be handled by mcp_settings.js, but good fallback)
+                mcpTextarea.addEventListener('input', () => {
+                    saveMcpBtn.disabled = false;
+                });
+
+                // 5. Copy Button Listener (if needed here, might be in mcp_settings.js)
+                if (copyMcpBtn) {
+                    copyMcpBtn.addEventListener('click', () => {
+                        navigator.clipboard.writeText(mcpTextarea.value).then(() => {
+                            // Optional: Show temporary feedback like 'Copied!'
+                            const originalText = copyMcpBtn.innerHTML;
+                            copyMcpBtn.innerHTML = '<i class="codicon codicon-check"></i>';
+                            setTimeout(() => { copyMcpBtn.innerHTML = originalText; }, 1500);
+                        }).catch(err => {
+                            console.error('Failed to copy MCP config:', err);
+                            alert('Failed to copy text.');
+                        });
+                    });
+                }
+
+            } else {
+                console.warn('[App] MCP config editor elements not found on settings page.');
+            }
+        }
+        // --- End MCP Config Editor Logic ---
                 const isMuted = JSON.parse(storedMute);
                 window.audioManager.toggleMute(!!isMuted);
                 // Update mute button UI if present

@@ -220,6 +220,44 @@ async function initializeWebSocketHandling(wss) { // Make the function async
                     console.error('Error saving settings:', error);
                     ws.send(JSON.stringify({ type: 'settings_update_ack', payload: { success: false, error: error.message } }));
                 }
+            } else if (parsedMessage.type === 'get_mcp_config') {
+                console.log('Handling get_mcp_config request...');
+                const mcpConfigPath = path.join(__dirname, '..', '..', 'mcp_config.json');
+                try {
+                    const data = await fs.readFile(mcpConfigPath, 'utf8');
+                    ws.send(JSON.stringify({ type: 'mcp_config_content', payload: { content: data } }));
+                } catch (error) {
+                    console.error('Error reading MCP config file:', error);
+                    ws.send(JSON.stringify({ type: 'mcp_config_error', payload: { error: 'Failed to read MCP config' } }));
+                }
+            } else if (parsedMessage.type === 'save_mcp_config') {
+                console.log('Handling save_mcp_config request...');
+                const mcpConfigPath = path.join(__dirname, '..', '..', 'mcp_config.json');
+                const { content } = parsedMessage.payload;
+
+                if (typeof content !== 'string') {
+                     ws.send(JSON.stringify({ type: 'mcp_config_save_error', payload: { error: 'Invalid content format' } }));
+                     return;
+                }
+
+                try {
+                    // Validate JSON before writing
+                    JSON.parse(content);
+                } catch (jsonError) {
+                    console.error('Invalid JSON format received for MCP config:', jsonError);
+                    ws.send(JSON.stringify({ type: 'mcp_config_save_error', payload: { error: 'Invalid JSON format' } }));
+                    return; // Stop processing
+                }
+
+                try {
+                    await fs.writeFile(mcpConfigPath, content, 'utf8');
+                    console.log('MCP config file saved successfully.');
+                    ws.send(JSON.stringify({ type: 'mcp_config_saved' }));
+                } catch (writeError) {
+                    console.error('Error writing MCP config file:', writeError);
+                    ws.send(JSON.stringify({ type: 'mcp_config_save_error', payload: { error: 'Failed to write MCP config file' } }));
+                }
+
             } else if (ws.voiceAgent) { // Check if agent exists *after* handling general messages
                 // Agent is initialized, route message based on type
                 console.log(`Routing message type '${parsedMessage.type}' to active agent: ${ws.voiceAgent.constructor.name}`);
