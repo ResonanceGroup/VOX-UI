@@ -585,6 +585,12 @@ main {
 .state-disconnected .orb::after {
     content: '❌';
     position: absolute;
+
+/* Add space above settings groups when scrolled to via hash */
+.settings-group.accordion {
+    scroll-margin-top: 80px; /* Adjust value as needed (header height + padding) */
+}
+
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -1543,6 +1549,26 @@ input:checked + .slider:before {
 .copy-btn:hover, .copy-btn.copied {
     opacity: 1;
     color: var(--accent, #0078d4);
+
+/* MCP Config Editor Specific Styles */
+#mcp-config-textarea {
+  background-color: transparent !important; /* Override .settings-input background */
+  color: rgba(230, 230, 230, 0.7); /* Make actual textarea text slightly transparent */
+  /* Ensure font matches the pre for alignment */
+  font-family: monospace;
+  font-size: 1rem; /* Match pre */
+  line-height: inherit; /* Match pre */
+  caret-color: var(--settings-input-text-dark); /* Make cursor visible */
+}
+
+/* Ensure the highlight pre has appropriate padding and visible text */
+#mcp-config-highlight {
+    padding: 1rem; /* Match textarea padding if any */
+    border-radius: 4px; /* Match textarea */
+    /* Ensure text color is visible */
+    color: var(--settings-input-text-dark); /* Use theme color */
+}
+
 }
 
 [data-theme="dark"] {

@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderServerList(servers);
         } catch (error) {
             console.error('Error fetching MCP servers:', error);
-            serverListContainer.innerHTML = '<p class="error-message">Failed to load MCP server list. Please try again later.</p>';
         }
     }
 
@@ -261,26 +260,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Edit MCP Servers Button ---
     if (editMcpServersButton) {
-        editMcpServersButton.addEventListener('click', async () => {
-            console.log('Attempting to open MCP config file...');
-            try {
-                const response = await fetch('/api/mcp/config/open', { method: 'POST' });
-                if (!response.ok) {
-                     // Try to read error message from backend if available
-                     let errorMsg = `HTTP error! status: ${response.status}`;
-                     try {
-                         const errorData = await response.json();
-                         errorMsg = errorData.message || errorMsg;
-                     } catch (e) { /* Ignore if response is not JSON */ }
-                     throw new Error(errorMsg);
-                }
-                console.log('Open config request sent successfully.');
-                // Optionally show a success message to the user
-                // alert('Attempting to open mcp_config.json in your editor...');
-            } catch (error) {
-                console.error('Error opening MCP config file:', error);
-                alert(`Failed to open MCP config file: ${error.message}`);
-            }
+        editMcpServersButton.addEventListener('click', () => {
+            console.log('Navigating to MCP settings section...');
+            window.location.href = 'settings.html#mcp-settings-group'; // Corrected hash
         });
     } else {
         console.warn('Edit MCP Servers button not found.');
@@ -291,10 +273,3 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchAndRenderServers();
 
 });
-// Edit MCP Servers button navigation
-const editBtn = document.getElementById('edit-mcp-config-btn');
-if (editBtn) {
-    editBtn.addEventListener('click', () => {
-        window.location.href = 'settings.html#mcp';
-    });
-}

@@ -63,19 +63,23 @@
 - Renamed `src/mcp_settings.js` to `src/mcp_servers.js` and updated HTML link.
 - Addressed potential race condition in `src/app.js` settings load using message queuing.
 - **Session Logic Refactor (Attempted):** Started refactoring `src/app.js` for improved WebSocket/settings initialization timing (task cancelled, state may be partial).
+- **Settings Accordion Fix:** Resolved bug preventing accordion groups from expanding/collapsing on `src/settings.html`.
 
-# In Progress (Debugging UI & Config)
+# In Progress (Implementing MCP Editor & Refining UI Flow)
 
-- Debugging UI issues on Settings page (`src/settings.html`).
+- Implementing Save/Cancel/Load for inline MCP editor.
+- Implementing auto-expand for settings accordions on navigation.
+- Removing old MCP error dialog logic.
 - Investigating backend MCP config error.
 
 # Upcoming Tasks (New Plan)
 
-1.  **Fix Settings Accordion:** Resolve bug preventing accordion groups from expanding/collapsing on `src/settings.html`.
-2.  **Link MCP Edit Button:** Implement navigation from "Edit MCP Servers" button (`src/mcp_servers.html`) to the editor section on `src/settings.html`.
-3.  **Fix Backend Config Error:** Resolve `mcp_config_path not found in settings.json` error.
-4.  **Complete Session Logic Refactor:** Verify and finish the refactor of `src/app.js` for robust session/settings initialization.
-5.  **Backend Plan - Phase 5: Integration & Testing (Deferred):** Resume end-to-end testing once current issues are resolved.
+1.  **Remove Old Error Dialog:** Delete obsolete MCP config file error handling from `src/mcp_servers.js`.
+2.  **Implement Expand-on-Navigate:** Add JS logic to expand settings accordions based on URL fragment (`window.location.hash`) on page load.
+3.  **Implement MCP Editor Save/Cancel:** Add frontend JS and backend WebSocket handlers for the inline MCP editor actions.
+4.  **Fix Backend Config Read Error:** Modify backend (`src/server/mcpApi.js`?) to read/write `mcp_config.json` directly, removing reliance on `settings.json` path. (May overlap with #3).
+5.  **Complete Session Logic Refactor:** Verify and finish the refactor of `src/app.js` for robust session/settings initialization.
+6.  **Backend Plan - Phase 5: Integration & Testing (Deferred):** Resume end-to-end testing once current issues are resolved.
 
 ## Backend Plan - Phase 4: Voice Agent Module Implementation (Continued - Deferred)
 - **Goal:** Implement specific `IVoiceAgent` modules.

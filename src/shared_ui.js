@@ -25,7 +25,7 @@ function setupAccordionGroups() {
     const accordionStateKey = 'voxui_accordion_state';
     const groups = document.querySelectorAll('.settings-group.accordion');
 
-    // Load initial state
+    // Load initial state from localStorage
     let accordionStates = {};
     try {
         const storedState = localStorage.getItem(accordionStateKey);
@@ -36,14 +36,27 @@ function setupAccordionGroups() {
         console.error('Error reading accordion state from localStorage:', e);
     }
 
+    // Check for hash navigation override
+    const currentHash = window.location.hash.substring(1); // Get ID from hash (e.g., "mcp-settings-group")
+
     groups.forEach((group, index) => {
         const header = group.querySelector('.settings-group-header');
         const details = group.querySelector('.settings-group-details');
         const groupId = group.id || `accordion-${index}`; // Use ID or index as key
 
         if (header && details) {
-            // Apply stored state or default (first one open)
-            const initialStateOpen = accordionStates[groupId] !== undefined ? accordionStates[groupId] : (index === 0); // Default first open
+            // Determine initial state: Hash > localStorage > Default (first open)
+            let initialStateOpen;
+            if (currentHash && groupId === currentHash) {
+                initialStateOpen = true; // Hash takes precedence
+                console.log(`[SharedUI] Accordion ${groupId} opened by hash.`);
+                // CSS scroll-margin-top should handle the scroll offset now.
+                // No need for JS scrollIntoView/scrollBy here.
+            } else if (accordionStates[groupId] !== undefined) {
+                initialStateOpen = accordionStates[groupId]; // Use stored state
+            } else {
+                initialStateOpen = (index === 0); // Default: first group open
+            }
             group.classList.toggle('open', initialStateOpen);
             details.style.display = initialStateOpen ? '' : 'none';
 

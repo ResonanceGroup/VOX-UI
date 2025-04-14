@@ -917,6 +917,40 @@ document.addEventListener('DOMContentLoaded', () => {
             // Proceed with WebSocket initialization anyway, it will handle fallback
             initializeMainAppLogic();
         });
+// Function to handle hash-based accordion expansion on settings pages
+function handleSettingsHashNavigation() {
+    // Check if we are on a settings-related page
+    if (window.location.pathname.endsWith('settings.html') || window.location.pathname.endsWith('mcp_settings.html')) {
+        const hash = window.location.hash;
+        if (hash) {
+            try {
+                const targetId = hash.substring(1); // Remove '#'
+                const targetElement = document.getElementById(targetId);
+
+                if (targetElement) {
+                    // Find the closest ancestor that is an accordion group
+                    const accordionGroup = targetElement.closest('.settings-group.accordion');
+
+                    if (accordionGroup && !accordionGroup.classList.contains('open')) {
+                        console.log(`[App.js] Expanding accordion for hash: ${hash}`);
+                        accordionGroup.classList.add('open');
+                        // The CSS should handle making the details visible when .open is added
+                    } else if (accordionGroup) {
+                         console.log(`[App.js] Accordion for hash ${hash} already open.`);
+                    } else {
+                         console.warn(`[App.js] No accordion group found for element with ID "${targetId}".`);
+                    }
+                } else {
+                    console.warn(`[App.js] Element with ID "${targetId}" not found for hash navigation.`);
+                }
+            } catch (error) {
+                console.error(`[App.js] Error handling hash navigation: ${error}`);
+            }
+        }
+    }
+}
+
+
 
     // Function to contain the rest of the initialization logic
     function initializeMainAppLogic() {
@@ -1122,3 +1156,5 @@ document.addEventListener('DOMContentLoaded', () => {
     } // End of initializeMainAppLogic
 
 }); // End of DOMContentLoaded
+
+        // Hash navigation handled in shared_ui.js

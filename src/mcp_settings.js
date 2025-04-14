@@ -93,26 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Sidebar logic moved to shared_ui.js
 
-    // --- Accordion Logic ---
-    const groups = document.querySelectorAll('.settings-group.accordion');
-    groups.forEach(group => {
-        const header = group.querySelector('.settings-group-header');
-        const details = group.querySelector('.settings-group-details');
-        if (header && details) {
-            header.addEventListener('click', () => {
-                const isOpen = group.classList.toggle('open');
-                if (isOpen) {
-                    details.style.display = '';
-                } else {
-                    details.style.display = 'none';
-                }
-            });
-            // Ensure initial state matches class
-            if (!group.classList.contains('open')) {
-                details.style.display = 'none';
-            }
-        }
-    });
+    // Accordion logic moved to shared_ui.js
 });
 
 // Add event listener for theme radio buttons
@@ -124,18 +105,6 @@ document.querySelectorAll('input[name="theme"]').forEach(radio => {
     });
 });
 
-    // --- Browse Button Placeholder ---
-    const browseButton = document.getElementById('browse-mcp-config');
-    const fileInput = document.getElementById('hidden-mcp-file-input');
-    const configPathInput = document.getElementById('mcp-config-path');
-    if (browseButton && fileInput && configPathInput) {
-        browseButton.addEventListener('click', () => {
-            fileInput.value = ''; // Reset file input
-            fileInput.click();
-        });
-        fileInput.addEventListener('change', (e) => {
-            if (fileInput.files && fileInput.files.length > 0) {
-                // Browsers only provide the file name, not the full path
 // --- MCP Config Editor Logic ---
 // --- MCP Config Editor Logic (Refactored) ---
 (function() {
@@ -166,16 +135,42 @@ document.querySelectorAll('input[name="theme"]').forEach(radio => {
     function setupMcpConfigEditor() {
         if (!(mcpTextarea && saveBtn && cancelBtn && copyBtn)) return;
         fetch('/api/mcp/config')
-            .then(res => res.json())
+            .then(async res => { // Make async to potentially read text body on error
+                if (!res.ok) {
+                    // Attempt to get more specific error text from the response body
+                    let errorText = `HTTP error! status: ${res.status}`;
+                    try {
+                        const text = await res.text(); // Read body as text
+                        errorText = `${errorText} - ${text}`;
+                    } catch (e) { /* Ignore if reading text fails */ }
+                    throw new Error(errorText); // Throw an error to be caught below
+                }
+                // Check content type before parsing JSON
+                const contentType = res.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    return res.json(); // Only parse if it's JSON
+                } else {
+                    // Handle non-JSON responses if necessary, or throw error
+                    const text = await res.text();
+                    console.warn('Received non-JSON response from /api/mcp/config:', text);
+                    // Treat as empty config or show specific message? For now, treat as empty.
+                    return {}; // Return empty object or handle as error
+                    // throw new Error('Received non-JSON response from server');
+                }
+            })
             .then(config => {
-                const configText = typeof config === 'string' ? config : JSON.stringify(config, null, 2);
+                // Ensure config is an object before stringifying
+                const configText = (typeof config === 'object' && config !== null)
+                                    ? JSON.stringify(config, null, 2)
+                                    : '{}'; // Default to empty JSON object if not valid object
                 mcpTextarea.value = configText;
                 originalConfig = configText;
                 saveBtn.disabled = true;
                 syncHighlight();
             })
             .catch(err => {
-                mcpTextarea.value = '// Failed to load MCP config: ' + err.message;
+                console.error('Error fetching MCP config:', err); // Log the full error
+                mcpTextarea.value = `// Failed to load MCP config:\n// ${err.message}`; // Show detailed error
                 mcpTextarea.style.color = 'red';
                 saveBtn.disabled = true;
                 syncHighlight();
@@ -197,17 +192,41 @@ document.querySelectorAll('input[name="theme"]').forEach(radio => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(configObj)
             })
-            .then(res => res.json())
+            .then(async res => { // Make async to read body on error
+                if (!res.ok) {
+                    // Attempt to get more specific error text from the response body
+                    let errorText = `HTTP error! status: ${res.status}`;
+                    try {
+                        const text = await res.text(); // Read body as text
+                        errorText = `${errorText} - ${text}`;
+                    } catch (e) { /* Ignore if reading text fails */ }
+                    throw new Error(errorText); // Throw an error to be caught below
+                }
+                 // Check content type before parsing JSON, although success should be JSON
+                const contentType = res.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    return res.json(); // Only parse if it's JSON
+                } else {
+                    // Handle unexpected non-JSON success response if necessary
+                     const text = await res.text();
+                     console.warn('Received non-JSON success response when saving MCP config:', text);
+                     // Assume success based on status code, but log warning
+                     return { success: true }; // Or handle differently
+                }
+            })
             .then(result => {
                 if (result.success) {
-                    originalConfig = mcpTextarea.value;
+                    originalConfig = mcpTextarea.value; // Update original config on successful save
                     saveBtn.disabled = true;
                     if (typeof showToast === 'function') showToast('MCP config saved!');
                 } else {
-                    alert('Failed to save config: ' + (result.error || 'Unknown error'));
+                    // Use the error message from the JSON result if available
+                    alert('Failed to save config: ' + (result.error || 'Save operation reported failure.'));
                 }
             })
             .catch(err => {
+                 console.error('Error saving MCP config:', err); // Log the full error
+                // Display the detailed error message from the thrown Error
                 alert('Failed to save config: ' + err.message);
             });
         });
@@ -247,19 +266,5 @@ document.querySelectorAll('input[name="theme"]').forEach(radio => {
 })();
 
 
-                configPathInput.value = fileInput.files[0].name;
-            }
-        });
-    }
 // --- MCP Config Syntax Highlighting ---
 
-// --- Open MCP group if hash is #mcp ---
-if (window.location.hash === '#mcp') {
-    const mcpGroup = Array.from(document.querySelectorAll('.settings-group.accordion')).find(g => g.querySelector('.settings-group-header')?.textContent?.toLowerCase().includes('mcp'));
-    if (mcpGroup) {
-        mcpGroup.classList.add('open');
-        const details = mcpGroup.querySelector('.settings-group-details');
-        if (details) details.style.display = '';
-        mcpGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-}

@@ -122,21 +122,4 @@ if (muteButton) {
 
 // Sidebar logic moved to shared_ui.js
 
-// Accordion expand/collapse for settings groups
-(function() {
-  const groups = document.querySelectorAll('.settings-group.accordion');
-  groups.forEach(group => {
-    const header = group.querySelector('.settings-group-header');
-    const details = group.querySelector('.settings-group-details');
-    if (header && details) {
-      header.addEventListener('click', () => {
-        const isOpen = group.classList.toggle('open');
-        // Style manipulation removed - CSS handles visibility via .open class
-      });
-      // Ensure initial state matches class
-      if (!group.classList.contains('open')) {
-        details.style.display = 'none';
-      }
-    }
-  });
-})();
+// Accordion logic moved to shared_ui.js

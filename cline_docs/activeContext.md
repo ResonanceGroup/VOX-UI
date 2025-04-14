@@ -13,10 +13,13 @@
 - **Sidebar Menu Fixes:** Added missing `id="sidebar-toggle"` to buttons and missing `<script src="script.js">` includes in `index.html`, `settings.html`, and `mcp_servers.html`.
 - **Inline MCP Editor Added:** Added a textbox to `src/settings.html` for direct editing of MCP config JSON (replaces file path input).
 - **Session Logic Refactor (Attempted):** Started refactoring `src/app.js` for improved WebSocket/settings initialization timing (task cancelled, state may be partial).
-- **New Bug:** Accordion groups on Settings page (`src/settings.html`) are no longer expanding/collapsing.
+- **Accordion Bug Fixed:** Accordion groups on Settings page (`src/settings.html`) were fixed by Debug agent (involved adding script include and fixing styles).
 - **Existing Backend Error:** `mcp_config_path not found in settings.json` error persists when loading MCP Servers page (likely related to inline editor change).
+- **New Requirement:** Navigating to Settings page fragment (e.g., `#mcp-settings-group`) should auto-expand the corresponding accordion.
+- **New Requirement:** Implement Save/Cancel functionality for the inline MCP config editor on Settings page.
+- **Cleanup Needed:** Old error dialog logic related to MCP config file path needs removal from `src/mcp_servers.js`.
 
-## Current Focus: Debugging UI Issues & MCP Config Flow
+## Current Focus: Implementing MCP Editor & Refining UI Flow
 
 Following the plan outlined in `cline_docs/backend_implementation_plan.md`:
 
@@ -58,8 +61,9 @@ Following the plan outlined in `cline_docs/backend_implementation_plan.md`:
 
 # Next Steps
 
-1.  Fix broken accordion groups on Settings page (`src/settings.html`).
-2.  Implement navigation link from "Edit MCP Servers" button (`src/mcp_servers.html`) to the editor section on `src/settings.html`.
-3.  Investigate and fix backend error `mcp_config_path not found in settings.json`.
-4.  Verify/complete `src/app.js` session/settings initialization refactor.
-5.  Resume Phase 5 testing (GPU setup, end-to-end tests) once UI/config issues are resolved.
+1.  **Remove Old Error Dialog:** Delete obsolete MCP config file error handling from `src/mcp_servers.js`.
+2.  **Implement Expand-on-Navigate:** Add JS logic to expand settings accordions based on URL fragment (`window.location.hash`) on page load.
+3.  **Implement MCP Editor Save/Cancel:** Add frontend JS and backend WebSocket handlers for the inline MCP editor actions.
+4.  **Fix Backend Config Read Error:** Modify backend (`src/server/mcpApi.js`?) to read/write `mcp_config.json` directly, removing reliance on `settings.json` path. (May overlap with #3).
+5.  **Verify/Complete Session Logic Refactor:** Revisit the changes in `src/app.js` for robust session/settings initialization.
+6.  **Resume Phase 5 Testing:** (GPU setup, end-to-end tests) once current issues are resolved.
