@@ -126,13 +126,17 @@ document.querySelectorAll('input[name="theme"]').forEach(radio => {
 
     // --- Browse Button Placeholder ---
     const browseButton = document.getElementById('browse-mcp-config');
-    if (browseButton) {
+    const fileInput = document.getElementById('hidden-mcp-file-input');
+    const configPathInput = document.getElementById('mcp-config-path');
+    if (browseButton && fileInput && configPathInput) {
         browseButton.addEventListener('click', () => {
-            // NOTE: Standard browser JS cannot directly open a file dialog for path selection.
-            // This would typically require backend integration (e.g., in Electron)
-            // or using an <input type="file"> for uploads.
-            alert('File browsing requires backend integration (e.g., Electron) or file upload mechanism.');
-            // Example: Trigger a hidden file input if using upload approach
-            // document.getElementById('hidden-file-input')?.click();
+            fileInput.value = ''; // Reset file input
+            fileInput.click();
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (fileInput.files && fileInput.files.length > 0) {
+                // Browsers only provide the file name, not the full path
+                configPathInput.value = fileInput.files[0].name;
+            }
         });
     }
