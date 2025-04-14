@@ -7,6 +7,9 @@
 }
 
 :root {
+  --input-background: #fff;
+  --input-foreground: #222;
+
   --primary-color: #347ab8;
   --primary-color-hover: #2a6194; /* Darker shade for hover */
   --primary-color-focus-shadow: rgba(52, 122, 184, 0.2); /* RGBA for box-shadow */
@@ -1506,3 +1509,39 @@ input:checked + .slider:before {
 
 
 /*# sourceMappingURL=app.css.map */
+
+/* MCP Config Editor Styles */
+.editor-textarea {
+    background: var(--input-controls-bg, #fff);
+    color: var(--input-foreground, #222);
+    border: 1px solid var(--input-controls-border, #ccc);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 1rem;
+    padding: 1rem;
+    resize: vertical;
+    transition: background 0.2s, color 0.2s, border 0.2s;
+}
+[data-theme="dark"] .editor-textarea {
+    background: var(--input-controls-bg-dark, #1e1e1e);
+    color: var(--input-foreground, #fff);
+    border: 1px solid var(--input-controls-border-dark, #333);
+}
+.copy-btn {
+    color: var(--input-foreground, #fff);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+.copy-btn:hover, .copy-btn.copied {
+    opacity: 1;
+    color: var(--accent, #0078d4);
+}
+
+[data-theme="dark"] {
+  --input-background: #222;
+  --input-foreground: #fff;
+}

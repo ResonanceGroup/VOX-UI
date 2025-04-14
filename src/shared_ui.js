@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- Accordion Logic ---
-(function() {
+function setupAccordionGroups() {
     const accordionStateKey = 'voxui_accordion_state';
     const groups = document.querySelectorAll('.settings-group.accordion');
 
@@ -60,7 +60,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
-})();
+}
+
+// Run accordion setup after DOM is ready, or immediately if already loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupAccordionGroups);
+} else {
+    setupAccordionGroups();
+}
 
 
 // --- Toast Notification Logic ---

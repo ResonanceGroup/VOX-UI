@@ -291,3 +291,10 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchAndRenderServers();
 
 });
+// Edit MCP Servers button navigation
+const editBtn = document.getElementById('edit-mcp-config-btn');
+if (editBtn) {
+    editBtn.addEventListener('click', () => {
+        window.location.href = 'settings.html#mcp';
+    });
+}

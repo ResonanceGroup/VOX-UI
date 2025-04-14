@@ -136,7 +136,130 @@ document.querySelectorAll('input[name="theme"]').forEach(radio => {
         fileInput.addEventListener('change', (e) => {
             if (fileInput.files && fileInput.files.length > 0) {
                 // Browsers only provide the file name, not the full path
+// --- MCP Config Editor Logic ---
+// --- MCP Config Editor Logic (Refactored) ---
+(function() {
+    const mcpTextarea = document.getElementById('mcp-config-textarea');
+    const saveBtn = document.getElementById('save-mcp-config-btn');
+    const cancelBtn = document.getElementById('cancel-mcp-config-btn');
+    const copyBtn = document.getElementById('copy-mcp-config-btn');
+    const highlightPre = document.getElementById('mcp-config-highlight');
+    let originalConfig = '';
+
+    function highlightJSON(json) {
+        let html = json
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/("[^"]+":)/g, '<span style="color:#9cdcfe;">$1</span>')
+            .replace(/("[^"]*")/g, '<span style="color:#ce9178;">$1</span>')
+            .replace(/\b(true|false|null)\b/g, '<span style="color:#569cd6;">$1</span>')
+            .replace(/\b(-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)\b/g, '<span style="color:#b5cea8;">$1</span>');
+        return html;
+    }
+
+    function syncHighlight() {
+        if (highlightPre && mcpTextarea) {
+            highlightPre.innerHTML = highlightJSON(mcpTextarea.value);
+            highlightPre.scrollTop = mcpTextarea.scrollTop;
+        }
+    }
+
+    function setupMcpConfigEditor() {
+        if (!(mcpTextarea && saveBtn && cancelBtn && copyBtn)) return;
+        fetch('/api/mcp/config')
+            .then(res => res.json())
+            .then(config => {
+                const configText = typeof config === 'string' ? config : JSON.stringify(config, null, 2);
+                mcpTextarea.value = configText;
+                originalConfig = configText;
+                saveBtn.disabled = true;
+                syncHighlight();
+            })
+            .catch(err => {
+                mcpTextarea.value = '// Failed to load MCP config: ' + err.message;
+                mcpTextarea.style.color = 'red';
+                saveBtn.disabled = true;
+                syncHighlight();
+            });
+        mcpTextarea.addEventListener('input', () => {
+            saveBtn.disabled = (mcpTextarea.value === originalConfig);
+            syncHighlight();
+        });
+        saveBtn.addEventListener('click', () => {
+            let configObj;
+            try {
+                configObj = JSON.parse(mcpTextarea.value);
+            } catch (e) {
+                alert('Invalid JSON: ' + e.message);
+                return;
+            }
+            fetch('/api/mcp/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(configObj)
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    originalConfig = mcpTextarea.value;
+                    saveBtn.disabled = true;
+                    if (typeof showToast === 'function') showToast('MCP config saved!');
+                } else {
+                    alert('Failed to save config: ' + (result.error || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                alert('Failed to save config: ' + err.message);
+            });
+        });
+        cancelBtn.addEventListener('click', () => {
+            mcpTextarea.value = originalConfig;
+            saveBtn.disabled = true;
+            syncHighlight();
+        });
+        copyBtn.addEventListener('click', () => {
+            mcpTextarea.select();
+            document.execCommand('copy');
+            copyBtn.classList.add('copied');
+            setTimeout(() => copyBtn.classList.remove('copied'), 1000);
+        });
+        mcpTextarea.addEventListener('input', syncHighlight);
+        mcpTextarea.addEventListener('scroll', () => {
+            if (highlightPre) highlightPre.scrollTop = mcpTextarea.scrollTop;
+        });
+        syncHighlight();
+        mcpTextarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                const value = this.value;
+                this.value = value.substring(0, start) + '    ' + value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 4;
+                syncHighlight();
+            }
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupMcpConfigEditor);
+    } else {
+        setupMcpConfigEditor();
+    }
+})();
+
+
                 configPathInput.value = fileInput.files[0].name;
             }
         });
     }
+// --- MCP Config Syntax Highlighting ---
+
+// --- Open MCP group if hash is #mcp ---
+if (window.location.hash === '#mcp') {
+    const mcpGroup = Array.from(document.querySelectorAll('.settings-group.accordion')).find(g => g.querySelector('.settings-group-header')?.textContent?.toLowerCase().includes('mcp'));
+    if (mcpGroup) {
+        mcpGroup.classList.add('open');
+        const details = mcpGroup.querySelector('.settings-group-details');
+        if (details) details.style.display = '';
+        mcpGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
