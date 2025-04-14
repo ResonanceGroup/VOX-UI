@@ -1,6 +1,12 @@
+console.log('[app.js] TOP OF FILE - script loaded');
+console.log('[app.js] Script execution start.');
+
 // Settings management
 class Settings {
     constructor() {
+        console.log('[Settings] Constructor called.');
+        if (window.settingsInstanceCounter) { window.settingsInstanceCounter++; } else { window.settingsInstanceCounter = 1; }
+        console.log(`[Settings] Instance count: ${window.settingsInstanceCounter}`);
         // Default settings
         this.settings = {
             theme: 'system',
@@ -13,7 +19,7 @@ class Settings {
         this.log('Settings initialized with defaults:', this.settings);
 
         // Initialize settings
-        this.load();
+        // this.load(); // Correctly commented out
         this.setupListeners();
         // Apply theme only after loading settings (handled in load())
 
@@ -29,8 +35,8 @@ class Settings {
         }
     }
 
-    load() {
-        this.log('Requesting settings via WebSocket...');
+    load(caller = 'unknown') {
+        this.log(`load() called by: ${caller}. Requesting settings via WebSocket...`); // Caller tracking already added
         // Return a promise that resolves when settings are loaded via WebSocket
         return new Promise((resolve, reject) => {
             // Store the resolver function to be called by the WebSocket handler
@@ -40,16 +46,28 @@ class Settings {
             if (window.wsClient && window.wsClient.ws && window.wsClient.ws.readyState === WebSocket.OPEN) {
                 window.wsClient.sendMessage('get_settings', {});
             } else {
-                // Handle case where WebSocket is not ready yet
-                // Maybe wait for connection or reject the promise
-                console.error('WebSocket not ready when trying to load settings.');
-                // Reject or wait? For now, let's log and rely on connect logic to eventually load.
-                // If the connection fails permanently, settings won't load.
-                // We could add a timeout here if needed.
-                // Alternative: Queue the request until WS is open.
+                // Fallback: Load from localStorage
+                console.warn('WebSocket not ready, loading settings from localStorage.');
+                try {
+                    const local = localStorage.getItem('voxui_settings');
+                    if (local) {
+                        this.settings = { ...this.settings, ...JSON.parse(local) };
+                        this.log('Loaded settings from localStorage:', JSON.stringify(this.settings));
+                        this.log(`Theme value after localStorage load: ${this.settings.theme}`);
+                        this.updateInputs();
+                        this.applyTheme();
+                        resolve(this.settings);
+                    } else {
+                        this.log('No settings found in localStorage, using defaults.');
+                        this.updateInputs();
+                        this.applyTheme();
+                        resolve(this.settings);
+                    }
+                } catch (e) {
+                    console.error('Failed to load settings from localStorage:', e);
+                    reject(e);
+                }
             }
-            // Note: The actual update (updateInputs, applyTheme) happens
-            // in the WebSocket onmessage handler for 'settings_data'.
         });
     }
 
@@ -109,7 +127,7 @@ class Settings {
                 if (radio.checked) {
                     this.settings.theme = radio.value;
                     this.applyTheme();
-                    this.log('Theme changed to:', radio.value);
+                    this.log('Theme radio changed. this.settings.theme is now:', this.settings.theme); // ADDED LOG
                 }
             });
         });
@@ -823,6 +841,7 @@ function ensureAnimationStyles() {
 }
 
 // Initialize when the page loads
+console.log('[app.js] DOMContentLoaded handler registered');
 document.addEventListener('DOMContentLoaded', () => {
     window.settings = new Settings();
     
@@ -836,8 +855,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Load settings first, then initialize WebSocket and the rest of the UI logic
-    window.settings.load().then(() => {
+    console.log('[DOMContentLoaded] Calling settings.load()');
+    window.settings.load('DOMContentLoaded').then(() => {
+        console.log('[DOMContentLoaded] Settings loaded. Current theme:', window.settings.settings.theme);
         window.settings.applyTheme();
+        console.log('[DOMContentLoaded] applyTheme() called.');
         console.log('Settings loaded, initializing WebSocket client...');
         const websocketUrl = `wss://${window.location.hostname}:3002`; // Use hostname and specific port
         // Fallback for local development if hostname isn't resolving correctly or for file:// protocol
