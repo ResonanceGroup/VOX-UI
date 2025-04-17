@@ -14,12 +14,11 @@
 - **Inline MCP Editor Added:** Added a textbox to `src/settings.html` for direct editing of MCP config JSON (replaces file path input).
 - **Session Logic Refactor (Attempted):** Started refactoring `src/app.js` for improved WebSocket/settings initialization timing (task cancelled, state may be partial).
 - **Accordion Bug Fixed:** Accordion groups on Settings page (`src/settings.html`) were fixed by Debug agent (involved adding script include and fixing styles).
-- **Existing Backend Error:** `mcp_config_path not found in settings.json` error persists when loading MCP Servers page (likely related to inline editor change).
-- **New Requirement:** Navigating to Settings page fragment (e.g., `#mcp-settings-group`) should auto-expand the corresponding accordion.
-- **New Requirement:** Implement Save/Cancel functionality for the inline MCP config editor on Settings page.
-- **Cleanup Needed:** Old error dialog logic related to MCP config file path needs removal from `src/mcp_servers.js`.
+- **Backend MCP Config Handling Refactored:** Backend (`mcpApi.js`, `webSocketHandler.js`) updated to read/write `mcp_config.json` directly and handle get/save via WebSocket. (Fixes `mcp_config_path` error).
+- **MCP Editor Implemented:** Frontend (`app.js`) logic added for loading, saving, reverting MCP config via WebSocket. Expand-on-navigate implemented. Button alignment/order fixed. Textarea color fixed. Old error dialog removed from `mcp_servers.js`.
+- **Session Logic Verified:** Robust session/settings initialization logic in `src/app.js` confirmed.
 
-## Current Focus: Implementing MCP Editor & Refining UI Flow
+## Current Focus: Phase 5 - Integration & Testing
 
 Following the plan outlined in `cline_docs/backend_implementation_plan.md`:
 
@@ -61,9 +60,9 @@ Following the plan outlined in `cline_docs/backend_implementation_plan.md`:
 
 # Next Steps
 
-1.  **Remove Old Error Dialog:** Delete obsolete MCP config file error handling from `src/mcp_servers.js`.
-2.  **Implement Expand-on-Navigate:** Add JS logic to expand settings accordions based on URL fragment (`window.location.hash`) on page load.
-3.  **Implement MCP Editor Save/Cancel:** Add frontend JS and backend WebSocket handlers for the inline MCP editor actions.
-4.  **Fix Backend Config Read Error:** Modify backend (`src/server/mcpApi.js`?) to read/write `mcp_config.json` directly, removing reliance on `settings.json` path. (May overlap with #3).
-5.  **Verify/Complete Session Logic Refactor:** Revisit the changes in `src/app.js` for robust session/settings initialization.
-6.  **Resume Phase 5 Testing:** (GPU setup, end-to-end tests) once current issues are resolved.
+1.  **Begin Backend Plan - Phase 5:**
+    *   Analyze `gpu_server_setup.sh` script.
+    *   Set up cloud GPU environment using the script.
+    *   Configure VOX UI settings (`settings.json`) to point to the GPU services and select the `UltraVoxKokoroAgent`.
+    *   Perform end-to-end testing of voice input/output flow.
+    *   Debug any issues found during testing.

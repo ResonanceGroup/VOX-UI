@@ -29,8 +29,12 @@
 - **Sidebar Menu Fixes:**
     - Added missing `id="sidebar-toggle"` to menu buttons in `index.html`, `settings.html`, `mcp_servers.html`.
     - Added missing `<script src="script.js">` includes to `index.html`, `settings.html`, `mcp_servers.html`.
-- **Inline MCP Config Editor:**
+- **Inline MCP Config Editor & UI Fixes:**
     - Added textbox to `src/settings.html` for direct editing of MCP config JSON.
+    - Implemented frontend logic (`app.js`) for loading/saving/reverting via WebSocket.
+    - Fixed button alignment/order and textarea color (`settings.html`, `app.css`).
+    - Implemented expand-on-navigate for settings accordions.
+    - Removed obsolete error message from `mcp_servers.js`.
 
 ## Backend Planning (Original Plan - Deferred)
 - Architecture design completed (for old plan)
@@ -62,24 +66,22 @@
 - Fixed `_cleanupPendingRequests` bug in `src/server/mcpClient.js`.
 - Renamed `src/mcp_settings.js` to `src/mcp_servers.js` and updated HTML link.
 - Addressed potential race condition in `src/app.js` settings load using message queuing.
-- **Session Logic Refactor (Attempted):** Started refactoring `src/app.js` for improved WebSocket/settings initialization timing (task cancelled, state may be partial).
+- **Session Logic Refactor Verified:** Confirmed `src/app.js` correctly handles WebSocket/settings initialization timing and missing voice agent configs.
 - **Settings Accordion Fix:** Resolved bug preventing accordion groups from expanding/collapsing on `src/settings.html`.
+- **Backend MCP Config Handling Refactored:** Updated `mcpApi.js` and `webSocketHandler.js` to handle `mcp_config.json` directly.
 
-# In Progress (Implementing MCP Editor & Refining UI Flow)
+# In Progress (Phase 5 - Integration & Testing)
 
-- Implementing Save/Cancel/Load for inline MCP editor.
-- Implementing auto-expand for settings accordions on navigation.
-- Removing old MCP error dialog logic.
-- Investigating backend MCP config error.
+- Preparing to set up cloud GPU environment.
 
 # Upcoming Tasks (New Plan)
 
-1.  **Remove Old Error Dialog:** Delete obsolete MCP config file error handling from `src/mcp_servers.js`.
-2.  **Implement Expand-on-Navigate:** Add JS logic to expand settings accordions based on URL fragment (`window.location.hash`) on page load.
-3.  **Implement MCP Editor Save/Cancel:** Add frontend JS and backend WebSocket handlers for the inline MCP editor actions.
-4.  **Fix Backend Config Read Error:** Modify backend (`src/server/mcpApi.js`?) to read/write `mcp_config.json` directly, removing reliance on `settings.json` path. (May overlap with #3).
-5.  **Complete Session Logic Refactor:** Verify and finish the refactor of `src/app.js` for robust session/settings initialization.
-6.  **Backend Plan - Phase 5: Integration & Testing (Deferred):** Resume end-to-end testing once current issues are resolved.
+1.  **Backend Plan - Phase 5: Integration & Testing:**
+    *   Analyze `gpu_server_setup.sh` script.
+    *   Set up cloud GPU environment using the script.
+    *   Configure VOX UI settings (`settings.json`) to point to the GPU services and select the `UltraVoxKokoroAgent`.
+    *   Perform end-to-end testing of voice input/output flow.
+    *   Debug any issues found during testing.
 
 ## Backend Plan - Phase 4: Voice Agent Module Implementation (Continued - Deferred)
 - **Goal:** Implement specific `IVoiceAgent` modules.
