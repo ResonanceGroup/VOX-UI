@@ -1,145 +1,196 @@
 // UltraVoxKokoroAgent.js
-// Production-ready networked agent for UltraVox STT + Kokoro TTS (cloud GPU).
-// Implements IVoiceAgent interface via EventEmitter.
+// Real-time networked agent for self-hosted UltraVox + Kokoro (cloud GPU) using WebSocket.
+// Implements IVoiceAgent interface via EventEmitter, strictly following the self-hosted protocol.
 
 const EventEmitter = require('events');
 const axios = require('axios');
 const WebSocket = require('ws');
 
-// Placeholder: import types if using TypeScript, otherwise document types in comments.
-
 /**
  * UltraVoxKokoroAgent
- * - Uses remote UltraVox STT and Kokoro TTS via HTTP/WebSocket APIs.
- * - All endpoints/API keys are provided via the config object.
- * - Implements all IVoiceAgent methods/events.
+ * - Streams 16kHz int16 PCM audio to a self-hosted UltraVox server via WebSocket.
+ * - Receives text and audio responses as per the open-source protocol.
+ * - Strictly implements IVoiceAgent for agentManager.js compatibility.
+ * - Emits: status_update, text_response, audio_response_chunk, error.
  */
 class UltraVoxKokoroAgent extends EventEmitter {
     /**
-     * @param {object} config - Configuration object with endpoints, API keys, etc.
-     *   {
-     *     ultravoxUrl: 'http://<gpu-server-ip>:5000/ultravox',
-     *     kokoroUrl: 'http://<gpu-server-ip>:5001/kokoro',
-     *     ultravoxApiKey: '...',
-     *     kokoroApiKey: '...',
-     *     ...other config...
-     *   }
+     * @param {object} config - {
+     *   serverUrl: 'http://<host>:7860', // Base URL of the self-hosted server
+     *   systemPrompt: 'You are a helpful assistant...',
+     *   voice: 'Bella (US Female)',      // Optional, must match server's voice list
+     * }
      */
-    constructor(config) {
+    constructor(config = {}) {
         super();
         this.config = config;
-        this.audioChunks = [];
+        this.ws = null;
+        this.audioQueue = [];
+        this.audioStreaming = false;
         this.initialized = false;
-        this.ultravoxSocket = null;
-        this.status = 'idle';
+        this.sessionActive = false;
+        this.reconnectAttempts = 0;
+        this.maxReconnects = 3;
+        this.reconnectDelay = 2000;
     }
 
-    /**
-     * Initializes the agent (connects to services if needed).
-     */
     async initialize(config) {
         this.config = config || this.config;
-        this.audioChunks = [];
-        this.initialized = true;
-        this.status = 'ready';
-        this.emit('status_update', { status: 'ready' });
-        // Optionally, test connectivity to UltraVox/Kokoro here.
+        this.emit('status_update', { status: 'initializing' });
         try {
-            await axios.get(this.config.ultravoxUrl + '/health');
-            await axios.get(this.config.kokoroUrl + '/health');
+            // Step 1: Create a call session to get joinUrl
+            const apiUrl = (this.config.serverUrl || 'http://localhost:7860') + '/api/calls';
+            const payload = {
+                systemPrompt: this.config.systemPrompt || "You are a helpful assistant.",
+            };
+            if (this.config.voice) payload.voice = this.config.voice;
+            const response = await axios.post(apiUrl, payload, {
+                headers: { 'Content-Type': 'application/json' }
+            });
+            this.joinUrl = response.data.joinUrl;
+            if (!this.joinUrl) throw new Error('No joinUrl returned from UltraVox server');
+            await this._connectWebSocket();
+            this.initialized = true;
+            this.emit('status_update', { status: 'idle' });
         } catch (err) {
-            this.emit('error', new Error('Failed to connect to UltraVox or Kokoro: ' + err.message));
+            this.emit('error', new Error('Failed to initialize UltraVoxKokoroAgent: ' + err.message));
+            this.emit('status_update', { status: 'error' });
             throw err;
         }
     }
 
-    /**
-     * Shuts down the agent (cleanup).
-     */
     async shutdown() {
-        this.audioChunks = [];
+        this.audioQueue = [];
+        this.audioStreaming = false;
         this.initialized = false;
-        this.status = 'shutdown';
+        this.sessionActive = false;
+        if (this.ws) {
+            this.ws.terminate();
+            this.ws = null;
+        }
         this.emit('status_update', { status: 'shutdown' });
-        if (this.ultravoxSocket) {
-            this.ultravoxSocket.close();
-            this.ultravoxSocket = null;
-        }
     }
 
-    /**
-     * Processes a complete text message (send to Kokoro TTS).
-     * Emits 'audio_response_chunk' events with TTS audio.
-     */
     async processTextMessage(message) {
-        if (!this.initialized) throw new Error('Agent not initialized');
-        this.emit('status_update', { status: 'processing_text' });
-        try {
-            const response = await axios.post(
-                this.config.kokoroUrl + '/tts',
-                { text: message },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${this.config.kokoroApiKey || ''}`,
-                        'Content-Type': 'application/json'
-                    },
-                    responseType: 'arraybuffer'
-                }
-            );
-            // Emit audio as a single chunk (or split if needed)
-            this.emit('audio_response_chunk', Buffer.from(response.data));
-            this.emit('status_update', { status: 'idle' });
-        } catch (err) {
-            this.emit('error', new Error('Kokoro TTS failed: ' + err.message));
-            this.emit('status_update', { status: 'error' });
+        // The self-hosted protocol does NOT support text input over WebSocket.
+        // If the server is extended to support it, implement here.
+        this.emit('error', new Error('Text input is not supported by the self-hosted UltraVox protocol.'));
+        // TODO: If server adds support for text input, send as JSON here.
+    }
+
+    async processAudioChunk(chunk) {
+        if (!this.initialized || !this.sessionActive) throw new Error('Agent not initialized or session not active');
+        // Queue audio for streaming
+        this.audioQueue.push(chunk);
+        if (!this.audioStreaming) {
+            this._startAudioStreaming();
         }
     }
 
-    /**
-     * Processes a chunk of audio data (buffer for UltraVox STT).
-     */
-    async processAudioChunk(chunk) {
-        if (!this.initialized) throw new Error('Agent not initialized');
-        this.audioChunks.push(chunk);
-        this.emit('status_update', { status: 'receiving_audio' });
+    async endAudioStream() {
+        // No explicit end-of-stream message; just stop streaming.
+        this.audioStreaming = false;
+        this.emit('status_update', { status: 'processing' });
+        // TODO: If server adds explicit end-of-stream, send it here.
     }
 
-    /**
-     * Signals end of audio stream, sends to UltraVox STT, emits 'text_response'.
-     */
-    async endAudioStream() {
-        if (!this.initialized) throw new Error('Agent not initialized');
-        this.emit('status_update', { status: 'processing_audio' });
-        const audioBuffer = Buffer.concat(this.audioChunks);
-        this.audioChunks = [];
-        try {
-            // POST audio to UltraVox STT
-            const response = await axios.post(
-                this.config.ultravoxUrl + '/stt',
-                audioBuffer,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${this.config.ultravoxApiKey || ''}`,
-                        'Content-Type': 'audio/wav'
+    provideMcpToolResult(requestId, result) {
+        // The self-hosted protocol does NOT support MCP tool invocation.
+        // This is a no-op unless the server is extended to support it.
+        // TODO: If server adds support, implement here.
+    }
+
+    // --- Private methods ---
+
+    async _connectWebSocket() {
+        return new Promise((resolve, reject) => {
+            this.ws = new WebSocket(this.joinUrl);
+            this.ws.binaryType = 'arraybuffer';
+
+            this.ws.on('open', () => {
+                this.sessionActive = true;
+                this.reconnectAttempts = 0;
+                this.emit('status_update', { status: 'listening' });
+                resolve();
+            });
+
+            this.ws.on('message', (data, isBinary) => {
+                if (isBinary) {
+                    // Audio response from agent (TTS)
+                    this.emit('audio_response_chunk', Buffer.from(data));
+                } else {
+                    try {
+                        const msg = JSON.parse(data.toString());
+                        this._handleDataMessage(msg);
+                    } catch (err) {
+                        this.emit('error', new Error('Failed to parse data message: ' + err.message));
                     }
                 }
-            );
-            const text = response.data && response.data.text ? response.data.text : response.data;
-            this.emit('text_response', text);
-            this.emit('status_update', { status: 'idle' });
-        } catch (err) {
-            this.emit('error', new Error('UltraVox STT failed: ' + err.message));
-            this.emit('status_update', { status: 'error' });
-        }
+            });
+
+            this.ws.on('close', (code, reason) => {
+                this.sessionActive = false;
+                this.emit('status_update', { status: 'disconnected' });
+                if (this.reconnectAttempts < this.maxReconnects) {
+                    setTimeout(() => {
+                        this.reconnectAttempts++;
+                        this._connectWebSocket();
+                    }, this.reconnectDelay);
+                } else {
+                    this.emit('error', new Error('WebSocket connection closed: ' + reason));
+                }
+            });
+
+            this.ws.on('error', (err) => {
+                this.emit('error', new Error('WebSocket error: ' + err.message));
+            });
+        });
     }
 
-    /**
-     * Receives MCP tool result (for advanced workflows).
-     */
-    provideMcpToolResult(requestId, result) {
-        // Implement as needed for your workflow.
-        // For now, just log.
-        console.log(`[UltraVoxKokoroAgent] MCP tool result for ${requestId}:`, result);
+    _startAudioStreaming() {
+        if (this.audioStreaming) return;
+        this.audioStreaming = true;
+        const streamInterval = 20; // ms, ~20ms of audio per frame
+        const sendNextChunk = () => {
+            if (!this.audioStreaming || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+            if (this.audioQueue.length > 0) {
+                const chunk = this.audioQueue.shift();
+                try {
+                    this.ws.send(chunk);
+                } catch (err) {
+                    this.emit('error', new Error('Failed to stream audio chunk: ' + err.message));
+                }
+            }
+            if (this.audioStreaming) {
+                setTimeout(sendNextChunk, streamInterval);
+            }
+        };
+        sendNextChunk();
+    }
+
+    _handleDataMessage(msg) {
+        switch (msg.type) {
+            case 'transcript':
+                // { type, role, text, final, ... }
+                if (msg.role === 'agent') {
+                    let text = msg.text || '';
+                    if (typeof text === 'string' && text.length > 0) {
+                        this.emit('text_response', text);
+                    }
+                }
+                break;
+            case 'state':
+                // { type: 'state', state: ... }
+                this.emit('status_update', { status: msg.state });
+                break;
+            case 'error':
+                // { type: 'error', error: ... }
+                this.emit('error', new Error(msg.error || 'Unknown error from UltraVox server'));
+                break;
+            default:
+                // Unknown message type; ignore
+                break;
+        }
     }
 }
 
