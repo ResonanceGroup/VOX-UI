@@ -592,6 +592,59 @@ main {
     display: none; /* Remove the icon entirely */
 }
 
+/* Status icon content for different states */
+.state-idle .status-icon::before {
+    content: '●'; /* Green dot for idle/ready */
+    color: #4CAF50;
+}
+
+[data-theme="dark"] .state-idle .status-icon::before {
+    color: #81C784; /* Lighter green for dark mode */
+}
+
+.state-executing .status-icon::before {
+    content: '⚙️'; /* Gear icon for executing */
+    color: #7E57C2;
+}
+
+[data-theme="dark"] .state-executing .status-icon::before {
+    color: #9575CD; /* Lighter purple for dark mode */
+}
+
+.state-processing .status-icon::before {
+    content: '...'; /* Ellipsis for processing */
+    color: inherit;
+}
+
+.state-notifying .status-icon::before {
+    content: '🔔'; /* Bell icon for notifications */
+    color: #42A5F5;
+}
+
+[data-theme="dark"] .state-notifying .status-icon::before {
+    color: #64B5F6; /* Lighter blue for dark mode */
+}
+
+.state-muted .status-icon::before {
+    content: '🔇'; /* Muted speaker icon */
+    color: #FFA726;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .state-muted .status-icon::before {
+    color: #FFB74D; /* Lighter orange for dark mode */
+    text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+}
+
+.state-disconnected .status-icon::before {
+    content: '❌'; /* X mark for disconnected */
+    color: #F44336;
+}
+
+[data-theme="dark"] .state-disconnected .status-icon::before {
+    color: #E57373; /* Lighter red for dark mode */
+}
+
 /* Helper for state transitions */
 .transitioning .orb {
     animation: state-transition-flash 0.15s ease-in-out;
