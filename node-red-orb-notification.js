@@ -610,6 +610,7 @@
                 }
             }
             
+            /* Audio level animations - copied exactly from original styles.css */
             .orb[data-audio-level]::before {
                 animation: glow 3s infinite ease-in-out;
             }
@@ -619,15 +620,15 @@
             }
             
             .orb[data-audio-level="low"] {
-                filter: drop-shadow(0 0 25px rgba(64, 206, 224, calc(0.4 + var(--intensity, 0) * 0.2)));
+                filter: drop-shadow(0 0 25px rgba(64, 206, 224, calc(0.4 + var(--intensity) * 0.2)));
             }
             
             .orb[data-audio-level="medium"] {
-                filter: drop-shadow(0 0 35px rgba(64, 206, 224, calc(0.5 + var(--intensity, 0) * 0.3)));
+                filter: drop-shadow(0 0 35px rgba(64, 206, 224, calc(0.5 + var(--intensity) * 0.3)));
             }
             
             .orb[data-audio-level="high"] {
-                filter: drop-shadow(0 0 45px rgba(64, 206, 224, calc(0.6 + var(--intensity, 0) * 0.4)));
+                filter: drop-shadow(0 0 45px rgba(64, 206, 224, calc(0.6 + var(--intensity) * 0.4)));
             }
             
             @keyframes pulse {
@@ -1058,23 +1059,42 @@
                 updateUIState(currentAIState, payload.status);
             }
             
-            // Handle audio level - get orb element from current overlay
-            if (payload.level !== undefined) {
+            // Handle audio level - support both 'level' and 'audioLevel' property names
+            var audioLevel = payload.level !== undefined ? payload.level : payload.audioLevel;
+            if (audioLevel !== undefined) {
                 var currentOrbElement = currentOverlay.querySelector('.orb');
                 if (currentOrbElement) {
-                    var level = parseFloat(payload.level) || 0;
+                    var level = parseFloat(audioLevel) || 0;
+                    console.log('🎵 Setting audio level:', level, 'from payload property:', payload.level !== undefined ? 'level' : 'audioLevel');
+                    console.log('🎵 Full payload:', payload);
+                    console.log('🎵 Target element:', currentOrbElement);
+                    
                     currentOrbElement.style.setProperty('--intensity', level.toFixed(3));
+                    console.log('🎵 Set --intensity CSS property to:', level.toFixed(3));
                     
                     // Set audio level data attribute
                     if (level > 0.75) {
                         currentOrbElement.dataset.audioLevel = 'high';
+                        console.log('🎵 Set data-audio-level="high"');
                     } else if (level > 0.5) {
                         currentOrbElement.dataset.audioLevel = 'medium';
+                        console.log('🎵 Set data-audio-level="medium"');
                     } else if (level > 0.25) {
                         currentOrbElement.dataset.audioLevel = 'low';
+                        console.log('🎵 Set data-audio-level="low"');
                     } else {
                         delete currentOrbElement.dataset.audioLevel;
+                        console.log('🎵 Removed data-audio-level attribute (level was', level, ')');
                     }
+                    
+                    // Debug: Check computed styles
+                    var computedStyle = window.getComputedStyle(currentOrbElement);
+                    console.log('🎵 Current orb transform:', computedStyle.transform);
+                    console.log('🎵 Current orb animation:', computedStyle.animation);
+                    console.log('🎵 Current orb filter:', computedStyle.filter);
+                    console.log('🎵 Current --intensity value:', computedStyle.getPropertyValue('--intensity'));
+                } else {
+                    console.error('🎵 Could not find .orb element in overlay');
                 }
             }
         };
