@@ -456,25 +456,20 @@
             .state-executing .orb::after {
                 content: '';
                 position: absolute;
+                top: 50%;
+                left: 50%;
                 width: 60%;
                 height: 60%;
-                top: 20%;
-                left: 20%;
+                transform: translate(-50%, -50%) scale(0.1);
+                transform-origin: center center;
                 background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='gearGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23EEEEEE' /%3E%3Cstop offset='45%25' stop-color='%23AAAAAA' /%3E%3Cstop offset='100%25' stop-color='%23666666' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z' fill='url(%23gearGradient)' stroke='%23444444' stroke-width='0.4'/%3E%3C/svg%3E");
-                background-size: 50% 50%;
+                background-size: 80% 80%;
                 background-repeat: no-repeat;
                 background-position: center center;
                 opacity: 0;
                 filter: drop-shadow(0 0 8px rgba(126, 87, 194, 0.5));
                 pointer-events: none;
                 z-index: 3;
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                top: 0;
-                left: 0;
-                transform: scale(0.1);
-                transform-origin: center center;
                 animation:
                     appear-from-center 0.8s forwards ease-out,
                     rotate-gear 5s infinite linear 0.8s;
@@ -482,22 +477,22 @@
 
             @keyframes appear-from-center {
                 0% {
-                    transform: scale(0.1);
+                    transform: translate(-50%, -50%) scale(0.1);
                     opacity: 0;
                 }
                 60% {
-                    transform: scale(1.15);
+                    transform: translate(-50%, -50%) scale(1.15);
                     opacity: 0.95;
                 }
                 100% {
-                    transform: scale(1);
+                    transform: translate(-50%, -50%) scale(1);
                     opacity: 0.9;
                 }
             }
 
             @keyframes rotate-gear {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
+                0% { transform: translate(-50%, -50%) rotate(0deg); }
+                100% { transform: translate(-50%, -50%) rotate(360deg); }
             }
 
             .state-executing .orb .c {
@@ -757,6 +752,11 @@
                 opacity: 0.9 !important;
             }
             
+            /* Hide the toast notification body element */
+            md-toast, md-toast .md-toast-content {
+                visibility: hidden;
+            }
+
             /* Dark theme */
             .overlay-dark .overlay-content {
                 background: radial-gradient(circle at center, rgba(64, 206, 224, 0.05) 0%, transparent 70%) !important;
