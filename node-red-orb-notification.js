@@ -33,7 +33,7 @@
             width: 100vw !important;
             height: 100vh !important;
             z-index: 999999 !important;
-            background: rgba(255, 255, 255, 1) !important;
+            background: rgba(255, 255, 255, 1);
             backdrop-filter: blur(2px) !important;
             display: none !important;
             opacity: 0 !important;
@@ -757,13 +757,13 @@
                 visibility: hidden;
             }
 
-            /* Dark theme */
-            .overlay-dark #persistent-orb-overlay {
+            /* Dark theme - more specific selectors to override inline styles */
+            #persistent-orb-overlay.overlay-dark {
                 background: rgba(0, 0, 0, 1) !important;
                 color: #fff !important;
             }
             
-            #persistent-orb-overlay.overlay-dark {
+            #persistent-orb-overlay[data-theme="dark"] {
                 background: rgba(0, 0, 0, 1) !important;
                 color: #fff !important;
             }
