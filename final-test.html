@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Final Orb Overlay Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        
+        .button:hover {
+            background: #45a049;
+        }
+        
+        .button.dark {
+            background: #666;
+        }
+        
+        .button.dark:hover {
+            background: #555;
+        }
+        
+        .button.disconnect {
+            background: #f44336;
+        }
+        
+        .button.disconnect:hover {
+            background: #d32f2f;
+        }
+        
+        .button.mute {
+            background: #FFA726;
+        }
+        
+        .button.mute:hover {
+            background: #F57C00;
+        }
+        
+        .button.notify {
+            background: #42A5F5;
+        }
+        
+        .button.notify:hover {
+            background: #1E88E5;
+        }
+        
+        #test-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 999999;
+            background: rgba(255, 255, 255, 1);
+            backdrop-filter: blur(2px);
+            display: none;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            color: #333;
+            cursor: pointer;
+            pointer-events: auto;
+            isolation: isolate;
+        }
+        
+        #test-overlay.overlay-dark {
+            background: rgba(0, 0, 0, 1) !important;
+            color: #fff !important;
+        }
+        
+        .overlay-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 4rem;
+            min-height: 500px;
+            background: radial-gradient(circle at center, rgba(64, 206, 224, 0.02) 0%, transparent 70%);
+        }
+        
+        .overlay-dark .overlay-content {
+            background: radial-gradient(circle at center, rgba(64, 206, 224, 0.05) 0%, transparent 70%);
+        }
+        
+        .orb {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            filter: drop-shadow(0 0 20px rgba(64, 206, 224, 0.3));
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: visible;
+            border-radius: 50%;
+        }
+        
+        .orb::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 260px;
+            height: 260px;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(
+                circle at 25% 25%,
+                rgba(255, 255, 255, 0.95) 0%,
+                rgba(255, 255, 255, 0.9) 4%,
+                rgba(148, 255, 238, 0.5) 8%,
+                rgba(64, 206, 224, 0.3) 12%,
+                rgba(64, 159, 255, 0.1) 20%,
+                transparent 30%
+            );
+            border-radius: 50%;
+            box-shadow:
+                inset 0 0 30px rgba(255, 255, 255, 0.4),
+                inset 0 0 60px rgba(64, 206, 224, 0.3),
+                inset 0 0 100px rgba(95, 89, 255, 0.2);
+            z-index: 3;
+            backdrop-filter: blur(2px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        #status-display {
+            color: #555;
+            font-size: 0.9rem;
+            opacity: 0.9;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-align: center;
+            line-height: 1.5;
+            min-height: 1.5em;
+            transition: color 0.3s ease, opacity 0.3s ease;
+            margin-top: 5px;
+        }
+        
+        .status-text {
+            display: inline-block;
+            transition: opacity 0.3s ease;
+        }
+        
+        .status-icon {
+            display: inline-block;
+            transition: color 0.3s ease;
+        }
+        
+        .overlay-dark #status-display {
+            color: #D0D0D0;
+            opacity: 0.85;
+        }
+        
+        .overlay-dark .status-text {
+            color: #D0D0D0;
+        }
+        
+        .overlay-dark .status-icon {
+            color: #D0D0D0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Final Orb Overlay Test</h1>
+        <p>Click the buttons below to test different orb states and themes</p>
+        
+        <button class="button" onclick="testState('idle')">Idle</button>
+        <button class="button" onclick="testState('executing')">Executing</button>
+        <button class="button notify" onclick="testState('notifying')">Notifying</button>
+        <button class="button mute" onclick="testState('muted')">Muted</button>
+        <button class="button disconnect" onclick="testState('disconnected')">Disconnected</button>
+        <button class="button" onclick="testState('processing', 'Analyzing data')">Processing</button>
+        
+        <div style="margin: 20px 0;">
+            <button class="button" onclick="toggleTheme('light')">Light Theme</button>
+            <button class="button dark" onclick="toggleTheme('dark')">Dark Theme</button>
+        </div>
+        
+        <div id="status" style="margin-top: 20px; padding: 10px; background: #e0e0e0; border-radius: 4px;">
+            Ready to test...
+        </div>
+    </div>
+
+    <div id="test-overlay">
+        <div class="overlay-content">
+            <div class="orb">
+                <div class="orb-status-effects">
+                    <div class="orb-status-ring"></div>
+                    <div class="orb-particles"></div>
+                </div>
+                <div class="wrap">
+                    <div class="c"></div>
+                    <div class="c"></div>
+                    <div class="c"></div>
+                </div>
+            </div>
+            <div id="status-display">
+                <span class="status-icon">●</span>
+                <span class="status-text">Ready to assist...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const overlay = document.getElementById('test-overlay');
+        const statusDisplay = document.getElementById('status-display');
+        const statusIcon = document.querySelector('.status-icon');
+        const statusText = document.querySelector('.status-text');
+        
+        function testState(state, detail = '') {
+            document.getElementById('status').textContent = `Testing state: ${state} ${detail ? '(' + detail + ')' : ''}`;
+            
+            // Update status display
+            updateStatus(state, detail);
+            
+            // Show overlay
+            overlay.style.display = 'block';
+            overlay.style.opacity = '1';
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                }, 500);
+            }, 3000);
+        }
+        
+        function updateStatus(state, detail = '') {
+            let textContent = 'Ready to assist...';
+            let iconContent = '●';
+            let color = '#4CAF50';
+            
+            switch(state) {
+                case 'idle':
+                    textContent = 'Ready to assist...';
+                    iconContent = '●';
+                    color = '#4CAF50';
+                    break;
+                case 'executing':
+                    textContent = 'Executing: ' + (detail || 'Task') + '...';
+                    iconContent = '⚙️';
+                    color = '#7E57C2';
+                    break;
+                case 'processing':
+                    textContent = detail || 'Processing';
+                    iconContent = '';
+                    break;
+                case 'notifying':
+                    textContent = detail || 'Notification Received';
+                    iconContent = '🔔';
+                    color = '#42A5F5';
+                    break;
+                case 'muted':
+                    textContent = 'Microphone Muted';
+                    iconContent = '🔇';
+                    color = '#FFA726';
+                    break;
+                case 'disconnected':
+                    textContent = 'Disconnected';
+                    iconContent = '❌';
+                    color = '#F44336';
+                    break;
+            }
+            
+            statusIcon.textContent = iconContent;
+            statusText.textContent = textContent;
+        }
+        
+        function toggleTheme(theme) {
+            if (theme === 'dark') {
+                overlay.classList.add('overlay-dark');
+                document.getElementById('status').textContent = 'Dark theme applied';
+            } else {
+                overlay.classList.remove('overlay-dark');
+                document.getElementById('status').textContent = 'Light theme applied';
+            }
+        }
+    </script>
+</body>
+</html>

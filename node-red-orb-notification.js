@@ -69,28 +69,9 @@
                         <div class="c"></div>
                     </div>
                 </div>
-                <div id="status-display" class="status-display" style="
-                    color: #555 !important;
-                    font-size: 0.9rem !important;
-                    opacity: 0.9 !important;
-                    display: inline-flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    gap: 6px !important;
-                    text-align: center !important;
-                    line-height: 1.5 !important;
-                    min-height: 1.5em !important;
-                    transition: color 0.3s ease, opacity 0.3s ease !important;
-                    margin-top: 5px !important;
-                ">
-                    <span class="status-icon" style="
-                        display: inline-block !important;
-                        transition: color 0.3s ease !important;
-                    "></span>
-                    <span class="status-text" style="
-                        display: inline-block !important;
-                        transition: opacity 0.3s ease !important;
-                    ">Ready to assist...</span>
+                <div id="status-display" class="status-display">
+                    <span class="status-icon"></span>
+                    <span class="status-text">Ready to assist...</span>
                 </div>
             </div>
         \`;
@@ -749,7 +730,26 @@
             
             #persistent-orb-overlay .status-display {
                 color: #555 !important;
+                font-size: 0.9rem !important;
                 opacity: 0.9 !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 6px !important;
+                text-align: center !important;
+                line-height: 1.5 !important;
+                min-height: 1.5em !important;
+                margin-top: 5px !important;
+            }
+            
+            #persistent-orb-overlay .status-text {
+                display: inline-block !important;
+                transition: opacity 0.3s ease !important;
+            }
+            
+            #persistent-orb-overlay .status-icon {
+                display: inline-block !important;
+                transition: color 0.3s ease !important;
             }
             
             /* Hide the toast notification body element */
@@ -758,6 +758,16 @@
             }
 
             /* Dark theme */
+            .overlay-dark #persistent-orb-overlay {
+                background: rgba(0, 0, 0, 1) !important;
+                color: #fff !important;
+            }
+            
+            #persistent-orb-overlay.overlay-dark {
+                background: rgba(0, 0, 0, 1) !important;
+                color: #fff !important;
+            }
+            
             .overlay-dark .overlay-content {
                 background: radial-gradient(circle at center, rgba(64, 206, 224, 0.05) 0%, transparent 70%) !important;
             }
@@ -765,6 +775,23 @@
             .overlay-dark .status-display {
                 color: #D0D0D0 !important;
                 opacity: 0.85 !important;
+            }
+            
+            .overlay-dark .status-text {
+                color: #D0D0D0 !important;
+                display: inline-block !important;
+            }
+            
+            .overlay-dark .status-icon {
+                color: #81C784 !important; /* Match original VOX-UI dark mode idle color */
+                display: inline-block !important;
+            }
+            
+            /* Disconnected state styling */
+            .state-disconnected .status-icon,
+            .state-disconnected .status-text {
+                color: #F44336 !important;
+                font-weight: bold !important;
             }
         \`;
         document.head.appendChild(style);
@@ -908,12 +935,10 @@
                 case 'idle':
                     textContent = 'Ready to assist...';
                     iconContent = '●';
-                    statusIcon.style.color = '#4CAF50';
                     break;
                 case 'executing':
                     textContent = 'Executing: ' + (detail || 'Task') + '...';
                     iconContent = '⚙️';
-                    statusIcon.style.color = '#7E57C2';
                     break;
                 case 'processing':
                     textContent = detail || 'Processing';
@@ -922,7 +947,6 @@
                 case 'notifying':
                     textContent = detail || 'Notification Received';
                     iconContent = '🔔';
-                    statusIcon.style.color = '#42A5F5';
                     
                     // Create particle effect with slight delay to ensure DOM is ready
                     setTimeout(() => createParticles(), 10);
@@ -938,12 +962,10 @@
                 case 'muted':
                     textContent = 'Microphone Muted';
                     iconContent = '🔇';
-                    statusIcon.style.color = '#FFA726';
                     break;
                 case 'disconnected':
                     textContent = 'Disconnected';
                     iconContent = '❌';
-                    statusIcon.style.color = '#F44336';
                     break;
             }
 
@@ -1038,14 +1060,10 @@
                 console.log('🔵 Processing theme:', payload.theme);
                 if (payload.theme === 'dark') {
                     currentOverlay.classList.add('overlay-dark');
-                    currentOverlay.style.background = 'rgba(0, 0, 0, 1)';
-                    currentOverlay.style.color = '#fff';
-                    console.log('🔵 Applied dark theme - background set to black');
+                    console.log('🔵 Applied dark theme');
                 } else {
                     currentOverlay.classList.remove('overlay-dark');
-                    currentOverlay.style.background = 'rgba(255, 255, 255, 1)';
-                    currentOverlay.style.color = '#333';
-                    console.log('🔵 Applied light theme - background set to white');
+                    console.log('🔵 Applied light theme');
                 }
             }
             
