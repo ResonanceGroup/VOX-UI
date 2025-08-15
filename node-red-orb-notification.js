@@ -783,7 +783,7 @@
             }
             
             .overlay-dark .status-icon {
-                color: #81C784 !important; /* Match original VOX-UI dark mode idle color */
+                color: #4CAF50 !important; /* Use same green as light mode for recording dot */
                 display: inline-block !important;
             }
             
