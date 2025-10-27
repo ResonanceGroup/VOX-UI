@@ -1005,11 +1005,18 @@
                     console.log('🔵 Hiding overlay and notification container...');
                     
                     try {
-                        // First, remove our overlay from DOM
-                        if (currentOverlay && currentOverlay.parentNode) {
-                            console.log('🔵 Removing overlay from DOM:', currentOverlay);
-                            currentOverlay.parentNode.removeChild(currentOverlay);
-                            console.log('🔵 Overlay successfully removed from DOM');
+                        // First, fade out the overlay
+                        if (currentOverlay) {
+                            console.log('🔵 Fading out overlay');
+                            currentOverlay.style.opacity = '0';
+                            // Wait for fade animation to complete before removing from DOM
+                            setTimeout(() => {
+                                if (currentOverlay && currentOverlay.parentNode) {
+                                    console.log('🔵 Removing overlay from DOM after fade:', currentOverlay);
+                                    currentOverlay.parentNode.removeChild(currentOverlay);
+                                    console.log('🔵 Overlay successfully removed from DOM');
+                                }
+                            }, 500); // Match the CSS transition time
                         }
                         
                         // Now find and remove the parent notification container
@@ -1044,8 +1051,13 @@
                         // Fallback: hide everything we can find
                         if (currentOverlay) {
                             currentOverlay.style.opacity = '0';
-                            currentOverlay.style.visibility = 'hidden';
-                            currentOverlay.style.display = 'none';
+                            // Wait for fade animation to complete before hiding
+                            setTimeout(() => {
+                                if (currentOverlay) {
+                                    currentOverlay.style.visibility = 'hidden';
+                                    currentOverlay.style.display = 'none';
+                                }
+                            }, 500); // Match the CSS transition time
                         }
                         window.orbOverlayActive = false;
                     }

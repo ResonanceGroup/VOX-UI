@@ -1,7 +1,7 @@
 # Active Context - VOX-UI
 
 ## Current Status
-**COMPLETED IMPLEMENTATION** - Node-RED function node for JSON payload processing and orb overlay control is complete.
+**COMPLETED IMPLEMENTATION AND FIX** - Node-RED function node for JSON payload processing and orb overlay control is complete, with fade-out animation fix applied.
 
 ## What I'm Working On Now
 - Finalizing documentation and testing procedures
@@ -16,6 +16,7 @@
 - Implemented direct JSON payload processing (no MQTT topic parsing)
 - Added smart overlay control (show on state changes, preserve audio updates)
 - Created comprehensive documentation in README.md
+- **FIXED FADE-OUT ANIMATION**: Updated node-red-orb-notification.js to properly fade out the overlay instead of instant disappearance
 
 ## Next Steps
 1. Final testing with sample JSON payloads
@@ -38,7 +39,7 @@
 
 ## Current Project State
 - Main files exist and appear functional: index.html, main.js, styles.css
-- Node-RED orb notification system working (node-red-orb-notification.js)
+- Node-RED orb notification system working (node-red-orb-notification.js) with proper fade animations
 - Updated function node implementation complete (JSON payload processing)
 - Comprehensive documentation created in README.md
 - Ready for final testing and validation
