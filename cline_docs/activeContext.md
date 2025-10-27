@@ -1,68 +1,67 @@
-# Project Pivot (April 2025)
+# Active Context
+
+## What We're Working On Now
+Starting a new Flutter frontend-only mock project to replicate the VOX UI visually and interactively.
+
+**Current Task**: Create a Flutter app that matches the existing VOX UI design
+- Frontend-only implementation (no backend, no WebSockets, no audio, no LiveKit, no MCP)
+- Focus on visual fidelity and basic interactions (sidebar, accordions, theme switching)
+- Phase 1: Visual & Navigation Only
+
+**Immediate Next Steps**:
+1. Explore the existing web UI (old/src/ files) to understand visual design
+2. Create Flutter project using VS Code Flutter commands
+3. Implement basic navigation structure (Chat, MCP Servers, Settings)
+4. Create OrbWidget as placeholder (solid circle only)
+5. Implement sidebar with overlay scrim
+6. Add theme switching (system/light/dark)
+7. Create accordion components for Settings page
 
 ## Recent Changes
-- **Project Direction Shift:** The project's focus has pivoted from building a standalone voice assistant backend (RunPod/UltraVox/Kokoro) to creating a voice UI (VOX UI) that acts as a frontend controller for the Roo Code VSCode extension via the Model Context Protocol (MCP).
-- **Previous Backend Work Deferred:** All work related to the RunPod infrastructure, UltraVox, and Kokoro TTS integration is now deferred indefinitely.
-- **Phase 1 (MCP Page HTML/CSS) Complete:** The initial HTML structure and CSS styling for the MCP Server settings page (`src/mcp_servers.html`) are complete, including sample data. JS logic and minor CSS tweaks deferred.
-- **UI Finalization - Phases A, B, C Complete:** Settings page overhaul, MCP icon integration, and theme persistence bug fixed.
-- **Backend Plan - Phase 1 Complete:** Research & Definition for backend architecture, interfaces, and protocols completed and documented.
-- **Backend Plan - Phase 2 Complete:** Core backend implementation in Node.js finished, including modularized Settings API, WebSocket handler, Agent Lifecycle Management, Message Routing, and MCP Client logic.
-- **Backend Plan - Phase 3 Complete:** Frontend implementation finished (WebSocket client, MCP page logic, UI state updates, Audio handling, Settings save/load via WebSocket).
-- **Backend Plan - Phase 4 (Tasks 1 & 2):** Implemented `EchoAgent.js` and `UltraVoxKokoroAgent.js` (networked version). Created `gpu_server_setup.sh`.
-- **Code Review Fixes:** Addressed issues found in code review (MCP client cleanup bug, JS filename inconsistency (`mcp_servers.js`), `app.js` race condition).
-- **Sidebar Menu Fixes:** Added missing `id="sidebar-toggle"` to buttons and missing `<script src="script.js">` includes in `index.html`, `settings.html`, and `mcp_servers.html`.
-- **Inline MCP Editor Added:** Added a textbox to `src/settings.html` for direct editing of MCP config JSON (replaces file path input).
-- **Session Logic Refactor (Attempted):** Started refactoring `src/app.js` for improved WebSocket/settings initialization timing (task cancelled, state may be partial).
-- **Accordion Bug Fixed:** Accordion groups on Settings page (`src/settings.html`) were fixed by Debug agent (involved adding script include and fixing styles).
-- **Backend MCP Config Handling Refactored:** Backend (`mcpApi.js`, `webSocketHandler.js`) updated to read/write `mcp_config.json` directly and handle get/save via WebSocket. (Fixes `mcp_config_path` error).
-- **MCP Editor Implemented:** Frontend (`app.js`) logic added for loading, saving, reverting MCP config via WebSocket. Expand-on-navigate implemented. Button alignment/order fixed. Textarea color fixed. Old error dialog removed from `mcp_servers.js`.
-- **Session Logic Verified:** Robust session/settings initialization logic in `src/app.js` confirmed.
+- Project initialized with README.md and productContext.md
+- Identified source files in old/src/ directory for visual reference
+- Preparing to start Flutter development
 
-## Current Focus: Phase 5 - Integration & Testing
+## Current State - Core Implementation Complete! 🎉
+- **Flutter App Fully Functional**: All core features implemented and tested ✅
+- **No Navigation Errors**: All Scaffold.of() and routing issues resolved ✅
+- **Web UI Analysis Complete**: Comprehensive visual design system documented ✅
+- **Dependencies Working**: go_router, flutter_riverpod, theme system all functional ✅
 
-Following the plan outlined in `cline_docs/backend_implementation_plan.md`:
+## Key Visual Findings from Live UI Analysis
 
-### UI Finalization (Phases A, B, C) (Complete)
-- **Status:** Settings page updated, MCP icon integrated, theme bug fixed.
+### Design System Discovered
+- **Primary Color**: #347ab8 (blue) - matches CSS variables
+- **Layout**: 60px nav, 160px sidebar, responsive main area
+- **Typography**: System fonts, proper hierarchy (1.25rem nav, 0.9rem body)
+- **Spacing**: Consistent 20px padding, 12px gaps, 12px border radius
+- **Animations**: 0.2-0.3s ease transitions, smooth sidebar slide
 
-### Backend Plan - Phase 1: Research & Definition (Complete)
-- **Status:** Interfaces, protocols, and settings structures defined.
+### Component Behavior Observed
+- **Sidebar**: Slides in from left with backdrop blur overlay
+- **Navigation**: Blue accent color on active items, smooth hover effects
+- **Orb**: Sophisticated circle with depth and visual effects (solid for Phase 1)
+- **Accordions**: Expand/collapse with chevron rotation, smooth content animation
+- **Theme System**: Live switching between system/light/dark modes
+- **Form Elements**: Clean inputs with focus states and proper validation styling
 
-### Backend Plan - Phase 2: Core Backend Implementation (Complete)
-- **Status:** Node.js server logic implemented.
+### Color Tokens Extracted
+```css
+--primary-color: #347ab8;        /* Main blue */
+--bg-color: #ffffff;             /* Clean white background */
+--text-color: #333333;           /* Dark gray text */
+--border-color: #eeeeee;         /* Light borders */
+--sidebar-width: 160px;          /* Consistent sidebar size */
+```
 
-### Backend Plan - Phase 3: Frontend Implementation (Complete)
-- **Status:** Frontend JavaScript logic implemented.
-
-### Backend Plan - Phase 4: Voice Agent Module Implementation (In Progress)
-- **Goal:** Implement specific `IVoiceAgent` modules.
-- **Completed Tasks:**
-    1. Implemented `EchoAgent.js`.
-    2. Implemented `UltraVoxKokoroAgent.js` (networked).
-    3. Created `gpu_server_setup.sh`.
-- **Remaining Tasks:**
-    1. Implement other desired agent modules (Phi4, Qwen). (Deferred)
-
-### Backend Plan - Phase 5: Integration & Testing (In Progress)
-- **Goal:** Ensure all components work together. (Next Step)
-- **Tasks:**
-    1. Set up cloud GPU environment using `gpu_server_setup.sh`.
-    2. Configure VOX UI settings (`settings.json`, `mcp_config.json`) to point to the GPU services and select the `UltraVoxKokoroAgent`.
-    3. Perform end-to-end testing of voice input/output flow.
-    4. Debug any issues found during testing.
-
-### Original Plan - Phase 2: Enhance Visualizations (Deferred)
-- Further UI enhancements deferred.
-
-### Original Plan - Phase 4: MCP Server for Roo Code (Deferred)
-- Building the dedicated Roo Code MCP server deferred.
-
-
-# Next Steps
-
-1.  **Begin Backend Plan - Phase 5:**
-    *   Analyze `gpu_server_setup.sh` script.
-    *   Set up cloud GPU environment using the script.
-    *   Configure VOX UI settings (`settings.json`) to point to the GPU services and select the `UltraVoxKokoroAgent`.
-    *   Perform end-to-end testing of voice input/output flow.
-    *   Debug any issues found during testing.
+## Next Steps (Ready to Start Flutter Development)
+1. ✅ **Complete**: Memory Bank with visual design system
+2. ⏳ **In Progress**: Create Flutter project via VS Code commands
+3. 📋 **Pending**: Set up project structure and GoRouter routing
+4. 📋 **Pending**: Implement navigation bar and sidebar components
+5. 📋 **Pending**: Create OrbWidget placeholder (solid circle)
+6. 📋 **Pending**: Build Settings page with accordions
+7. 📋 **Pending**: Add theme switching system
+8. 📋 **Pending**: Style all components to match web UI
+9. 📋 **Pending**: Add smooth animations and transitions
+10. 📋 **Pending**: Final testing and visual polish

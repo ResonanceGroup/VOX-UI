@@ -1,96 +1,177 @@
 # Technical Context
 
-## Development Stack
+## Technologies Used
 
-### Frontend
-- HTML5 for structure
-- CSS3 for styling
-  - Custom properties for theming
-  - Flexbox and Grid for layouts
-  - Media queries for responsiveness
-- Vanilla JavaScript for functionality
-  - ES6+ features
-  - WebSocket API for audio streaming
-  - Local storage API
-  - Event handling
+### Core Framework
+- **Flutter**: Main UI framework for building the cross-platform application
+- **Dart**: Programming language for Flutter development
 
-### Backend
-- Python for server implementation
-  - FastAPI/websockets for WebSocket server
-  - UltraVox Python SDK for voice processing
-  - Kokoro TTS for speech synthesis
-  - JSON for structured responses
-  - GPU acceleration support
+### State Management (Decision Required)
+- **Riverpod** (Recommended): Type-safe, reactive state management
+  - Alternative: **Provider** (Simpler but less powerful)
+- **flutter_riverpod** package for dependency injection and state management
 
-### Infrastructure
-- RunPod instance hosting
-  - NVIDIA RTX 3090 GPU
-  - CUDA and cuDNN support
-  - SSH access via RSA key
-  - Command: `ssh gana4hxiljs2mn-64410b18@ssh.runpod.io -i ~/.ssh/id_ed25519`
-  - API Key: rpa_6Z64QX45BBE1GW8MYDSW659GBG5X643MQKPP6DT611gr1f
-  - File transfer: runpodctl utility
-  - Persistence: Only /workspace directory persists between pod restarts
-- GPU-accelerated processing
-  - UltraVox speech-to-text
-  - Kokoro TTS synthesis
-  - High-throughput capabilities
+### Routing & Navigation
+- **GoRouter** (Recommended): Declarative routing with deep linking
+  - Alternative: **Navigator 2.0** (Built-in but more complex)
+- **go_router** package for advanced routing features
+
+### UI & Theming
+- **Material 3**: Modern Material Design system
+- **flutter/material.dart**: Core Material widgets
+- **ThemeData**: Centralized theming system
+
+### Development Tools
+- **VS Code**: Primary development environment
+- **Flutter Extension**: VS Code Flutter tools and debugger
+- **Dart Extension**: Dart language support and analysis
+
+## Development Setup
+
+### Prerequisites
+- **Flutter SDK**: Latest stable version (3.0+ recommended)
+- **Dart SDK**: Comes with Flutter installation
+- **VS Code**: With Flutter and Dart extensions
+- **Android Studio** (for Android emulation) or **Xcode** (for iOS)
+
+### Installation Commands
+```bash
+# Install Flutter SDK (if not already installed)
+git clone https://github.com/flutter/flutter.git -b stable
+export PATH="$PATH:`pwd`/flutter/bin"
+
+# Verify installation
+flutter doctor
+flutter --version
+
+# Enable web support (for development)
+flutter config --enable-web
+```
+
+### Project Creation
+1. **VS Code Command Palette**: `Ctrl+Shift+P`
+2. **Flutter: New Project** → **Application**
+3. Project name: `vox_ui_flutter`
+4. Use default template structure
+
+### Development Workflow
+```bash
+# Get dependencies
+flutter pub get
+
+# Run on connected device/emulator
+flutter run
+
+# Run on web (for design reference)
+flutter run -d chrome
+
+# Hot reload during development
+# Changes are reflected instantly in running app
+
+# Build for production
+flutter build apk  # Android
+flutter build ios  # iOS
+flutter build web  # Web
+```
+
+## Technical Constraints
+
+### Phase 1 Limitations
+- **Frontend-only**: No backend integration, no WebSocket connections
+- **No audio**: No sound input/output or audio processing
+- **No LiveKit**: No real-time communication features
+- **No MCP integration**: No Model Context Protocol server connections
+- **No persistence**: All state is in-memory only
+
+### Flutter-Specific Constraints
+- **Platform compatibility**: Target Android, iOS, and Web platforms
+- **Material Design**: Use Material 3 design system for consistency
+- **Performance**: Optimize for smooth animations and transitions
+- **Responsive design**: Handle different screen sizes appropriately
+
+### Visual Fidelity Requirements
+- **Match existing web UI**: Colors, spacing, typography, and animations
+- **Approximations allowed**: Use closest Material Design values when exact matches aren't available
+- **Comment approximations**: Add `// approx` comments for design decisions
+- **Theme consistency**: Implement system/light/dark theme matching
+
+## Package Dependencies (Planned)
+
+### Core Dependencies
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  riverpod: ^2.4.9  # State management
+  go_router: ^12.1.3  # Routing
+  flutter_riverpod: ^2.4.9  # Riverpod for Flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1  # Code linting
+```
+
+### Optional Future Dependencies (Phase 2)
+```yaml
+# Audio processing (future)
+# flutter_sound: ^9.2.13
+
+# WebSocket connections (future)
+# web_socket_channel: ^2.4.0
+
+# HTTP client (future)
+# dio: ^5.3.2
+
+# Local storage (future)
+# shared_preferences: ^2.2.2
+```
 
 ## Development Environment
-- VSCode as primary editor
-- Python virtual environment
-- Chrome DevTools for debugging
-- Git for version control
-- PowerShell for CLI operations
 
-## Project Structure
+### VS Code Configuration
+- **Flutter Extension**: Provides code completion, debugging, and device management
+- **Dart Extension**: Language server for Dart analysis and refactoring
+- **Settings**: Configure for Flutter development best practices
+
+### Device Testing
+- **Android Emulator**: For Android development and testing
+- **iOS Simulator**: For iOS development (macOS only)
+- **Web Browser**: Chrome for web development and design reference
+- **Physical Devices**: For final testing and optimization
+
+### Code Quality
+- **Dart Analysis**: Built-in static analysis for code quality
+- **Flutter Lints**: Consistent code style and best practices
+- **Testing**: Unit tests for business logic, widget tests for UI components
+
+## Build and Deployment
+
+### Development Builds
+```bash
+# Run in debug mode
+flutter run
+
+# Enable performance overlay
+flutter run --profile
 ```
-src/                 # Frontend code
-├── app.css          # Main application styles
-├── app.js           # Core application logic
-├── index.html       # Main chat interface
-├── settings.html    # Settings page
-├── orb.js          # Orb visualization
-└── style.css        # Additional styles
 
-backend/            # Python backend
-├── main.py         # FastAPI application
-├── websocket.py    # WebSocket handling
-├── ultravox.py     # UltraVox integration
-├── kokoro.py       # Kokoro TTS integration
-└── requirements.txt # Python dependencies
+### Release Builds
+```bash
+# Build optimized APK
+flutter build apk --release
+
+# Build App Bundle (preferred for Play Store)
+flutter build appbundle --release
+
+# Build for iOS
+flutter build ios --release
 ```
 
-## External Services
-- UltraVox API for voice processing
-- Kokoro TTS for speech synthesis
-- WebSocket connections for streaming
-- Local storage for settings persistence
+### Web Builds (for reference)
+```bash
+# Build optimized web app
+flutter build web --release
 
-## Browser Support
-- Modern browsers with CSS Grid support
-- CSS custom properties support required
-- Flexbox support required
-- Local storage API support required
-
-## Development Practices
-- Mobile-first responsive design
-- Progressive enhancement
-- Semantic HTML
-- Accessible markup
-- Performance optimization
-
-## Current Technical Challenges
-1. Theme switching performance
-2. Form validation implementation
-3. API integration error handling
-4. Mobile responsiveness
-5. Loading state management
-6. Browser compatibility
-
-## Development Setup Requirements
-- Node.js for development tools
-- Local development server
-- Modern web browser
-- Git for version control
-- VSCode extensions for HTML/CSS/JS
+# Serve locally for testing
+flutter run -d chrome --release

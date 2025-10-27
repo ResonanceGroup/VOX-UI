@@ -2,7 +2,7 @@
   "servers": [
     {
       "name": "test-server-15",
-      "enabled": true,
+      "enabled": false,
       "command": "node test-server-1.js",
       "tools": [
         {
