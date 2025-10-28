@@ -33,7 +33,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           preferredSize: const Size.fromHeight(1.0),
           child: Container(
             height: 1.0,
-            color: AppTheme.borderColor,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF333333) // Darker border for dark mode
+                : AppTheme.borderColor,
           ),
         ),
       ),
@@ -115,9 +117,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
            color: Theme.of(context).scaffoldBackgroundColor,
            border: Border(
              top: BorderSide(
-               color: Theme.of(context).brightness == Brightness.light
-                   ? const Color(0xFFE5E5E5) // Lighter border for light mode
-                   : AppTheme.borderColor,
+               color: Theme.of(context).brightness == Brightness.dark
+                   ? const Color(0xFF333333) // Darker border for dark mode matching original
+                   : const Color(0xFFE5E5E5), // Lighter border for light mode
                width: 1.0,
              ),
            ),

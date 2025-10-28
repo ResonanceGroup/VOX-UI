@@ -169,13 +169,16 @@ class AppTheme {
       // App Bar Theme
       appBarTheme: const AppBarTheme(
         backgroundColor: headerDarkBackground,
-        foregroundColor: Color(0xFFEEEEEE),
+        foregroundColor: Color(0xFFCCCCCC), // Lighter gray to match original
         elevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
           fontSize: 20.0,
           fontWeight: FontWeight.w500,
-          color: Color(0xFFEEEEEE),
+          color: Color(0xFFCCCCCC), // Lighter gray to match original
+        ),
+        iconTheme: IconThemeData(
+          color: Color(0xFFCCCCCC), // Lighter gray for hamburger menu
         ),
       ),
 
