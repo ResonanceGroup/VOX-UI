@@ -22,20 +22,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu),
+            padding: const EdgeInsets.all(8.0), // 8px padding to match original
             onPressed: () {
               Scaffold.of(context).openDrawer();
             },
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              // Navigate to settings using GoRouter
-              context.go('/settings');
-            },
+        // Add bottom border to match original
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(
+            height: 1.0,
+            color: AppTheme.borderColor,
           ),
-        ],
+        ),
       ),
       drawer: const VOXNavigationDrawer(currentRoute: '/chat'),
       body: Container(
@@ -50,94 +50,116 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
               const SizedBox(height: 20.0),
 
-              // Status indicator (matching web UI)
+              // Microphone icon (matching web UI)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                width: 40.0,
+                height: 40.0,
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade800
+                      : Colors.grey.shade200,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade600
+                        : Colors.grey.shade400,
+                    width: 1.0,
+                  ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.close,
-                      size: 16.0,
-                      color: Colors.red.shade600,
-                    ),
-                    const SizedBox(width: 8.0),
-                    Text(
-                      'Ready to assist...',
-                      style: AppTheme.statusTextStyle.copyWith(
-                        color: Colors.red.shade600,
-                      ),
-                    ),
-                  ],
+                child: Icon(
+                  Icons.mic,
+                  size: 20.0,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade300
+                      : Colors.grey.shade700,
                 ),
               ),
+              const SizedBox(height: 20.0),
+
+              // Status indicator (matching web UI)
+               Container(
+                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                 decoration: BoxDecoration(
+                   color: Colors.red.withOpacity(0.1),
+                   borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+                   border: Border.all(color: Colors.red.withOpacity(0.3)),
+                 ),
+                 child: Row(
+                   mainAxisSize: MainAxisSize.min,
+                   children: [
+                     Icon(
+                       Icons.close,
+                       size: 16.0,
+                       color: const Color(0xFFE53E3E), // Exact red color matching web UI
+                     ),
+                     const SizedBox(width: 8.0),
+                     Text(
+                       'Ready to assist...',
+                       style: AppTheme.statusTextStyle.copyWith(
+                         color: const Color(0xFFE53E3E), // Exact red color matching web UI
+                       ),
+                     ),
+                   ],
+                 ),
+               ),
             ],
           ),
         ),
       ),
 
       // Bottom input controls (matching web UI)
-      bottomNavigationBar: Container(
-        height: AppTheme.navHeight,
-        padding: const EdgeInsets.symmetric(horizontal: 32.0),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          border: Border(
-            top: BorderSide(
-              color: AppTheme.borderColor,
-              width: 1.0,
-            ),
-          ),
-        ),
-        child: Row(
-          children: [
-            // Text input
-            Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Type a message...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Theme.of(context).inputDecorationTheme.fillColor,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                ),
-                style: AppTheme.bodyTextStyle,
-              ),
-            ),
-            const SizedBox(width: 8.0),
+       bottomNavigationBar: Container(
+         height: AppTheme.navHeight,
+         padding: const EdgeInsets.symmetric(horizontal: 32.0),
+         decoration: BoxDecoration(
+           color: Theme.of(context).scaffoldBackgroundColor,
+           border: Border(
+             top: BorderSide(
+               color: Theme.of(context).brightness == Brightness.light
+                   ? const Color(0xFFE5E5E5) // Lighter border for light mode
+                   : AppTheme.borderColor,
+               width: 1.0,
+             ),
+           ),
+         ),
+         child: Row(
+           children: [
+             // Text input (completely borderless and seamless)
+             Expanded(
+               child: TextField(
+                 decoration: InputDecoration(
+                   hintText: 'Type a message...',
+                   border: InputBorder.none,
+                   enabledBorder: InputBorder.none,
+                   focusedBorder: InputBorder.none,
+                   filled: false,
+                   contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                   hintStyle: AppTheme.bodyTextStyle.copyWith(
+                     color: AppTheme.textLightColor,
+                   ),
+                 ),
+                 style: AppTheme.bodyTextStyle,
+               ),
+             ),
+             const SizedBox(width: 8.0),
 
-            // Upload button
-            IconButton(
-              icon: const Icon(Icons.upload),
-              onPressed: () {
-                // TODO: Implement file upload
-              },
-              tooltip: 'Upload file (coming soon)',
-            ),
+             // Upload button
+             Icon(
+               Icons.upload,
+               color: AppTheme.textLightColor,
+               size: 20.0,
+             ),
+             const SizedBox(width: 16.0),
 
-            // Send button
-            IconButton(
-              icon: const Icon(Icons.send),
-              onPressed: () {
-                // TODO: Implement send functionality
-              },
-              tooltip: 'Send message',
-              style: IconButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
+             // Send button (blue arrow, no circular background)
+             Icon(
+               Icons.send,
+               color: AppTheme.primaryColor,
+               size: 20.0,
+             ),
+           ],
+         ),
+       ),
     );
   }
 }

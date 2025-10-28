@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,30 +13,17 @@ class VOXNavigationDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Drawer(
       width: AppTheme.sidebarWidth,
-      child: Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        child: Column(
+      elevation: 0,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.zero, // Remove rounded corners
+      ),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0), // Add blur effect matching CSS backdrop-filter: blur(2px)
+        child: Container(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: Column(
           children: [
-            // Drawer header
-            Container(
-              height: AppTheme.navHeight,
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: AppTheme.borderColor,
-                    width: 1.0,
-                  ),
-                ),
-              ),
-              child: const Center(
-                child: Text(
-                  'Navigation',
-                  style: AppTheme.navTitleStyle,
-                ),
-              ),
-            ),
-
-            // Navigation items
+            // Navigation items (no header)
             _buildNavItem(
               context: context,
               icon: Icons.chat,
@@ -46,7 +34,7 @@ class VOXNavigationDrawer extends StatelessWidget {
 
             _buildNavItem(
               context: context,
-              icon: Icons.computer,
+              icon: Icons.storage, // Stacked servers icon matching original codicon-server
               label: 'MCP Servers',
               route: '/mcp-servers',
               currentRoute: currentRoute,
@@ -61,6 +49,7 @@ class VOXNavigationDrawer extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

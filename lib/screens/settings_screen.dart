@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../theme/app_theme.dart';
 import '../providers/theme_provider.dart';
+import '../widgets/navigation_drawer.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -24,25 +25,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {
-            // TODO: Open sidebar - will be handled by parent ShellRoute
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Sidebar will be implemented with ShellRoute')),
-            );
-          },
-        ),
-        actions: [
-          ElevatedButton(
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            padding: const EdgeInsets.all(8.0), // 8px padding to match original
             onPressed: () {
-              // Navigate back to chat using GoRouter
-              context.go('/chat');
+              Scaffold.of(context).openDrawer();
             },
-            child: const Text('Done'),
           ),
-        ],
+        ),
+        // Add bottom border to match original
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(
+            height: 1.0,
+            color: AppTheme.borderColor,
+          ),
+        ),
       ),
+      drawer: const VOXNavigationDrawer(currentRoute: '/settings'),
       body: Container(
         color: Theme.of(context).scaffoldBackgroundColor,
         child: SingleChildScrollView(
@@ -82,9 +83,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   _buildDropdownField(
                     label: 'Language',
-                    value: 'en',
+                    value: 'english',
                     onChanged: (value) {},
-                    items: const ['English', 'Chinese'],
+                    items: const ['english', 'chinese'],
                   ),
                 ],
               ),
@@ -177,11 +178,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
               const SizedBox(height: 32.0),
 
-              // Action buttons
+              // Action buttons (matching original dimensions)
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        side: BorderSide(color: AppTheme.borderColor, width: 1.0),
+                      ),
                       onPressed: () {
                         Navigator.of(context).pop();
                       },
@@ -191,6 +196,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(width: 16.0),
                   Expanded(
                     child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      ),
                       onPressed: () {
                         // TODO: Save all settings
                         Navigator.of(context).pop();
@@ -218,21 +226,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
         border: Border.all(color: AppTheme.borderColor),
       ),
-      child: ExpansionTile(
-        initiallyExpanded: initiallyExpanded,
-        title: Text(
-          title,
-          style: AppTheme.sectionHeaderStyle,
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: children,
-            ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent), // Remove divider lines
+        child: ExpansionTile(
+          initiallyExpanded: initiallyExpanded,
+          title: Text(
+            title,
+            style: AppTheme.sectionHeaderStyle,
           ),
-        ],
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: children,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -291,8 +302,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           DropdownButtonFormField<String>(
             value: value,
             onChanged: onChanged,
-            items: items.map((item) {
-              return DropdownMenuItem(
+            items: items.map<DropdownMenuItem<String>>((item) {
+              return DropdownMenuItem<String>(
                 value: item.toLowerCase(),
                 child: Text(item),
               );
@@ -370,68 +381,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       onTap: () {
         ThemeService.updateTheme(ref, value);
       },
-    );
-  }
-}
-
-class NavigationDrawer extends StatelessWidget {
-  const NavigationDrawer({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      width: AppTheme.sidebarWidth,
-      child: Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        child: Column(
-          children: [
-            Container(
-              height: AppTheme.navHeight,
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: AppTheme.borderColor,
-                    width: 1.0,
-                  ),
-                ),
-              ),
-              child: const Center(
-                child: Text(
-                  'Navigation',
-                  style: AppTheme.navTitleStyle,
-                ),
-              ),
-            ),
-
-            ListTile(
-              leading: const Icon(Icons.chat),
-              title: const Text('Chat'),
-              onTap: () {
-                context.go('/chat');
-              },
-            ),
-
-            ListTile(
-              leading: const Icon(Icons.computer),
-              title: const Text('MCP Servers'),
-              onTap: () {
-                context.go('/mcp-servers');
-              },
-            ),
-
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('Settings'),
-              selected: true,
-              selectedTileColor: AppTheme.primaryColor.withOpacity(0.1),
-              selectedColor: AppTheme.primaryColor,
-              onTap: () {
-                // Already on this page
-              },
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

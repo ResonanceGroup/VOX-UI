@@ -20,26 +20,27 @@ class _McpServersScreenState extends State<McpServersScreen> {
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu),
+            padding: const EdgeInsets.all(8.0), // 8px padding to match original
             onPressed: () {
               Scaffold.of(context).openDrawer();
             },
           ),
         ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              // Navigate back to chat using GoRouter
-              context.go('/chat');
-            },
-            child: const Text('Done'),
+        // Add bottom border to match original
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(
+            height: 1.0,
+            color: AppTheme.borderColor,
           ),
-        ],
+        ),
       ),
       drawer: const VOXNavigationDrawer(currentRoute: '/mcp-servers'),
       body: Container(
         color: Theme.of(context).scaffoldBackgroundColor,
-        padding: const EdgeInsets.all(AppTheme.containerPadding),
-        child: Column(
+        child: SingleChildScrollView( // Add scrolling
+          padding: const EdgeInsets.all(AppTheme.containerPadding),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -120,13 +121,16 @@ class _McpServersScreenState extends State<McpServersScreen> {
               resources: 0,
             ),
 
-            const Spacer(),
+            const SizedBox(height: AppTheme.sectionSpacing),
 
-            // Action buttons
+            // Action buttons (matching original dimensions)
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    ),
                     onPressed: () {
                       // TODO: Implement edit servers functionality
                     },
@@ -137,6 +141,7 @@ class _McpServersScreenState extends State<McpServersScreen> {
               ],
             ),
           ],
+        ),
         ),
       ),
     );
@@ -156,7 +161,9 @@ class _McpServersScreenState extends State<McpServersScreen> {
         borderRadius: BorderRadius.circular(AppTheme.borderRadius),
         border: Border.all(color: AppTheme.borderColor),
       ),
-      child: ExpansionTile(
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent), // Remove black border lines
+        child: ExpansionTile(
         leading: Icon(
           Icons.arrow_forward_ios,
           size: 16.0,
@@ -256,6 +263,7 @@ class _McpServersScreenState extends State<McpServersScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
