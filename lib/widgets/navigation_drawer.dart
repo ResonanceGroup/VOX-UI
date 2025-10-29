@@ -4,58 +4,119 @@ import 'package:go_router/go_router.dart';
 
 import '../theme/app_theme.dart';
 
-class VOXNavigationDrawer extends StatelessWidget {
+class VOXNavigationDrawer extends StatefulWidget {
   final String currentRoute;
 
   const VOXNavigationDrawer({super.key, required this.currentRoute});
 
   @override
+  State<VOXNavigationDrawer> createState() => _VOXNavigationDrawerState();
+}
+
+class _VOXNavigationDrawerState extends State<VOXNavigationDrawer>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    );
+    // Start the animation when the drawer appears
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Drawer(
-      width: 250,
-      elevation: 0,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.zero,
-      ),
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.9),
-            child: Column(
-          children: [
-            // Navigation items (no header)
-            _NavItem(
-              icon: Icons.chat,
-              label: 'Chat',
-              route: '/chat',
-              currentRoute: currentRoute,
-            ),
-
-            const SizedBox(height: 2.0),
-
-            _NavItem(
-              icon: Icons.storage,
-              label: 'MCP Servers',
-              route: '/mcp-servers',
-              currentRoute: currentRoute,
-            ),
-
-            const SizedBox(height: 2.0),
-
-            _NavItem(
-              icon: Icons.settings,
-              label: 'Settings',
-              route: '/settings',
-              currentRoute: currentRoute,
-            ),
-            ],
+    return SafeArea(
+      child: Stack(
+        children: [
+          // Backdrop blur effect with animation
+          AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              return BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: 3.0 * _animation.value,
+                  sigmaY: 3.0 * _animation.value,
+                ),
+                child: Container(
+                  color: Colors.black.withOpacity(0.1 * _animation.value),
+                ),
+              );
+            },
           ),
-        ),
+          // Actual drawer
+          Drawer(
+            width: 250,
+            elevation: 0,
+            backgroundColor: isDark
+                ? const Color(0xFF252526).withOpacity(0.95)
+                : Colors.white.withOpacity(0.95),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.zero,
+            ),
+            child: Column(
+              children: [
+                // Navigation items (no header)
+                _NavItem(
+                  icon: Icons.chat,
+                  label: 'Chat',
+                  route: '/chat',
+                  currentRoute: widget.currentRoute,
+                  onTap: () => _closeDrawer(context, '/chat'),
+                ),
+
+                const SizedBox(height: 2.0),
+
+                _NavItem(
+                  icon: Icons.storage,
+                  label: 'MCP Servers',
+                  route: '/mcp-servers',
+                  currentRoute: widget.currentRoute,
+                  onTap: () => _closeDrawer(context, '/mcp-servers'),
+                ),
+
+                const SizedBox(height: 2.0),
+
+                _NavItem(
+                  icon: Icons.settings,
+                  label: 'Settings',
+                  route: '/settings',
+                  currentRoute: widget.currentRoute,
+                  onTap: () => _closeDrawer(context, '/settings'),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-    ));
+    );
+  }
+
+  void _closeDrawer(BuildContext context, String route) {
+    // Start reversing the animation
+    _controller.reverse();
+    // Close drawer immediately (don't wait for animation)
+    Navigator.of(context).pop();
+    if (route != widget.currentRoute) {
+      context.go(route);
+    }
   }
 }
 
@@ -64,12 +125,14 @@ class _NavItem extends StatefulWidget {
   final String label;
   final String route;
   final String currentRoute;
+  final VoidCallback onTap;
 
   const _NavItem({
     required this.icon,
     required this.label,
     required this.route,
     required this.currentRoute,
+    required this.onTap,
   });
 
   @override
@@ -103,12 +166,7 @@ class _NavItemState extends State<_NavItem> {
       onExit: (_) => setState(() => _isHovering = false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () {
-          Navigator.of(context).pop(); // Close drawer
-          if (!isSelected) {
-            context.go(widget.route);
-          }
-        },
+        onTap: widget.onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
           decoration: BoxDecoration(
