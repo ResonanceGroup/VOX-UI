@@ -62,6 +62,19 @@
 - Animation timings noted
 - Component specifications detailed
 
+## Recent UI Polish Completions (October 29, 2025) ✅
+
+### Critical Fixes Implemented
+1. **Text Label Colors in Dark Mode** - Fixed to #E0E0E0 for proper visibility
+2. **Focus Border Width** - Restored to 2px across all input controls
+3. **Titlebar Borders** - Fixed to consistent #E5E5E5 (light) and #333333 (dark)
+4. **Titlebar Scroll Effect** - Removed unwanted background color changes
+5. **Navigation Drawer Blur** - Implemented smooth animated blur effect:
+   - 3px blur strength (user-optimized)
+   - 150ms animation duration
+   - Proper bidirectional fade in/out
+   - Synced with drawer slide animation
+
 ## What's Left to Build 🚧
 
 ### Minor Outstanding Items
@@ -74,14 +87,13 @@
 - Action: Examine `old/src/mcp_servers.html` for icon reference
 - Priority: Low (cosmetic only)
 
-#### 2. Menu Animation Enhancement 🔍
-**Status**: Pending research
-**Description**: Menu should fade in instead of sliding
-- Current: Navigation drawer slides from left
-- Desired: Fade-in animation
-- Challenge: flutter_zoom_drawer may require custom implementation
-- Action: Research custom drawer animation approaches
-- Priority: Medium (nice-to-have enhancement)
+#### 2. Menu Animation Enhancement ✅ RESOLVED
+**Status**: COMPLETED
+**Description**: Blur effect now properly animates with drawer
+- Implemented custom AnimationController for blur
+- Smooth fade in/out in both directions
+- Perfect synchronization with drawer movement
+- Note: flutter_zoom_drawer was never appropriate (different use case)
 
 ### Phase 2 Features (Future Work) 🚀
 

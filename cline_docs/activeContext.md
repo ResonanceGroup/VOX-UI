@@ -1,34 +1,35 @@
 # Active Context
 
-## Current Status: UI Polish Phase Nearly Complete ✨
+## Current Status: UI Polish Phase Complete ✅
 
-**Last Updated**: October 2025
-**Current Task**: Visual refinements and UI fixes based on user feedback
-**Session Status**: Preparing for memory reset - documentation update in progress
+**Last Updated**: October 29, 2025
+**Current Task**: UI refinements completed successfully
+**Session Status**: All fixes implemented and verified by user
 
 ## What We Just Completed in This Session
 
 ### Major UI Fixes Implemented ✅
-1. **Menu Overlay Blur Effect** - Added BackdropFilter with blur(10) to navigation drawer
-2. **Menu Panel Corners** - Removed all border radius from drawer (was 12px)
-3. **Settings Icon Removal** - Removed settings icon from header AppBar actions
-4. **Text Input Border** - Removed border from chat input TextField
-5. **Accordion Border Lines** - Removed top/bottom borders from expanded ExpansionTiles
-6. **MCP Servers Scrolling** - Made accordion groups scrollable with proper SingleChildScrollView
-7. **Accordion Controls Styling** - Fixed borders and colors for dropdowns, buttons, and inputs
-8. **Theme Selector Slider** - Replaced radio buttons with SegmentedButton three-way slider
-9. **Button Heights** - Increased global button height to 42px (from 36px)
-10. **Light Mode Border Colors** - Fixed to #E5E5E5 throughout
-11. **Light Mode Backgrounds** - Fixed panel and group colors to match original
+1. **Text Label Colors in Dark Mode** - Fixed labels in Settings and MCP Servers to use proper #E0E0E0 color for visibility
+2. **Thicker Blue Focus Borders** - Restored focus border width to 2px (from 1px) across all input controls
+3. **Titlebar Border Colors** - Fixed to consistent #E5E5E5 (light mode) and #333333 (dark mode) across all screens
+4. **Titlebar Background on Scroll** - Removed background color change effect by adding:
+   - `surfaceTintColor: Colors.transparent`
+   - `scrolledUnderElevation: 0`
+   - Explicit background colors for all AppBars
+5. **Navigation Drawer Blur Effect** - Successfully implemented animated blur:
+   - 3px blur strength (user-tweaked for optimal feel)
+   - 150ms animation duration (refined through testing)
+   - Proper bidirectional animation (fades in/out with drawer)
+   - Synced with drawer slide animation using AnimationController
 
 ### Files Modified in This Session
-- `lib/widgets/navigation_drawer.dart` - Blur effect, removed border radius
-- `lib/screens/chat_screen.dart` - Removed input border, removed settings icon
-- `lib/screens/settings_screen.dart` - Fixed accordion borders, slider control, button styling
-- `lib/screens/mcp_servers_screen.dart` - Fixed scrolling, removed borders
-- `lib/theme/app_theme.dart` - Updated border colors, backgrounds, button heights
+- `lib/theme/app_theme.dart` - Updated focus border width to 2px in both light and dark themes
+- `lib/screens/chat_screen.dart` - Fixed titlebar border color, added scroll protection
+- `lib/screens/settings_screen.dart` - Fixed text label colors in dark mode, titlebar borders, focus borders
+- `lib/screens/mcp_servers_screen.dart` - Fixed titlebar border color
+- `lib/widgets/navigation_drawer.dart` - Completely rewrote to StatefulWidget with AnimationController for blur effect
 
-## Outstanding Items from User Feedback
+## Outstanding Items from Previous Sessions
 
 ### Pending Tasks 🔍
 1. **3-Server Stacked MCP Icon** - Need to check if original UI uses a different icon (3 servers stacked vs current 2)
@@ -36,11 +37,11 @@
    - Need to investigate: Does old version have a 3-server icon variant?
    - Action: Check `old/src/mcp_servers.html` for icon reference
 
-2. **Menu Overlay Animation** - Current implementation slides, should fade
-   - Issue: Navigation drawer uses flutter_zoom_drawer which slides in
-   - Desired: Fade-in animation instead of slide
-   - Requires: Investigation of flutter_zoom_drawer alternatives or custom animation
-   - Complexity: Medium - may need custom drawer implementation
+### Recently Resolved ✅
+1. **Menu Overlay Animation** - RESOLVED
+   - Implemented custom AnimationController-based blur effect
+   - Blur animates smoothly in both directions
+   - No longer using flutter_zoom_drawer (it was never appropriate - different use case)
 
 ## Current Project State
 
@@ -87,9 +88,11 @@
 ```dart
 // lib/widgets/navigation_drawer.dart
 - Width: 250px
-- Blur effect: BackdropFilter with ImageFilter.blur(10, 10)
+- Blur effect: BackdropFilter with ImageFilter.blur(3.0, 3.0) - animated
+- Animation: 150ms duration with AnimationController
 - No border radius (borderRadius: BorderRadius.zero)
 - Menu items only (no title header)
+- StatefulWidget with SingleTickerProviderStateMixin for animation
 ```
 
 ### Accordion Components
