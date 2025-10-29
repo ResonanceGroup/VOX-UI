@@ -18,6 +18,9 @@ class _McpServersScreenState extends State<McpServersScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: isDark ? const Color(0xFF252526) : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         title: const Text('MCP Servers'),
         leading: Builder(
           builder: (context) => IconButton(
@@ -32,7 +35,7 @@ class _McpServersScreenState extends State<McpServersScreen> {
           preferredSize: const Size.fromHeight(1.0),
           child: Container(
             height: 1.0,
-            color: isDark ? const Color(0xFF333333) : const Color(0xFFEEEEEE),
+            color: isDark ? const Color(0xFF333333) : const Color(0xFFE5E5E5),
           ),
         ),
       ),
@@ -46,10 +49,10 @@ class _McpServersScreenState extends State<McpServersScreen> {
             child: Container(
               constraints: const BoxConstraints(maxWidth: 800),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF252526) : const Color(0xFFFBFBFB),
+                color: isDark ? const Color(0xFF252526) : const Color(0xFFF9F9F9),
                 borderRadius: BorderRadius.circular(8.0),
                 border: Border.all(
-                  color: isDark ? const Color(0xFF444444) : const Color(0xFFEEEEEE),
+                  color: isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -157,7 +160,7 @@ class _McpServersScreenState extends State<McpServersScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF347AB7),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(6.0),
                           ),
@@ -220,7 +223,7 @@ class _McpServerAccordionState extends State<_McpServerAccordion> {
         color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
         borderRadius: BorderRadius.circular(8.0),
         border: Border.all(
-          color: isDark ? const Color(0xFF444444) : const Color(0xFFEEEEEE),
+          color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC),
         ),
       ),
       child: Column(
@@ -306,7 +309,7 @@ class _McpServerAccordionState extends State<_McpServerAccordion> {
           if (_isExpanded)
             Container(
               height: 1.0,
-              color: isDark ? const Color(0xFF444444) : const Color(0xFFEEEEEE),
+              color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC),
             ),
           // Content
           if (_isExpanded)
@@ -355,7 +358,7 @@ class _McpServerAccordionState extends State<_McpServerAccordion> {
                       color: isDark ? const Color(0xFF383838) : const Color(0xFFF9F9F9),
                       borderRadius: BorderRadius.circular(6.0),
                       border: Border.all(
-                        color: isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
+                        color: isDark ? const Color(0xFF555555) : const Color(0xFFDDDDDD),
                       ),
                     ),
                     child: Column(

@@ -13,57 +13,49 @@ class VOXNavigationDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Stack(
-      children: [
-        // Blurred backdrop
-        GestureDetector(
-          onTap: () => Navigator.of(context).pop(),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
-            child: Container(
-              color: Colors.black.withOpacity(0.3),
-            ),
-          ),
-        ),
-        // Drawer panel
-        Align(
-          alignment: Alignment.centerLeft,
+    return Drawer(
+      width: 250,
+      elevation: 0,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.zero,
+      ),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
-            width: AppTheme.sidebarWidth,
-            color: Theme.of(context).scaffoldBackgroundColor,
+            color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.9),
             child: Column(
-              children: [
-                // Navigation items (no header)
-                _NavItem(
-                  icon: Icons.chat,
-                  label: 'Chat',
-                  route: '/chat',
-                  currentRoute: currentRoute,
-                ),
-
-                const SizedBox(height: 2.0), // Add spacing between menu items matching original gap: 2px
-
-                _NavItem(
-                  icon: Icons.storage, // Stacked servers icon matching original codicon-server
-                  label: 'MCP Servers',
-                  route: '/mcp-servers',
-                  currentRoute: currentRoute,
-                ),
-
-                const SizedBox(height: 2.0), // Add spacing between menu items matching original gap: 2px
-
-                _NavItem(
-                  icon: Icons.settings,
-                  label: 'Settings',
-                  route: '/settings',
-                  currentRoute: currentRoute,
-                ),
-              ],
+          children: [
+            // Navigation items (no header)
+            _NavItem(
+              icon: Icons.chat,
+              label: 'Chat',
+              route: '/chat',
+              currentRoute: currentRoute,
             ),
+
+            const SizedBox(height: 2.0),
+
+            _NavItem(
+              icon: Icons.storage,
+              label: 'MCP Servers',
+              route: '/mcp-servers',
+              currentRoute: currentRoute,
+            ),
+
+            const SizedBox(height: 2.0),
+
+            _NavItem(
+              icon: Icons.settings,
+              label: 'Settings',
+              route: '/settings',
+              currentRoute: currentRoute,
+            ),
+            ],
           ),
         ),
-      ],
-    );
+      ),
+    ));
   }
 }
 

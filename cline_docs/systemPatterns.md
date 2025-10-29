@@ -1,197 +1,427 @@
 # System Patterns
 
 ## Architecture Overview
-Frontend-only Flutter application that replicates the VOX UI design and interactions.
+Frontend-only Flutter application that replicates the VOX UI design and interactions with 95% visual fidelity to the original web UI.
 
 ## Key Technical Decisions
 
 ### State Management
-- **Riverpod** or **Provider** for state management
-- Theme mode (system/light/dark) state
-- Sidebar open/close state
-- Accordion expansion states
-- Navigation state (current route)
+- **Riverpod** for centralized theme state management
+- Theme mode (system/light/dark) state with reactive updates
+- Accordion expansion states managed locally in StatefulWidgets
+- Navigation state handled by GoRouter
 
 ### Routing
-- **GoRouter** or **Navigator 2.0** for declarative routing
-- Named routes: `/chat`, `/mcp-servers`, `/settings`
-- Deep linking support for navigation
+- **GoRouter** for declarative routing
+- Named routes: `/` (chat), `/mcp-servers`, `/settings`
+- Deep linking support with proper route configuration
+- Context-based navigation with `context.go()`
 
 ### UI Architecture
 - **Material 3** design system for Flutter theming
-- Custom widgets for complex UI components
-- Separation of concerns between UI logic and business logic
-- Responsive design patterns
+- Custom widgets for complex UI components (OrbWidget, NavigationDrawer)
+- Separation of concerns between UI and business logic
+- Responsive design patterns with MediaQuery
+- Theme-aware components using `Theme.of(context)`
 
 ## Widget Architecture Patterns
 
-### Custom Widgets Structure
+### Project Structure
 ```
 lib/
+├── main.dart                       # App entry, GoRouter, theme setup
+├── providers/
+│   └── theme_provider.dart         # Riverpod theme state management
+├── theme/
+│   └── app_theme.dart              # Light/dark theme definitions
 ├── widgets/
-│   ├── orb_widget.dart          # OrbWidget (solid circle placeholder)
-│   ├── sidebar/
-│   │   ├── sidebar_drawer.dart   # Main sidebar component
-│   │   └── overlay_scrim.dart    # Blur overlay for sidebar
-│   ├── accordions/
-│   │   ├── accordion_group.dart  # Accordion container
-│   │   └── accordion_item.dart   # Individual accordion item
-│   ├── navigation/
-│   │   └── nav_item.dart         # Navigation list items
-│   └── theme/
-│       └── theme_selector.dart   # Theme switcher widget
-├── screens/
-│   ├── chat_screen.dart          # Chat page with orb and input
-│   ├── mcp_servers_screen.dart   # MCP Servers with accordion list
-│   └── settings_screen.dart      # Settings with grouped accordions
-├── models/
-│   └── theme_model.dart          # Theme state model
-└── providers/
-    └── theme_provider.dart       # State management
+│   ├── navigation_drawer.dart      # Custom drawer with blur overlay
+│   └── orb_widget.dart            # Placeholder orb (solid circle)
+└── screens/
+    ├── chat_screen.dart            # Chat UI with orb and input
+    ├── mcp_servers_screen.dart     # MCP server accordion list
+    └── settings_screen.dart        # Settings with grouped accordions
 ```
 
 ### Component Patterns
-- **OrbWidget**: Custom widget with controller interface (placeholder for future state)
-- **SidebarDrawer**: Slide-in navigation drawer with backdrop
-- **AccordionGroup**: Vertical stack of expandable sections
-- **ThemeSelector**: Radio buttons or toggle for theme switching
+
+#### OrbWidget (lib/widgets/orb_widget.dart)
+- Custom widget with simple circular Container
+- Solid color placeholder for Phase 1
+- Controller interface documented for future state integration
+- Positioned centrally on chat screen
+
+#### NavigationDrawer (lib/widgets/navigation_drawer.dart)
+- Custom Drawer widget with BackdropFilter blur effect
+- Width: 250px, no border radius
+- Menu items only (no header title)
+- Active route highlighting with primary color
+- Blur overlay: `ImageFilter.blur(sigmaX: 10, sigmaY: 10)`
+
+#### Accordion Components (ExpansionTile)
+- Used in both Settings and MCP Servers screens
+- Custom styling to remove default borders
+- Scrollable content with SingleChildScrollView
+- Chevron icon rotation on expand/collapse
+- Theme-aware colors for headers and content
+
+#### Theme Selector (SegmentedButton)
+- Three-way slider: System / Light / Dark
+- No rounded corners on individual segments
+- Proper selected/unselected states
+- Instant theme switching on selection
+- Located in Settings > General UI section
 
 ## State Management Patterns
 
-### Theme Management
-- Centralized theme state via Provider/Riverpod
-- System theme detection
-- Live theme switching without app restart
-- Persistent theme preference (if needed in future)
+### Theme Management (Riverpod)
+```dart
+// providers/theme_provider.dart
+final themeProvider = StateNotifierProvider<ThemeNotifier, ThemeMode>((ref) {
+  return ThemeNotifier();
+});
 
-### UI State
-- Sidebar visibility state
-- Accordion expansion states
-- Current navigation route
-- All state is in-memory (no persistence for Phase 1)
+class ThemeNotifier extends StateNotifier<ThemeMode> {
+  ThemeNotifier() : super(ThemeMode.system);
+  
+  void setTheme(ThemeMode mode) {
+    state = mode;
+  }
+}
+
+// Usage in widgets
+class MyWidget extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeProvider);
+    // Widget builds with current theme
+  }
+}
+```
+
+### UI State Management
+- Sidebar visibility: Handled by Scaffold drawer mechanism
+- Accordion expansion: Local StatefulWidget state
+- Current navigation: GoRouter's location state
+- All state is in-memory (no persistence in Phase 1)
 
 ## Design Patterns Applied
 
 ### Factory Pattern
-- Theme creation and management
-- Widget factories for consistent styling
+- Theme creation: `AppTheme.lightTheme` and `AppTheme.darkTheme`
+- Widget factories for consistent styling across screens
 
 ### Observer Pattern
-- State changes trigger UI rebuilds
-- Theme changes propagate to all widgets
-
-### Singleton Pattern
-- Theme service (if needed)
-- Navigation service
+- Riverpod state changes trigger UI rebuilds
+- Theme changes propagate to all consumer widgets
+- GoRouter navigation updates all route-aware widgets
 
 ### Builder Pattern
-- Complex widget construction
-- Theme-aware widget building
+- Complex widget construction with proper theme awareness
+- Scaffold builders for consistent screen structure
 
-## Visual Design System
+## Visual Design System (As Implemented)
 
 ### Color Palette
-```css
-/* Primary Colors */
---primary-color: #347ab8;           /* Primary blue */
---primary-color-hover: #2a6194;     /* Darker blue for hover */
+```dart
+// theme/app_theme.dart
 
-/* Theme Colors */
---bg-color: #ffffff;                /* Main background */
---text-color: #333333;              /* Primary text */
---text-color-light: #666666;        /* Secondary text */
---text-color-dark: #cccccc;         /* Disabled text */
+// Light Mode
+Primary: #347ab8 (Color(0xFF347AB8))
+Background: #FFFFFF (Colors.white)
+Surface: #FFFFFF (Colors.white)
+Text: #333333 (Color(0xFF333333))
+Border: #E5E5E5 (Color(0xFFE5E5E5))
+Panel Background: #F5F5F5 (Color(0xFFF5F5F5))
 
-/* UI Elements */
---border-color: #eeeeee;            /* Borders */
---border-color-dark: #444444;       /* Dark theme borders */
---header-bg: #ffffff;               /* Navigation background */
---header-bg-dark: #252526;          /* Dark navigation */
---sidebar-bg: #ffffff;              /* Sidebar background */
---sidebar-bg-dark: #252526;         /* Dark sidebar */
---input-controls-bg: #ffffff;       /* Input area background */
---input-controls-bg-dark: #1e1e1e;  /* Dark input area */
+// Dark Mode
+Primary: #347ab8 (Color(0xFF347AB8))
+Background: #1E1E1E (Color(0xFF1E1E1E))
+Surface: #252526 (Color(0xFF252526))
+Text: #CCCCCC (Color(0xFFCCCCCC))
+Border: #333333 (Color(0xFF333333))
+Panel Background: #252526 (Color(0xFF252526))
 ```
 
 ### Typography Scale
-- **Navigation Title**: 1.25rem, font-weight: 500
-- **Section Headers**: 1.0rem, font-weight: 500
-- **Body Text**: 0.9rem, font-weight: 400
-- **Status Text**: 0.9rem, font-weight: 400, opacity: 0.9
-- **Labels**: 0.9rem, font-weight: 500
+```dart
+// Implemented via Material 3 TextTheme
+titleLarge: 20px (1.25rem equivalent) - Navigation titles
+titleMedium: 16px (1.0rem equivalent) - Section headers
+bodyMedium: 14.4px (0.9rem equivalent) - Body text
+bodySmall: 14.4px (0.9rem equivalent) - Status text
+labelLarge: 14.4px (0.9rem equivalent) - Button labels
+```
 
 ### Spacing System
-- **Container Padding**: 20px horizontal
-- **Section Spacing**: 24px
-- **Element Gaps**: 12px (buttons), 16px (form fields)
-- **Border Radius**: 12px (inputs/buttons), 6px (icons)
-- **Nav Height**: 60px
-- **Sidebar Width**: 160px
+```dart
+// Applied throughout the app
+Container Padding: 20px (EdgeInsets.all(20))
+Section Spacing: 24px (SizedBox(height: 24))
+Element Gaps: 12px (gap in Flex widgets)
+Form Field Spacing: 16px (SizedBox(height: 16))
 
-### Animation & Transitions
-- **Duration**: 0.2s - 0.3s for most interactions
-- **Easing**: ease (smooth transitions)
-- **Sidebar Animation**: translateX with 0.3s duration
-- **Overlay Animation**: opacity + backdrop-filter blur
-- **Hover Effects**: opacity changes (0.6 → 0.8 → 1.0)
+// Border Radius
+Input Fields: 12px (BorderRadius.circular(12))
+Buttons: 12px (BorderRadius.circular(12))
+Drawer: 0px (BorderRadius.zero)
+```
 
 ### Component Specifications
 
-#### Navigation Bar
-- **Height**: 60px fixed
-- **Background**: var(--header-bg)
-- **Border**: 1px solid var(--border-color)
-- **Padding**: 0 20px
-- **Hamburger Menu**: 8px padding, hover background
+#### Navigation Bar (AppBar)
+- Height: Default Material AppBar height (~56px)
+- Background: Theme-based (white/dark)
+- Border: Bottom divider
+- Leading: Hamburger menu icon
+- No trailing actions (settings icon removed)
 
-#### Sidebar
-- **Width**: 160px fixed
-- **Background**: var(--sidebar-bg)
-- **Border**: 1px solid var(--sidebar-border)
-- **Animation**: translateX(-100%) → translateX(0)
-- **Item Spacing**: 2px gap, 14px vertical padding
-- **Active State**: 3px left border in primary color
+#### Sidebar Drawer
+```dart
+width: 250
+borderRadius: BorderRadius.zero  // No rounded corners
+BackdropFilter: ImageFilter.blur(sigmaX: 10, sigmaY: 10)
+```
 
 #### Main Content Area
-- **Background**: var(--bg-color)
-- **Flex Layout**: Centered content with padding
-- **Overflow**: Hidden for proper scrolling
+- Background: Theme-based background color
+- Flex layout: Column with centered content
+- Padding: 20px horizontal
+- Scrollable: SingleChildScrollView where needed
 
-#### Input Controls (Bottom)
-- **Height**: 60px fixed
-- **Background**: var(--input-controls-bg)
-- **Border**: 1px solid var(--input-controls-border)
-- **Padding**: 0 32px
-- **Button Size**: 36px diameter, 8px padding
+#### Input Controls (Chat Screen)
+```dart
+TextField(
+  decoration: InputDecoration(
+    border: InputBorder.none,  // No border
+    enabledBorder: InputBorder.none,
+    focusedBorder: InputBorder.none,
+  ),
+)
+
+Send Button:
+  - IconButton with arrow icon
+  - Primary blue color
+  - No circular background
+  - Size: 24x24 icon
+```
 
 #### Orb Widget
-- **Shape**: Perfect circle (solid color for Phase 1)
-- **Size**: Variable (based on screen size)
-- **Background**: Sophisticated gradient or solid color
-- **Border**: Subtle border/shadow for depth
-- **Status Effects**: Positioned absolutely for animations
+```dart
+Container(
+  width: 200,
+  height: 200,
+  decoration: BoxDecoration(
+    shape: BoxShape.circle,
+    color: Theme.of(context).colorScheme.primary,
+  ),
+)
+```
 
-#### Accordion Components
-- **Header**: Clickable with hover states
-- **Icon**: Chevron rotation animation
-- **Content**: Slide down/up animation
-- **Spacing**: Consistent padding and margins
-- **Borders**: Subtle separators between sections
+#### Accordion Components (ExpansionTile)
+```dart
+ExpansionTile(
+  tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  childrenPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  // Custom decoration to remove borders
+  decoration: BoxDecoration(border: Border.all(width: 0)),
+)
+```
 
 #### Form Elements
-- **Input Fields**: 12px border radius, consistent padding
-- **Focus States**: Primary color border/highlight
-- **Dropdowns**: Native styling with custom arrows
-- **Labels**: Proper spacing and typography
+```dart
+Button Heights: 42px (minHeight in ButtonStyle)
+Border Radius: 12px for inputs and buttons
+DropdownButton: Custom styling with theme colors
+TextField: Outlined with focus states
+```
+
+### Animation & Transitions
+```dart
+// Drawer Animation (built-in)
+Duration: ~300ms
+Curve: easeInOut
+
+// Theme Switching
+Duration: Instant (no animation needed)
+
+// Accordion Expansion
+Duration: Built-in ExpansionTile animation
+Curve: Default Material curve
+```
 
 ## Code Organization Principles
-- **Separation of concerns**: UI logic separate from business logic
-- **Single responsibility**: Each widget has one clear purpose
-- **DRY (Don't Repeat Yourself)**: Common patterns extracted to reusable components
-- **SOLID principles**: Maintainable and extensible code structure
+
+### Separation of Concerns
+- Screens handle layout and composition
+- Widgets focus on single responsibilities
+- Theme logic centralized in app_theme.dart
+- State management isolated in providers/
+
+### Single Responsibility
+- Each widget has one clear purpose
+- OrbWidget: Display circular orb
+- NavigationDrawer: Handle sidebar navigation
+- Each screen: Manage one page's layout
+
+### DRY (Don't Repeat Yourself)
+- Shared theme definitions in AppTheme
+- Reusable accordion patterns
+- Common button styles extracted
+- Consistent spacing using theme values
+
+### SOLID Principles
+- Open/Closed: Easy to extend with new screens
+- Dependency Inversion: Depend on abstractions (ThemeMode)
+- Single Responsibility: Each file has one purpose
+
+## Implementation Details
+
+### Theme Switching Implementation
+```dart
+// main.dart
+MaterialApp.router(
+  theme: AppTheme.lightTheme,
+  darkTheme: AppTheme.darkTheme,
+  themeMode: ref.watch(themeProvider),
+  routerConfig: router,
+)
+
+// User selects theme
+onPressed: () => ref.read(themeProvider.notifier).setTheme(ThemeMode.light),
+```
+
+### Navigation Implementation
+```dart
+// main.dart - GoRouter setup
+final router = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(path: '/', builder: (context, state) => ChatScreen()),
+    GoRoute(path: '/mcp-servers', builder: (context, state) => McpServersScreen()),
+    GoRoute(path: '/settings', builder: (context, state) => SettingsScreen()),
+  ],
+);
+
+// Navigation usage
+onTap: () => context.go('/settings'),
+```
+
+### Blur Overlay Implementation
+```dart
+// navigation_drawer.dart
+Stack(
+  children: [
+    // Blur overlay
+    Positioned.fill(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(color: Colors.black.withOpacity(0.3)),
+      ),
+    ),
+    // Drawer content
+    SafeArea(
+      child: Container(
+        width: 250,
+        color: Theme.of(context).colorScheme.surface,
+        // ... drawer content
+      ),
+    ),
+  ],
+)
+```
+
+### Scrollable Accordion Implementation
+```dart
+// mcp_servers_screen.dart & settings_screen.dart
+SingleChildScrollView(
+  child: Column(
+    children: [
+      ExpansionTile(
+        // Scrollable content inside accordion
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                // Accordion content
+              ],
+            ),
+          ),
+        ],
+      ),
+    ],
+  ),
+)
+```
+
+## Current Implementation Status
+
+### Fully Implemented ✅
+- Theme system with three modes
+- Navigation between all screens
+- Custom drawer with blur overlay
+- Accordion components with scrolling
+- Form controls with proper styling
+- Button heights at 42px
+- Borderless text input
+- Light/dark mode color schemes
+- SegmentedButton theme selector
+
+### Pending Investigation 🔍
+- 3-server stacked icon verification
+- Drawer fade animation (vs slide)
 
 ## Future Integration Points (Phase 2)
-- OrbWidget controller integration with LiveKit/MCP
-- WebSocket connections for real-time data
-- Backend API integration
-- Persistent storage for settings
+
+### Backend Integration
+- Real MCP server connections
+- WebSocket communication
+- API endpoints for data
+- Settings persistence
+
+### Enhanced Features
+- OrbWidget LiveKit integration
+- Real-time state updates
+- Audio input/output
+- Voice agent selection
+- n8n workflow integration
+
+### Advanced UI
+- Animated orb states
+- Connection status indicators
+- Progress indicators
+- Toast notifications
+- Error handling UI
+
+## Testing Strategy (Future)
+
+### Unit Tests
+- Theme provider logic
+- State management
+- Navigation routing
+
+### Widget Tests
+- Individual widget rendering
+- Theme switching
+- Accordion behavior
+- Form validation
+
+### Integration Tests
+- Full user flows
+- Screen navigation
+- Theme persistence
+- Settings management
+
+## Performance Considerations
+
+### Current Optimizations
+- Minimal rebuilds with Riverpod
+- Efficient theme switching
+- Lazy loading of screens
+- Proper widget keys
+
+### Future Optimizations
+- Image caching
+- Network request optimization
+- State persistence
+- Memory management

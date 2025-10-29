@@ -26,6 +26,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF252526)
+            : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         title: const Text('Settings'),
         leading: Builder(
           builder: (context) => IconButton(
@@ -40,7 +45,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           preferredSize: const Size.fromHeight(1.0),
           child: Container(
             height: 1.0,
-            color: AppTheme.borderColor,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF333333)
+                : const Color(0xFFE5E5E5),
           ),
         ),
       ),
@@ -54,10 +61,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Container(
               constraints: const BoxConstraints(maxWidth: 800),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF252526) : const Color(0xFFFBFBFB),
+                color: isDark ? const Color(0xFF252526) : const Color(0xFFF9F9F9),
                 borderRadius: BorderRadius.circular(8.0),
                 border: Border.all(
-                  color: isDark ? const Color(0xFF444444) : const Color(0xFFEEEEEE),
+                  color: isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
                 ),
                 boxShadow: [
                     BoxShadow(
@@ -246,7 +253,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         foregroundColor: isPrimary
             ? Colors.white
             : (isDark ? const Color(0xFFCCCCCC) : const Color(0xFF555555)),
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6.0),
           side: BorderSide(
@@ -283,7 +290,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           Text(
             label,
-            style: AppTheme.labelStyle,
+            style: TextStyle(
+              fontSize: 14.4,
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFFE0E0E0)
+                  : const Color(0xFF333333),
+            ),
           ),
           const SizedBox(height: 8.0),
           TextField(
@@ -295,7 +308,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             decoration: InputDecoration(
               hintText: placeholder,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+                borderRadius: BorderRadius.circular(6.0),
+                borderSide: BorderSide(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF555555)
+                      : const Color(0xFFCCCCCC),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6.0),
+                borderSide: BorderSide(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF555555)
+                      : const Color(0xFFCCCCCC),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6.0),
+                borderSide: const BorderSide(
+                  color: Color(0xFF347AB7),
+                  width: 2.0,
+                ),
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             ),
@@ -324,7 +357,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           Text(
             label,
-            style: AppTheme.labelStyle,
+            style: TextStyle(
+              fontSize: 14.4,
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFFE0E0E0)
+                  : const Color(0xFF333333),
+            ),
           ),
           const SizedBox(height: 8.0),
           DropdownButtonFormField<String>(
@@ -338,7 +377,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             }).toList(),
             decoration: InputDecoration(
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppTheme.borderRadius),
+                borderRadius: BorderRadius.circular(6.0),
+                borderSide: BorderSide(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF555555)
+                      : const Color(0xFFCCCCCC),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6.0),
+                borderSide: BorderSide(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF555555)
+                      : const Color(0xFFCCCCCC),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6.0),
+                borderSide: const BorderSide(
+                  color: Color(0xFF347AB7),
+                  width: 2.0,
+                ),
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             ),
@@ -350,6 +409,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildThemeSelector() {
     final currentTheme = ref.watch(themeModeProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,62 +419,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           style: TextStyle(
             fontWeight: FontWeight.w500,
             fontSize: 14.0,
-            color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFFE0E0E0)
-                : const Color(0xFF333333),
+            color: isDark ? const Color(0xFFE0E0E0) : const Color(0xFF333333),
           ),
         ),
         const SizedBox(height: 8.0),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: AppTheme.borderColor),
-            borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-          ),
-          child: Column(
-            children: [
-              _buildThemeOption(
-                title: 'System',
-                value: ThemeMode.system,
-                currentValue: currentTheme,
-              ),
-              Divider(height: 1.0, color: AppTheme.borderColor),
-              _buildThemeOption(
-                title: 'Light',
-                value: ThemeMode.light,
-                currentValue: currentTheme,
-              ),
-              Divider(height: 1.0, color: AppTheme.borderColor),
-              _buildThemeOption(
-                title: 'Dark',
-                value: ThemeMode.dark,
-                currentValue: currentTheme,
-              ),
-            ],
-          ),
+        _ThemeToggle(
+          currentTheme: currentTheme,
+          onChanged: (mode) {
+            ThemeService.updateTheme(ref, mode);
+          },
         ),
       ],
-    );
-  }
-
-  Widget _buildThemeOption({
-    required String title,
-    required ThemeMode value,
-    required ThemeMode currentValue,
-  }) {
-    return ListTile(
-      title: Text(title),
-      leading: Radio<ThemeMode>(
-        value: value,
-        groupValue: currentValue,
-        onChanged: (mode) {
-          if (mode != null) {
-            ThemeService.updateTheme(ref, mode);
-          }
-        },
-      ),
-      onTap: () {
-        ThemeService.updateTheme(ref, value);
-      },
     );
   }
 }
@@ -454,7 +469,7 @@ class _SettingsAccordionState extends State<_SettingsAccordion> {
         color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
         borderRadius: BorderRadius.circular(8.0),
         border: Border.all(
-          color: isDark ? const Color(0xFF444444) : const Color(0xFFEEEEEE),
+          color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC),
         ),
       ),
       child: Column(
@@ -513,7 +528,7 @@ class _SettingsAccordionState extends State<_SettingsAccordion> {
           if (_isExpanded)
             Container(
               height: 1.0,
-              color: isDark ? const Color(0xFF444444) : const Color(0xFFEEEEEE),
+              color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC),
             ),
           // Content
           if (_isExpanded)
@@ -525,6 +540,125 @@ class _SettingsAccordionState extends State<_SettingsAccordion> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// Three-way toggle button widget for theme selection
+class _ThemeToggle extends StatelessWidget {
+  final ThemeMode currentTheme;
+  final Function(ThemeMode) onChanged;
+
+  const _ThemeToggle({
+    required this.currentTheme,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: isDark ? const Color(0xFF555555) : const Color(0xFFCCCCCC),
+        ),
+        borderRadius: BorderRadius.circular(6.0),
+        color: isDark ? const Color(0xFF3A3A3A) : Colors.white,
+      ),
+      padding: const EdgeInsets.all(4.0),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ThemeToggleButton(
+            label: 'System',
+            isSelected: currentTheme == ThemeMode.system,
+            onTap: () => onChanged(ThemeMode.system),
+          ),
+          const SizedBox(width: 10.0),
+          _ThemeToggleButton(
+            label: 'Light',
+            isSelected: currentTheme == ThemeMode.light,
+            onTap: () => onChanged(ThemeMode.light),
+          ),
+          const SizedBox(width: 10.0),
+          _ThemeToggleButton(
+            label: 'Dark',
+            isSelected: currentTheme == ThemeMode.dark,
+            onTap: () => onChanged(ThemeMode.dark),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Individual toggle button within the three-way toggle
+class _ThemeToggleButton extends StatefulWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ThemeToggleButton({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_ThemeToggleButton> createState() => _ThemeToggleButtonState();
+}
+
+class _ThemeToggleButtonState extends State<_ThemeToggleButton> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Color backgroundColor;
+    Color textColor;
+
+    if (widget.isSelected) {
+      backgroundColor = const Color(0xFF347AB7); // Primary color
+      textColor = Colors.white;
+    } else if (_isHovering) {
+      backgroundColor = isDark
+          ? const Color(0x26529EDA) // rgba(82, 158, 218, 0.15)
+          : const Color(0x1A347AB8); // rgba(52, 122, 184, 0.1)
+      textColor = isDark
+          ? const Color(0xFF999999)
+          : const Color(0xFF666666);
+    } else {
+      backgroundColor = Colors.transparent;
+      textColor = isDark
+          ? const Color(0xFF999999)
+          : const Color(0xFF666666);
+    }
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(4.0),
+          ),
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              fontSize: 14.0,
+              fontWeight: widget.isSelected ? FontWeight.w500 : FontWeight.normal,
+              color: textColor,
+            ),
+          ),
+        ),
       ),
     );
   }

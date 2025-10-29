@@ -12,7 +12,7 @@ class AppTheme {
   static const Color textColor = Color(0xFF333333);
   static const Color textLightColor = Color(0xFF666666);
   static const Color textDarkColor = Color(0xFFCCCCCC);
-  static const Color borderColor = Color(0xFFEEEEEE);
+  static const Color borderColor = Color(0xFFCCCCCC);  // Light mode border (matching CSS)
   static const Color borderDarkColor = Color(0xFF444444);
 
   // UI Element Colors
@@ -20,7 +20,7 @@ class AppTheme {
   static const Color headerDarkBackground = Color(0xFF252526);
   static const Color sidebarBackground = Colors.white;
   static const Color sidebarDarkBackground = Color(0xFF252526);
-  static const Color sidebarBorder = Color(0xFFEEEEEE);
+  static const Color sidebarBorder = Color(0xFFCCCCCC);  // Light mode border
   static const Color sidebarDarkBorder = Color(0xFF333333);
   static const Color inputControlsBackground = Colors.white;
   static const Color inputControlsDarkBackground = Color(0xFF1E1E1E);
@@ -106,15 +106,15 @@ class AppTheme {
         fillColor: Colors.transparent,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(borderRadius),
-          borderSide: const BorderSide(color: borderColor),
+          borderRadius: BorderRadius.circular(smallBorderRadius),
+          borderSide: const BorderSide(color: inputControlsBorder),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(borderRadius),
-          borderSide: const BorderSide(color: borderColor),
+          borderRadius: BorderRadius.circular(smallBorderRadius),
+          borderSide: const BorderSide(color: inputControlsBorder),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(borderRadius),
+          borderRadius: BorderRadius.circular(smallBorderRadius),
           borderSide: const BorderSide(color: primaryColor, width: 2.0),
         ),
         labelStyle: labelStyle,
@@ -127,9 +127,10 @@ class AppTheme {
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          minimumSize: const Size(0, 50),  // Set minimum height to 44px
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(borderRadius),
+            borderRadius: BorderRadius.circular(smallBorderRadius),
           ),
           textStyle: bodyTextStyle.copyWith(
             color: Colors.white,
@@ -151,8 +152,8 @@ class AppTheme {
         color: Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(borderRadius),
-          side: const BorderSide(color: borderColor),
+          borderRadius: BorderRadius.circular(smallBorderRadius),
+          side: const BorderSide(color: inputControlsBorder),
         ),
       ),
     );
@@ -198,15 +199,15 @@ class AppTheme {
         fillColor: const Color(0xFF3A3A3A),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(borderRadius),
-          borderSide: const BorderSide(color: borderDarkColor),
+          borderRadius: BorderRadius.circular(smallBorderRadius),
+          borderSide: const BorderSide(color: Color(0xFF555555)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(borderRadius),
-          borderSide: const BorderSide(color: borderDarkColor),
+          borderRadius: BorderRadius.circular(smallBorderRadius),
+          borderSide: const BorderSide(color: Color(0xFF555555)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(borderRadius),
+          borderRadius: BorderRadius.circular(smallBorderRadius),
           borderSide: const BorderSide(color: primaryColor, width: 2.0),
         ),
         labelStyle: const TextStyle(
@@ -227,9 +228,10 @@ class AppTheme {
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          minimumSize: const Size(0, 50),  // Set minimum height to 44px
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(borderRadius),
+            borderRadius: BorderRadius.circular(smallBorderRadius),
           ),
           textStyle: bodyTextStyle.copyWith(
             color: Colors.white,
@@ -243,8 +245,8 @@ class AppTheme {
         color: const Color(0xFF2C2C2C),
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(borderRadius),
-          side: const BorderSide(color: borderDarkColor),
+          borderRadius: BorderRadius.circular(smallBorderRadius),
+          side: const BorderSide(color: Color(0xFF555555)),
         ),
       ),
     );

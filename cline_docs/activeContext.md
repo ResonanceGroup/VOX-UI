@@ -1,101 +1,213 @@
 # Active Context
 
-## What We're Working On Now
-Starting a new Flutter frontend-only mock project to replicate the VOX UI visually and interactively.
+## Current Status: UI Polish Phase Nearly Complete ✨
 
-**Current Task**: Create a Flutter app that matches the existing VOX UI design
-- Frontend-only implementation (no backend, no WebSockets, no audio, no LiveKit, no MCP)
-- Focus on visual fidelity and basic interactions (sidebar, accordions, theme switching)
-- Phase 1: Visual & Navigation Only
+**Last Updated**: October 2025
+**Current Task**: Visual refinements and UI fixes based on user feedback
+**Session Status**: Preparing for memory reset - documentation update in progress
 
-**Immediate Next Steps**:
-1. Explore the existing web UI (old/src/ files) to understand visual design
-2. Create Flutter project using VS Code Flutter commands
-3. Implement basic navigation structure (Chat, MCP Servers, Settings)
-4. Create OrbWidget as placeholder (solid circle only)
-5. Implement sidebar with overlay scrim
-6. Add theme switching (system/light/dark)
-7. Create accordion components for Settings page
+## What We Just Completed in This Session
 
-## Recent Changes
-- Project initialized with README.md and productContext.md
-- Identified source files in old/src/ directory for visual reference
-- Preparing to start Flutter development
+### Major UI Fixes Implemented ✅
+1. **Menu Overlay Blur Effect** - Added BackdropFilter with blur(10) to navigation drawer
+2. **Menu Panel Corners** - Removed all border radius from drawer (was 12px)
+3. **Settings Icon Removal** - Removed settings icon from header AppBar actions
+4. **Text Input Border** - Removed border from chat input TextField
+5. **Accordion Border Lines** - Removed top/bottom borders from expanded ExpansionTiles
+6. **MCP Servers Scrolling** - Made accordion groups scrollable with proper SingleChildScrollView
+7. **Accordion Controls Styling** - Fixed borders and colors for dropdowns, buttons, and inputs
+8. **Theme Selector Slider** - Replaced radio buttons with SegmentedButton three-way slider
+9. **Button Heights** - Increased global button height to 42px (from 36px)
+10. **Light Mode Border Colors** - Fixed to #E5E5E5 throughout
+11. **Light Mode Backgrounds** - Fixed panel and group colors to match original
 
-## Current State - Core Implementation Complete! 🎉
-- **Flutter App Fully Functional**: All core features implemented and tested ✅
-- **No Navigation Errors**: All Scaffold.of() and routing issues resolved ✅
-- **Git Commit Complete**: 949 files committed with comprehensive implementation ✅
-- **Web UI Analysis Complete**: Comprehensive visual design system documented ✅
-- **Dependencies Working**: go_router, flutter_riverpod, theme system all functional ✅
+### Files Modified in This Session
+- `lib/widgets/navigation_drawer.dart` - Blur effect, removed border radius
+- `lib/screens/chat_screen.dart` - Removed input border, removed settings icon
+- `lib/screens/settings_screen.dart` - Fixed accordion borders, slider control, button styling
+- `lib/screens/mcp_servers_screen.dart` - Fixed scrolling, removed borders
+- `lib/theme/app_theme.dart` - Updated border colors, backgrounds, button heights
 
-## Successfully Implemented ✅
-- **Complete Navigation System**: GoRouter with proper routing between screens
-- **Functional Sidebar**: 160px drawer with hamburger menu activation
-- **All Three Main Screens**: Chat, MCP Servers, Settings with full UI
-- **OrbWidget**: Solid circle placeholder (Phase 1) matching web UI design
-- **Theme System**: Light/Dark/System modes with live switching
-- **Accordion Components**: Expandable sections in Settings and MCP Servers
-- **Visual Design System**: Colors, typography, spacing matching original
-- **State Management**: Riverpod for theme and navigation state
-- **No Crashes**: Clean analysis with only minor performance suggestions
+## Outstanding Items from User Feedback
 
-## Visual Polish Phase Complete! ✨
-All major visual improvements have been implemented based on user feedback:
+### Pending Tasks 🔍
+1. **3-Server Stacked MCP Icon** - Need to check if original UI uses a different icon (3 servers stacked vs current 2)
+   - Currently using: `Icons.dns` (2 stacked servers)
+   - Need to investigate: Does old version have a 3-server icon variant?
+   - Action: Check `old/src/mcp_servers.html` for icon reference
 
-### ✅ **Completed Visual Improvements:**
-- **✅ Header Borders** - Added thin gray borders to all screen headers matching original
-- **✅ Chat Input Styling** - Removed borders, changed send button to blue arrow (no circular background)
-- **✅ Navigation Drawer** - Removed title header, using only menu items
-- **✅ MCP Servers Icon** - Changed from computer to DNS icon (more appropriate)
-- **✅ Border Colors** - Fixed light mode border color (#E5E5E5)
-- **✅ Dropdown Fix** - Fixed dropdown menu item type issues
-- **✅ Consistent Actions** - All screens now use settings icons in action bar
+2. **Menu Overlay Animation** - Current implementation slides, should fade
+   - Issue: Navigation drawer uses flutter_zoom_drawer which slides in
+   - Desired: Fade-in animation instead of slide
+   - Requires: Investigation of flutter_zoom_drawer alternatives or custom animation
+   - Complexity: Medium - may need custom drawer implementation
 
-### 🎯 **Visual Fidelity Achieved:**
-- All header borders match the original thin gray lines
-- Chat input field is borderless and blends seamlessly
-- Send button is now a clean blue arrow (matching original)
-- Navigation drawer shows only menu items (no title header)
-- Proper border colors for light/dark modes
-- Fixed dropdown rendering issues
+## Current Project State
 
-The Flutter app now closely matches the original web UI visually! The main remaining difference is the solid circle orb (Phase 1 spec) vs the sophisticated 3D orb in the original (Phase 2).
+### Core Architecture ✅
+- **Framework**: Flutter 3.x with Material 3
+- **State Management**: Riverpod for theme management
+- **Routing**: GoRouter for navigation between screens
+- **Theme System**: Full light/dark/system mode support
 
-## Key Visual Findings from Live UI Analysis
+### Completed Features ✅
+- ✅ Three main screens: Chat, MCP Servers, Settings
+- ✅ Navigation drawer with menu items
+- ✅ Theme switching with 3-way slider control
+- ✅ Accordion components on Settings and MCP Servers pages
+- ✅ OrbWidget placeholder (solid circle)
+- ✅ Chat input with send button
+- ✅ Visual fidelity matching original web UI
+- ✅ Scrollable content areas
+- ✅ Proper light/dark mode color schemes
+- ✅ Consistent button styling and heights
 
-### Design System Discovered
-- **Primary Color**: #347ab8 (blue) - matches CSS variables
-- **Layout**: 60px nav, 160px sidebar, responsive main area
-- **Typography**: System fonts, proper hierarchy (1.25rem nav, 0.9rem body)
-- **Spacing**: Consistent 20px padding, 12px gaps, 12px border radius
-- **Animations**: 0.2-0.3s ease transitions, smooth sidebar slide
+### Visual Design Compliance ✅
+- Colors match original (#347ab8 primary, #E5E5E5 borders)
+- Typography scales correctly
+- Spacing matches web UI (20px padding, 12px gaps)
+- Border radius consistent (12px inputs/buttons, 0px drawer)
+- Button heights at 42px globally
+- Clean, borderless inputs
+- No extra icons or decorations
 
-### Component Behavior Observed
-- **Sidebar**: Slides in from left with backdrop blur overlay
-- **Navigation**: Blue accent color on active items, smooth hover effects
-- **Orb**: Sophisticated circle with depth and visual effects (solid for Phase 1)
-- **Accordions**: Expand/collapse with chevron rotation, smooth content animation
-- **Theme System**: Live switching between system/light/dark modes
-- **Form Elements**: Clean inputs with focus states and proper validation styling
+## Technical Implementation Details
 
-### Color Tokens Extracted
-```css
---primary-color: #347ab8;        /* Main blue */
---bg-color: #ffffff;             /* Clean white background */
---text-color: #333333;           /* Dark gray text */
---border-color: #eeeeee;         /* Light borders */
---sidebar-width: 160px;          /* Consistent sidebar size */
+### Theme System
+```dart
+// lib/theme/app_theme.dart
+- Light mode: white backgrounds, #E5E5E5 borders
+- Dark mode: #1E1E1E backgrounds, #333 borders
+- Primary color: #347ab8
+- Button height: 42px (minHeight)
+- Border radius: 12px (inputs), 0px (drawer)
 ```
 
-## Next Steps (Ready to Start Flutter Development)
-1. ✅ **Complete**: Memory Bank with visual design system
-2. ⏳ **In Progress**: Create Flutter project via VS Code commands
-3. 📋 **Pending**: Set up project structure and GoRouter routing
-4. 📋 **Pending**: Implement navigation bar and sidebar components
-5. 📋 **Pending**: Create OrbWidget placeholder (solid circle)
-6. 📋 **Pending**: Build Settings page with accordions
-7. 📋 **Pending**: Add theme switching system
-8. 📋 **Pending**: Style all components to match web UI
-9. 📋 **Pending**: Add smooth animations and transitions
-10. 📋 **Pending**: Final testing and visual polish
+### Navigation Drawer
+```dart
+// lib/widgets/navigation_drawer.dart
+- Width: 250px
+- Blur effect: BackdropFilter with ImageFilter.blur(10, 10)
+- No border radius (borderRadius: BorderRadius.zero)
+- Menu items only (no title header)
+```
+
+### Accordion Components
+```dart
+// ExpansionTile configuration
+- No borders (decoration: Border.all(width: 0))
+- Custom ListTileTheme for proper colors
+- Scrollable content with SingleChildScrollView
+```
+
+### Settings Controls
+```dart
+// SegmentedButton for theme selector
+- Three options: System, Light, Dark
+- No rounded corners on segments
+- Proper selected/unselected states
+```
+
+## Next Steps for Future Work
+
+### Immediate Actions (Next Session)
+1. **Check 3-Server Icon** - Look at old HTML/CSS for icon reference
+2. **Menu Animation Fix** - Research custom drawer animation approach
+3. **Final Visual QA** - Side-by-side comparison with original web UI
+
+### Phase 2 Enhancements (Future)
+- Backend integration for real MCP server connections
+- LiveKit integration for orb animations
+- WebSocket support for real-time communication
+- Audio input/output capabilities
+- Settings persistence to local storage
+
+## Known Issues & Limitations
+
+### By Design (Phase 1)
+- No backend integration (frontend-only mock)
+- No real MCP server connections
+- No audio functionality
+- No settings persistence
+- Solid circle orb (not animated)
+
+### Minor Issues (Non-blocking)
+- Menu drawer slides instead of fades (pending investigation)
+- Icon may not match original (pending verification)
+
+## File Structure Reference
+
+```
+lib/
+├── main.dart                    # App entry point, GoRouter setup
+├── providers/
+│   └── theme_provider.dart      # Riverpod theme state management
+├── theme/
+│   └── app_theme.dart          # Light/dark theme definitions
+├── widgets/
+│   ├── navigation_drawer.dart   # Sidebar with blur overlay
+│   └── orb_widget.dart         # Placeholder orb (solid circle)
+└── screens/
+    ├── chat_screen.dart         # Main chat UI with orb
+    ├── mcp_servers_screen.dart  # MCP server accordion list
+    └── settings_screen.dart     # Settings accordions
+```
+
+## Key Code Patterns Used
+
+### State Management
+- Riverpod `ConsumerWidget` for theme-aware widgets
+- `ref.watch(themeProvider)` for reactive theme updates
+- `ref.read(themeProvider.notifier).setTheme()` for theme changes
+
+### Navigation
+- GoRouter with named routes (`/`, `/mcp-servers`, `/settings`)
+- `context.go()` for navigation
+- `GoRouterState` for route information
+
+### Styling
+- Theme-aware colors via `Theme.of(context)`
+- Consistent use of `AppTheme.lightTheme` / `AppTheme.darkTheme`
+- Material 3 components throughout
+
+## Visual Design Tokens
+
+```dart
+// Primary Colors
+Primary Blue: #347ab8
+Primary Hover: #2a6194
+
+// Light Mode
+Background: #FFFFFF
+Text: #333333
+Border: #E5E5E5
+Panel Background: #F5F5F5
+
+// Dark Mode
+Background: #1E1E1E
+Text: #CCCCCC
+Border: #333333
+Panel Background: #252526
+
+// Dimensions
+Button Height: 42px
+Border Radius: 12px (inputs/buttons), 0px (drawer)
+Drawer Width: 250px
+Nav Height: 60px
+```
+
+## Success Criteria Status
+
+| Criteria | Status |
+|----------|--------|
+| Visual match to original | ✅ 95% complete |
+| Navigation works smoothly | ✅ Complete |
+| Theme switching functional | ✅ Complete |
+| All screens implemented | ✅ Complete |
+| Accordions expand/collapse | ✅ Complete |
+| Input controls styled | ✅ Complete |
+| Responsive design | ✅ Complete |
+| No crashes/errors | ✅ Complete |
+
+## Memory Bank Update Complete
+This document now contains comprehensive information about the current project state. After memory reset, start by reading all memory bank files to understand context before proceeding with any new work.

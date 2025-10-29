@@ -18,6 +18,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF252526)
+            : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         title: const Text('AI Assistant'),
         leading: Builder(
           builder: (context) => IconButton(
@@ -34,8 +39,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           child: Container(
             height: 1.0,
             color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF333333) // Darker border for dark mode
-                : AppTheme.borderColor,
+                ? const Color(0xFF333333)
+                : const Color(0xFFE5E5E5),
           ),
         ),
       ),
