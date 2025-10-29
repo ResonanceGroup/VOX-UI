@@ -39,8 +39,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           child: Container(
             height: 1.0,
             color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF333333)
-                : const Color(0xFFE5E5E5),
+                ? const Color(0xFF444444)
+                : const Color(0xFFDDDDDD),
           ),
         ),
       ),
@@ -123,8 +123,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
            border: Border(
              top: BorderSide(
                color: Theme.of(context).brightness == Brightness.dark
-                   ? const Color(0xFF333333) // Darker border for dark mode matching original
-                   : const Color(0xFFE5E5E5), // Lighter border for light mode
+                   ? const Color(0xFF444444) // Unified border color
+                   : const Color(0xFFDDDDDD), // Unified border color
                width: 1.0,
              ),
            ),

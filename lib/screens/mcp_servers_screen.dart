@@ -83,7 +83,7 @@ class _McpServersScreenState extends State<McpServersScreen> {
                       color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
                       borderRadius: BorderRadius.circular(AppTheme.borderRadius),
                       border: Border.all(
-                        color: isDark ? const Color(0xFF444444) : const Color(0xFFEEEEEE),
+                        color: isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
                       ),
                     ),
                     child: Row(
@@ -134,6 +134,16 @@ class _McpServersScreenState extends State<McpServersScreen> {
                     name: 'brave-search',
                     status: 'Connected',
                     statusColor: AppTheme.statusOkColor,
+                    isEnabled: true,
+                    onEnabledChanged: (value) {
+                      // TODO: Implement enable/disable functionality
+                      setState(() {});
+                    },
+                    networkTimeout: '1 minute',
+                    onTimeoutChanged: (value) {
+                      // TODO: Implement timeout change functionality
+                      setState(() {});
+                    },
                     tools: [
                       ToolData(
                         name: 'brave_web_search',
@@ -143,6 +153,11 @@ class _McpServersScreenState extends State<McpServersScreen> {
                           ToolParameter(name: 'count', description: 'Number of results (1-20, default 10)'),
                           ToolParameter(name: 'offset', description: 'Pagination offset (max 9, default 0)'),
                         ],
+                        isAlwaysAllowed: true,
+                        onAlwaysAllowChanged: (value) {
+                          // TODO: Implement always allow toggle
+                          setState(() {});
+                        },
                       ),
                       ToolData(
                         name: 'brave_local_search',
@@ -151,6 +166,11 @@ class _McpServersScreenState extends State<McpServersScreen> {
                           ToolParameter(name: 'query', description: 'Local search query (e.g. \'pizza near Central Park\')'),
                           ToolParameter(name: 'count', description: 'Number of results (1-20, default 5)'),
                         ],
+                        isAlwaysAllowed: true,
+                        onAlwaysAllowChanged: (value) {
+                          // TODO: Implement always allow toggle
+                          setState(() {});
+                        },
                       ),
                     ],
                     resources: [],
@@ -161,6 +181,16 @@ class _McpServersScreenState extends State<McpServersScreen> {
                     name: 'webresearch',
                     status: 'Disconnected',
                     statusColor: AppTheme.statusErrorColor,
+                    isEnabled: false,
+                    onEnabledChanged: (value) {
+                      // TODO: Implement enable/disable functionality
+                      setState(() {});
+                    },
+                    networkTimeout: '1 minute',
+                    onTimeoutChanged: (value) {
+                      // TODO: Implement timeout change functionality
+                      setState(() {});
+                    },
                     tools: [
                       ToolData(
                         name: 'search_google',
@@ -168,6 +198,11 @@ class _McpServersScreenState extends State<McpServersScreen> {
                         parameters: [
                           ToolParameter(name: 'query', description: 'Search query'),
                         ],
+                        isAlwaysAllowed: false,
+                        onAlwaysAllowChanged: (value) {
+                          // TODO: Implement always allow toggle
+                          setState(() {});
+                        },
                       ),
                       ToolData(
                         name: 'visit_page',
@@ -176,6 +211,11 @@ class _McpServersScreenState extends State<McpServersScreen> {
                           ToolParameter(name: 'url', description: 'URL to visit'),
                           ToolParameter(name: 'takeScreenshot', description: 'Whether to take a screenshot'),
                         ],
+                        isAlwaysAllowed: false,
+                        onAlwaysAllowChanged: (value) {
+                          // TODO: Implement always allow toggle
+                          setState(() {});
+                        },
                       ),
                     ],
                     resources: [],
@@ -186,6 +226,16 @@ class _McpServersScreenState extends State<McpServersScreen> {
                     name: 'mcp-openai',
                     status: 'Connected',
                     statusColor: AppTheme.statusOkColor,
+                    isEnabled: true,
+                    onEnabledChanged: (value) {
+                      // TODO: Implement enable/disable functionality
+                      setState(() {});
+                    },
+                    networkTimeout: '5 minutes',
+                    onTimeoutChanged: (value) {
+                      // TODO: Implement timeout change functionality
+                      setState(() {});
+                    },
                     tools: [
                       ToolData(
                         name: 'generate_text',
@@ -195,6 +245,11 @@ class _McpServersScreenState extends State<McpServersScreen> {
                           ToolParameter(name: 'model', description: 'Model to use (default: gpt-4)'),
                           ToolParameter(name: 'max_tokens', description: 'Maximum tokens to generate'),
                         ],
+                        isAlwaysAllowed: true,
+                        onAlwaysAllowChanged: (value) {
+                          // TODO: Implement always allow toggle
+                          setState(() {});
+                        },
                       ),
                     ],
                     resources: [],

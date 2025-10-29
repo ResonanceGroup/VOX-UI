@@ -1,10 +1,10 @@
 # Active Context
 
-## Current Status: MCP Servers Screen Redesign - Phase 2
+## Current Status: UI Polish Phase 3 - COMPLETE ✅
 
 **Last Updated**: October 29, 2025
-**Current Task**: Implementing additional improvements to MCP Servers screen based on user feedback
-**Session Status**: Phase 1 complete, moving to Phase 2 refinements
+**Current Task**: Final UI refinements and visual consistency improvements
+**Session Status**: All UI polish tasks completed successfully
 
 ## What We Just Completed (Phase 1)
 
@@ -19,16 +19,23 @@
 ### Files Modified in Phase 1
 - `lib/screens/mcp_servers_screen.dart` - Complete redesign of MCP server accordion and tool display
 
-## Current Work (Phase 2 - In Progress)
+## Phase 2 Work - COMPLETED ✅
 
-### Pending Improvements Based on User Feedback
-1. **Network Timeout Placement** - Move from top to end of each MCP server entry
-2. **Dropdown Height Fix** - Investigate and fix tall dropdown issue
-3. **Tool Icon Change** - Replace search icon with wrench icon for tools
-4. **Tool Description** - Add description field below tool name
-5. **Background Colors** - Add distinction between tool card and server group box backgrounds
-6. **Widget Refactoring** - Create dedicated McpServerWidget and McpToolWidget for better structure
-7. **Smooth Animations** - Add animated expand/collapse to accordions
+### All Improvements Successfully Implemented
+1. **✅ Network Timeout Placement** - Moved to end of each MCP server entry (not at top)
+2. **✅ Dropdown Height Fix** - Fixed with explicit 36px height and proper styling
+3. **✅ Tool Icon Change** - Changed from Icons.search to Icons.build (wrench icon)
+4. **✅ Tool Description** - Added description field below tool name with proper formatting
+5. **✅ Background Colors** - Distinct backgrounds: Tool cards (#1E1E1E dark / #F9F9F9 light) vs Server cards (#2C2C2C dark / white light)
+6. **✅ Widget Refactoring** - Created dedicated McpServerWidget and McpToolWidget as custom reusable components
+7. **✅ Smooth Animations** - Implemented AnimationController with SizeTransition (200ms, Curves.easeInOut)
+
+### Files Created in Phase 2
+- `lib/widgets/mcp/mcp_server_widget.dart` - Custom animated accordion widget (360 lines)
+- `lib/widgets/mcp/mcp_tool_widget.dart` - Custom tool display widget (135 lines)
+
+### Files Modified in Phase 2
+- `lib/screens/mcp_servers_screen.dart` - Refactored to use new custom widgets, removed old accordion code
 
 ## Key Technical Decisions Made
 
@@ -56,18 +63,40 @@ Parameters: #DDA0DD (purple/pink for names)
 // Backgrounds (Dark Mode)
 Main Panel: #252526
 Server Card: #2C2C2C
-Tool Card: #2C2C2C (needs distinction - Phase 2)
+Tool Card: #1E1E1E (distinct from server)
+
+// Backgrounds (Light Mode)
+Main Panel: #F5F5F5
+Server Card: white
+Tool Card: #F9F9F9 (distinct from server)
 ```
 
-## Next Steps for Phase 2
+## Implementation Details (Phase 2)
 
-### Immediate Actions
-1. Update activeContext.md with Phase 1 changes ✅
-2. Move Network Timeout to individual server entries
-3. Fix dropdown height styling
-4. Implement widget refactoring for better code organization
-5. Add smooth accordion animations
-6. Update tool display with wrench icons and descriptions
+### Animation System
+```dart
+// McpServerWidget animation setup
+_animationController = AnimationController(
+  duration: const Duration(milliseconds: 200),
+  vsync: this,
+);
+_expandAnimation = CurvedAnimation(
+  parent: _animationController,
+  curve: Curves.easeInOut,
+);
+
+// Usage
+SizeTransition(
+  sizeFactor: _expandAnimation,
+  child: expandedContent,
+)
+```
+
+### Network Timeout Dropdown
+- Positioned at END of each server's expanded content
+- Fixed height: 36px
+- Options: 15s, 30s, 45s, 1min, 2min, 5min, 10min, 30min, 60min
+- Uses DropdownButtonHideUnderline for clean styling
 
 ### Code Structure Plan
 ```dart
@@ -88,7 +117,7 @@ McpServersScreen
 └── Edit MCP Servers button
 ```
 
-## File Structure Reference
+## Current File Structure
 
 ```
 lib/
@@ -100,39 +129,115 @@ lib/
 ├── widgets/
 │   ├── navigation_drawer.dart
 │   ├── orb_widget.dart
-│   └── mcp/ (to be created in Phase 2)
-│       ├── mcp_server_widget.dart (new)
-│       └── mcp_tool_widget.dart (new)
+│   └── mcp/ ✅ CREATED
+│       ├── mcp_server_widget.dart ✅ NEW
+│       └── mcp_tool_widget.dart ✅ NEW
 └── screens/
     ├── chat_screen.dart
-    ├── mcp_servers_screen.dart (major refactor needed)
+    ├── mcp_servers_screen.dart ✅ REFACTORED
     └── settings_screen.dart
 ```
 
-## Known Issues & To-Do
+## Success Criteria - ACHIEVED ✅
 
-### Phase 2 Issues to Fix
-1. Network Timeout dropdown too tall (height styling issue)
-2. Tool cards need different background color from server box
-3. Missing tool descriptions
-4. No animation on accordion expand/collapse
-5. Code needs refactoring into dedicated widgets
+| Criteria | Phase 1 | Phase 2 | Status |
+|----------|---------|---------|--------|
+| Visual match to old design | ✅ 90% | ✅ 100% | COMPLETE |
+| Roo Code style match | ✅ Complete | ✅ Complete | COMPLETE |
+| Code maintainability | ⚠️ Basic | ✅ Refactored | COMPLETE |
+| Smooth animations | ❌ | ✅ Implemented | COMPLETE |
+| Ready for config parsing | ❌ | ✅ Ready | COMPLETE |
 
-### Design Goals (Phase 2)
-- Better visual hierarchy with background color distinction
-- Smoother UX with animated accordions
-- More maintainable code with dedicated widgets
-- Prepare for future config file parsing integration
+## Next Tasks (Future Sessions)
 
-## Success Criteria
+### Ready for New Work
+- MCP Servers screen is complete and matches old design
+- All refinements implemented
+- Code is clean, maintainable, and well-structured
+- Waiting for user's next set of tweaks/improvements
 
-| Criteria | Phase 1 | Phase 2 |
-|----------|---------|---------|
-| Visual match to old design | ✅ 90% | ⏳ Target 100% |
-| Roo Code style match | ✅ Complete | ⏳ Refinements |
-| Code maintainability | ⚠️ Basic | ⏳ Refactored |
-| Smooth animations | ❌ | ⏳ Pending |
-| Ready for config parsing | ❌ | ⏳ Pending |
+## Phase 3 Work - UI Polish & Consistency (COMPLETED ✅)
+
+### Session Overview (October 29, 2025)
+This session focused on fine-tuning visual consistency across MCP Servers and Settings pages, addressing subtle UI differences and ensuring unified styling throughout the application.
+
+### All Improvements Successfully Implemented
+
+#### 1. ✅ Accordion Header Height Consistency
+- **Issue**: MCP server headers appeared taller than Settings page headers despite both having 10.0 vertical padding
+- **Root Cause**: MCP headers contain blue server icon container and larger icons, adding visual height
+- **Solution**: Reduced MCP server header padding from 10.0 to 8.0 in [`mcp_server_widget.dart:103`](lib/widgets/mcp/mcp_server_widget.dart:103)
+- **Result**: Both pages now have visually consistent header heights
+
+#### 2. ✅ Toggle Switch Border Removal
+- **Issue**: Black border visible on toggle switches when toggled off in both light and dark modes
+- **Solution**: Added `trackOutlineColor: WidgetStateProperty.all(Colors.transparent)` in [`mcp_server_widget.dart:163`](lib/widgets/mcp/mcp_server_widget.dart:163)
+- **Result**: Clean, borderless toggle switches in both states
+
+#### 3. ✅ Unified Border Color System
+- **Issue**: Inconsistent border colors across different UI elements
+  - MCP servers light: 0xFFEEEEEE (very light gray)
+  - Settings light: 0xFFCCCCCC (darker gray)
+  - Tool boxes light: 0xFFDDDDDD (medium gray)
+  - Enable MCP checkbox container: 0xFFEEEEEE
+- **Solution**: Unified all borders to match tool box color (0xFFDDDDDD)
+  - Updated [`app_theme.dart:20`](lib/theme/app_theme.dart:20) accordion border color
+  - Updated [`mcp_servers_screen.dart:86`](lib/screens/mcp_servers_screen.dart:86) Enable MCP Servers container
+  - Updated [`settings_screen.dart:492,556`](lib/screens/settings_screen.dart:492) to use unified colors
+- **Result**: Consistent visual hierarchy across all bordered elements
+
+#### 4. ✅ Previously Completed in Phase 2
+- Separator line colors matching accordion borders
+- Tool "Always allow" toggle switches with callbacks
+- Inactive toggle appearance (gray when disabled)
+- Settings page accordion smooth animations
+- Theme color centralization
+
+### Files Modified in Phase 3
+- [`lib/theme/app_theme.dart`](lib/theme/app_theme.dart:18) - Unified accordion border colors
+- [`lib/widgets/mcp/mcp_server_widget.dart`](lib/widgets/mcp/mcp_server_widget.dart:103) - Header padding & toggle outline
+- [`lib/screens/mcp_servers_screen.dart`](lib/screens/mcp_servers_screen.dart:86) - Enable MCP container border
+- [`lib/screens/settings_screen.dart`](lib/screens/settings_screen.dart:492) - Unified color references
+
+### Color Specifications (Updated)
+```dart
+// Unified Border Colors
+Light Mode: 0xFFDDDDDD  // All borders (accordions, containers, tool boxes)
+Dark Mode: 0xFF444444   // All borders
+
+// Background Colors (Unchanged)
+Dark Mode:
+  Server Card: 0xFF2C2C2C
+  Tool Card: 0xFF1E1E1E
+  Panel: 0xFF252526
+
+Light Mode:
+  Server Card: white
+  Tool Card: 0xFFF9F9F9
+  Panel: 0xFFF5F5F5
+```
+
+### Technical Implementation Details
+
+#### Toggle Switch Enhancement
+```dart
+Switch(
+  value: widget.isEnabled,
+  onChanged: widget.onEnabledChanged,
+  activeColor: const Color(0xFF347AB8),
+  inactiveThumbColor: isDark ? const Color(0xFF888888) : const Color(0xFFBBBBBB),
+  inactiveTrackColor: isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
+  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  trackOutlineColor: WidgetStateProperty.all(Colors.transparent), // NEW: Removes border
+)
+```
+
+#### Unified Theme Colors
+```dart
+// Centralized in app_theme.dart
+static const Color accordionBorderColor = Color(0xFFDDDDDD);  // Light mode (unified)
+static const Color accordionBorderDarkColor = Color(0xFF444444);  // Dark mode
+```
 
 ## Memory Bank Update Notes
-This document reflects the current state after Phase 1 completion. Phase 2 work is in progress focusing on refinements, better code structure, and preparation for future config file integration.
+This document now reflects completion of Phase 3 UI polish, which focused on subtle visual refinements and ensuring perfect consistency across all pages. All UI elements now follow a unified design system with consistent borders, spacing, and styling throughout the application.

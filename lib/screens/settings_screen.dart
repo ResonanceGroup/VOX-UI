@@ -450,14 +450,34 @@ class _SettingsAccordion extends StatefulWidget {
   State<_SettingsAccordion> createState() => _SettingsAccordionState();
 }
 
-class _SettingsAccordionState extends State<_SettingsAccordion> {
+class _SettingsAccordionState extends State<_SettingsAccordion>
+    with SingleTickerProviderStateMixin {
   late bool _isExpanded;
   bool _isHovering = false;
+  late AnimationController _animationController;
+  late Animation<double> _expandAnimation;
 
   @override
   void initState() {
     super.initState();
     _isExpanded = widget.initiallyExpanded;
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _expandAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+    if (_isExpanded) {
+      _animationController.value = 1.0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -469,7 +489,7 @@ class _SettingsAccordionState extends State<_SettingsAccordion> {
         color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
         borderRadius: BorderRadius.circular(8.0),
         border: Border.all(
-          color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC),
+          color: isDark ? AppTheme.accordionBorderDarkColor : AppTheme.accordionBorderColor,
         ),
       ),
       child: Column(
@@ -481,6 +501,11 @@ class _SettingsAccordionState extends State<_SettingsAccordion> {
               onTap: () {
                 setState(() {
                   _isExpanded = !_isExpanded;
+                  if (_isExpanded) {
+                    _animationController.forward();
+                  } else {
+                    _animationController.reverse();
+                  }
                 });
               },
               child: Container(
@@ -495,7 +520,7 @@ class _SettingsAccordionState extends State<_SettingsAccordion> {
                         )
                       : BorderRadius.circular(8.0),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
                 child: Row(
                   children: [
                     // Chevron icon on the LEFT
@@ -528,17 +553,19 @@ class _SettingsAccordionState extends State<_SettingsAccordion> {
           if (_isExpanded)
             Container(
               height: 1.0,
-              color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC),
+              color: isDark ? AppTheme.accordionBorderDarkColor : AppTheme.accordionBorderColor,
             ),
-          // Content
-          if (_isExpanded)
-            Padding(
+          // Animated expandable content
+          SizeTransition(
+            sizeFactor: _expandAnimation,
+            child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: widget.children,
               ),
             ),
+          ),
         ],
       ),
     );

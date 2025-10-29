@@ -14,6 +14,10 @@ class AppTheme {
   static const Color textDarkColor = Color(0xFFCCCCCC);
   static const Color borderColor = Color(0xFFCCCCCC);  // Light mode border (matching CSS)
   static const Color borderDarkColor = Color(0xFF444444);
+  
+  // Accordion-specific borders (unified for consistency with tool boxes)
+  static const Color accordionBorderColor = Color(0xFFDDDDDD);  // Light mode
+  static const Color accordionBorderDarkColor = Color(0xFF444444);  // Dark mode
 
   // UI Element Colors
   static const Color headerBackground = Colors.white;

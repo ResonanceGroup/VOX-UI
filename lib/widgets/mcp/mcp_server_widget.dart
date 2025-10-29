@@ -77,7 +77,7 @@ class _McpServerWidgetState extends State<McpServerWidget>
         color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
         borderRadius: BorderRadius.circular(8.0),
         border: Border.all(
-          color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC),
+          color: isDark ? AppTheme.accordionBorderDarkColor : AppTheme.accordionBorderColor,
         ),
       ),
       child: Column(
@@ -100,7 +100,7 @@ class _McpServerWidgetState extends State<McpServerWidget>
                         )
                       : BorderRadius.circular(8.0),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: Row(
                   children: [
                     // Animated chevron icon
@@ -149,13 +149,17 @@ class _McpServerWidgetState extends State<McpServerWidget>
                       ),
                     ),
                     const SizedBox(width: 12.0),
-                    // Toggle switch
+                    // Toggle switch with custom inactive colors and no border
                     Transform.scale(
                       scale: 0.8,
                       child: Switch(
                         value: widget.isEnabled,
                         onChanged: widget.onEnabledChanged,
                         activeColor: const Color(0xFF347AB8),
+                        inactiveThumbColor: isDark ? const Color(0xFF888888) : const Color(0xFFBBBBBB),
+                        inactiveTrackColor: isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
                       ),
                     ),
                   ],
@@ -168,7 +172,7 @@ class _McpServerWidgetState extends State<McpServerWidget>
           if (_isExpanded)
             Container(
               height: 1.0,
-              color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC),
+              color: isDark ? AppTheme.accordionBorderDarkColor : AppTheme.accordionBorderColor,
             ),
           
           // Animated expandable content
@@ -198,6 +202,7 @@ class _McpServerWidgetState extends State<McpServerWidget>
                         description: tool.description,
                         parameters: tool.parameters,
                         isAlwaysAllowed: tool.isAlwaysAllowed,
+                        onAlwaysAllowChanged: tool.onAlwaysAllowChanged,
                       ),
                     ))
                   else if (_selectedTab == 1 && widget.resources.isNotEmpty)
@@ -332,12 +337,14 @@ class ToolData {
   final String? description;
   final List<ToolParameter> parameters;
   final bool isAlwaysAllowed;
+  final ValueChanged<bool>? onAlwaysAllowChanged;
 
   const ToolData({
     required this.name,
     this.description,
     required this.parameters,
     this.isAlwaysAllowed = true,
+    this.onAlwaysAllowChanged,
   });
 }
 
