@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:monaco_editor/monaco_editor.dart';
 
 import '../theme/app_theme.dart';
 import '../providers/theme_provider.dart';
@@ -19,6 +21,105 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String systemPrompt = 'Test Prompt';
   String model = 'ultravox';
   String voice = 'en-US/amy';
+  
+  // MCP Config state
+  final _monacoController = MonacoEditorController();
+  final _mcpEditorFocusNode = FocusNode();
+  bool _mcpEditorFocused = false;
+  String _originalMcpConfig = '';
+  String _currentMcpConfig = '';
+  bool _mcpConfigModified = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMcpConfig();
+    // Listen for focus changes to detect when editor loses focus
+    _mcpEditorFocusNode.addListener(() {
+      if (!_mcpEditorFocusNode.hasFocus && _mcpEditorFocused) {
+        setState(() {
+          _mcpEditorFocused = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _mcpEditorFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _loadMcpConfig() {
+    // TODO: Load actual config from backend
+    const sampleConfig = '''{
+  "mcpServers": {
+    "brave-search": {
+      "command": "node",
+      "args": [
+        "C:\\\\Users\\\\Jason\\\\AppData\\\\Roaming\\\\npm\\\\node_modules\\\\@modelcontextprotocol\\\\server-brave-search\\\\dist\\\\index.js"
+      ],
+      "env": {
+        "BRAVE_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}''';
+    _originalMcpConfig = sampleConfig;
+    _currentMcpConfig = sampleConfig;
+    _monacoController.setText(sampleConfig);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Update Monaco theme when app theme changes
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    _monacoController.initialize(
+      MonacoEditorOptions(
+        language: MonacoLanguage.json,
+        theme: isDark ? MonacoTheme.vsDark : MonacoTheme.vs,
+      ),
+    );
+  }
+
+  void _saveMcpConfig() async {
+    // Get current text from editor
+    final text = await _monacoController.getText();
+    // TODO: Implement actual save to backend
+    setState(() {
+      _originalMcpConfig = text;
+      _currentMcpConfig = text;
+      _mcpConfigModified = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('MCP config saved successfully!')),
+    );
+  }
+
+  void _revertMcpConfig() {
+    _monacoController.setText(_originalMcpConfig);
+    setState(() {
+      _currentMcpConfig = _originalMcpConfig;
+      _mcpConfigModified = false;
+    });
+  }
+
+  void _copyMcpConfig() async {
+    final text = await _monacoController.getText();
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Config copied to clipboard!')),
+    );
+  }
+
+  Future<void> _checkForChanges() async {
+    final text = await _monacoController.getText();
+    setState(() {
+      _currentMcpConfig = text;
+      _mcpConfigModified = _currentMcpConfig != _originalMcpConfig;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -124,56 +225,95 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     title: 'MCP',
                     initiallyExpanded: false,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(16.0),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).scaffoldBackgroundColor,
-                          borderRadius: BorderRadius.circular(AppTheme.smallBorderRadius),
-                          border: Border.all(color: AppTheme.borderColor),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              'MCP Config (JSON)',
-                              style: AppTheme.labelStyle,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'MCP Config (JSON)',
+                            style: TextStyle(
+                              fontSize: 14.4,
+                              fontWeight: FontWeight.w500,
+                              color: isDark
+                                  ? const Color(0xFFE0E0E0)
+                                  : const Color(0xFF333333),
                             ),
-                            const SizedBox(height: 8.0),
-                            Container(
-                              height: 200.0,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF1E1E1E),
-                                borderRadius: BorderRadius.circular(AppTheme.smallBorderRadius),
-                              ),
-                              child: const Center(
-                                child: Text(
-                                  '// MCP Configuration\n// TODO: Implement JSON editor',
-                                  style: TextStyle(
-                                    color: Color(0xFF666666),
-                                    fontFamily: 'monospace',
-                                    fontSize: 12.0,
+                          ),
+                          const SizedBox(height: 8.0),
+                          // Monaco Editor - rounded on all corners with focus indication
+                          Focus(
+                            focusNode: _mcpEditorFocusNode,
+                            descendantsAreFocusable: false,
+                            child: Listener(
+                              onPointerDown: (_) {
+                                setState(() {
+                                  _mcpEditorFocused = true;
+                                });
+                                _mcpEditorFocusNode.requestFocus();
+                              },
+                              child: Container(
+                                height: 400.0,
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                                  border: Border.all(
+                                    color: _mcpEditorFocused
+                                        ? const Color(0xFF347AB7)
+                                        : (isDark
+                                            ? const Color(0xFF555555)
+                                            : const Color(0xFFCCCCCC)),
+                                    width: _mcpEditorFocused ? 2.0 : 1.0,
+                                  ),
+                                  borderRadius: BorderRadius.circular(6.0),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6.0),
+                                  child: MonacoEditorWidget(
+                                    controller: _monacoController,
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 12.0),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                _buildButton(
-                                  label: 'Save',
-                                  isPrimary: true,
-                                  onPressed: () {},
-                                ),
-                                const SizedBox(width: 8.0),
-                                _buildButton(
-                                  label: 'Revert',
-                                  isPrimary: false,
-                                  onPressed: () {},
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                          ),
+                          // Action buttons bar - adjusted spacing
+                          const SizedBox(height: 16.0),
+                          Row(
+                            children: [
+                              // Copy button on the left
+                              IconButton(
+                                icon: const Icon(Icons.content_copy, size: 18.0),
+                                onPressed: _copyMcpConfig,
+                                color: isDark
+                                    ? const Color(0xFFCCCCCC)
+                                    : const Color(0xFF666666),
+                                tooltip: 'Copy to clipboard',
+                                padding: const EdgeInsets.all(8.0),
+                                constraints: const BoxConstraints(),
+                              ),
+                              const Spacer(),
+                              // Save and Revert buttons on the right
+                              _buildButton(
+                                label: 'Save',
+                                isPrimary: true,
+                                onPressed: () async {
+                                  await _checkForChanges();
+                                  if (_mcpConfigModified) {
+                                    _saveMcpConfig();
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 12.0),
+                              _buildButton(
+                                label: 'Revert',
+                                isPrimary: false,
+                                onPressed: () async {
+                                  await _checkForChanges();
+                                  if (_mcpConfigModified) {
+                                    _revertMcpConfig();
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -241,29 +381,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildButton({
     required String label,
     required bool isPrimary,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDisabled = onPressed == null;
 
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: isPrimary
-            ? const Color(0xFF347AB7)
-            : (isDark ? const Color(0xFF444444) : const Color(0xFFF0F0F0)),
-        foregroundColor: isPrimary
-            ? Colors.white
-            : (isDark ? const Color(0xFFCCCCCC) : const Color(0xFF555555)),
+        backgroundColor: isDisabled
+            ? (isDark ? const Color(0xFF3A3A3A) : const Color(0xFFE0E0E0))
+            : (isPrimary
+                ? const Color(0xFF347AB7)
+                : (isDark ? const Color(0xFF444444) : const Color(0xFFF0F0F0))),
+        foregroundColor: isDisabled
+            ? (isDark ? const Color(0xFF666666) : const Color(0xFF999999))
+            : (isPrimary
+                ? Colors.white
+                : (isDark ? const Color(0xFFCCCCCC) : const Color(0xFF555555))),
         padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6.0),
           side: BorderSide(
-            color: isPrimary
+            color: isDisabled
                 ? Colors.transparent
-                : (isDark ? const Color(0xFF555555) : const Color(0xFFCCCCCC)),
+                : (isPrimary
+                    ? Colors.transparent
+                    : (isDark ? const Color(0xFF555555) : const Color(0xFFCCCCCC))),
             width: 1.0,
           ),
         ),
         elevation: 0,
+        disabledBackgroundColor: isDark ? const Color(0xFF3A3A3A) : const Color(0xFFE0E0E0),
+        disabledForegroundColor: isDark ? const Color(0xFF666666) : const Color(0xFF999999),
       ),
       onPressed: onPressed,
       child: Text(
