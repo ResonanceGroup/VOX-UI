@@ -26,7 +26,7 @@ class LiveKitOrbController extends ChangeNotifier {
   LiveKitOrbData get currentData => _currentData ?? LiveKitOrbData(
     state: 'idle',
     level: 0.0,
-    theme: 'dark',
+    theme: 'light',
     status: 'Ready to assist...',
   );
   

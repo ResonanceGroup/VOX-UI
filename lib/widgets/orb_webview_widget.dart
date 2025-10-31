@@ -109,14 +109,15 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
 
   void _triggerManualState(String state) {
     try {
+      final data = widget.controller.currentData;
       final message = {
         'type': 'manual-state',
         'payload': {
           'state': state,
           'status': _getStatusForState(state),
           'command': 'show',
-          'level': 0.0,
-          'theme': 'dark',
+          'level': data.level,
+          'theme': data.theme,
         }
       };
       
