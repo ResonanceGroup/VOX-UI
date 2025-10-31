@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/chat_screen.dart';
 import 'screens/mcp_servers_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/orb_test_screen.dart';
 import 'theme/app_theme.dart';
 import 'providers/theme_provider.dart';
 
@@ -13,8 +14,12 @@ void main() {
 }
 
 final GoRouter _router = GoRouter(
-  initialLocation: '/chat',
+  initialLocation: '/orb-test',
   routes: [
+    GoRoute(
+      path: '/orb-test',
+      builder: (context, state) => OrbTestScreen(),
+    ),
     GoRoute(
       path: '/chat',
       builder: (context, state) => const ChatScreen(),

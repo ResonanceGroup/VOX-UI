@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VOX Orb</title>
+  <style>
+    /* Orb styles */
+    .orb {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      filter: drop-shadow(0 0 20px rgba(64, 206, 224, 0.3));
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: visible;
+      border-radius: 50%;
+      --intensity: 0;
+    }
+
+    /* Glass sphere effect */
+    .orb::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 260px;
+      height: 260px;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(
+        circle at 25% 25%,
+        rgba(255, 255, 255, 0.95) 0%,
+        rgba(255, 255, 255, 0.9) 4%,
+        rgba(148, 255, 238, 0.5) 8%,
+        rgba(64, 206, 224, 0.3) 12%,
+        rgba(64, 159, 255, 0.1) 20%,
+        transparent 30%
+      );
+      border-radius: 50%;
+      box-shadow: 
+        inset 0 0 30px rgba(255, 255, 255, 0.4),
+        inset 0 0 60px rgba(64, 206, 224, 0.3),
+        inset 0 0 100px rgba(95, 89, 255, 0.2);
+      z-index: 3;
+      backdrop-filter: blur(2px);
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Inner swirl container */
+    .wrap {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 260px;
+      height: 260px;
+      margin: -130px 0 0 -130px;
+      animation: rotate 40s infinite linear;
+      z-index: 1;
+      mix-blend-mode: screen;
+      filter: contrast(1.2) saturate(1.2);
+      transform-style: preserve-3d;
+      perspective: 1000px;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Swirling shapes */
+    .c {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 220px;
+      height: 220px;
+      margin: -110px 0 0 -110px;
+      border-radius: 60% 40% 55% 45% / 45% 55% 45% 55%;
+      transform-origin: center;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      mix-blend-mode: plus-lighter;
+      opacity: 0.85;
+      animation: morph 20s infinite ease-in-out;
+      filter: blur(6px) brightness(1.3) contrast(1.4);
+    }
+
+    @keyframes morph {
+      0%, 100% { 
+        transform: scale(calc(0.85 + var(--intensity) * 0.15)) translateY(0) rotate(0deg);
+        border-radius: 60% 40% 55% 45% / 45% 55% 45% 55%;
+        opacity: calc(0.85 + var(--intensity) * 0.15);
+      }
+      33% { 
+        transform: scale(calc(1.1 + var(--intensity) * 0.15)) translateY(-15px) rotate(120deg);
+        border-radius: 45% 55% 40% 60% / 55% 45% 55% 45%;
+        opacity: calc(0.95 + var(--intensity) * 0.05);
+      }
+      66% {
+        transform: scale(calc(0.9 + var(--intensity) * 0.15)) translateY(15px) rotate(240deg);
+        border-radius: 55% 45% 60% 40% / 40% 60% 40% 60%;
+        opacity: calc(0.75 + var(--intensity) * 0.25);
+      }
+    }
+
+    /* Distinct color patterns for each shape */
+    .c:nth-child(1) { 
+      transform: rotate(0deg) translateX(20px); 
+      animation-delay: -0.0s; 
+      background: radial-gradient(
+        circle at 30% 30%, 
+        rgba(255, 128, 255, calc(0.8 + var(--intensity) * 0.2)) 0%, 
+        rgba(255, 64, 192, calc(0.7 + var(--intensity) * 0.2)) 30%, 
+        rgba(192, 32, 255, calc(0.5 + var(--intensity) * 0.2)) 60%, 
+        transparent 85%
+      ); 
+      transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .c:nth-child(2) { 
+      transform: rotate(120deg) translateX(25px); 
+      animation-delay: -6.0s; 
+      background: radial-gradient(
+        circle at 30% 30%, 
+        rgba(64, 192, 255, calc(0.8 + var(--intensity) * 0.2)) 0%, 
+        rgba(32, 128, 255, calc(0.7 + var(--intensity) * 0.2)) 30%, 
+        rgba(64, 32, 255, calc(0.5 + var(--intensity) * 0.2)) 60%, 
+        transparent 85%
+      ); 
+      transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .c:nth-child(3) { 
+      transform: rotate(240deg) translateX(22px); 
+      animation-delay: -12.0s; 
+      background: radial-gradient(
+        circle at 30% 30%, 
+        rgba(255, 192, 128, calc(0.8 + var(--intensity) * 0.2)) 0%, 
+        rgba(255, 128, 64, calc(0.7 + var(--intensity) * 0.2)) 30%, 
+        rgba(255, 64, 128, calc(0.5 + var(--intensity) * 0.2)) 60%, 
+        transparent 85%
+      ); 
+      transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Ripple effects */
+    .orb::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: calc(100% + 40px);
+      height: calc(100% + 40px);
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(
+        circle at center,
+        rgba(64, 206, 224, calc(0.15 * var(--intensity))) 0%,
+        rgba(95, 89, 255, calc(0.1 * var(--intensity))) 30%,
+        rgba(148, 255, 238, calc(0.05 * var(--intensity))) 60%,
+        transparent 80%
+      );
+      filter: blur(20px);
+      animation: ripple 3s infinite ease-in-out;
+      opacity: var(--intensity);
+      z-index: -1;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes ripple {
+      0%, 100% {
+        transform: translate(-50%, -50%) scale(1);
+        filter: blur(20px) brightness(1);
+      }
+      50% {
+        transform: translate(-50%, -50%) scale(1.1);
+        filter: blur(25px) brightness(1.2);
+      }
+    }
+
+    /* Audio level animations */
+    .orb[data-audio-level] {
+      animation: pulse 3s infinite ease-in-out;
+    }
+
+    .orb[data-audio-level="low"] {
+      filter: drop-shadow(0 0 25px rgba(64, 206, 224, calc(0.4 + var(--intensity) * 0.2)));
+    }
+
+    .orb[data-audio-level="medium"] {
+      filter: drop-shadow(0 0 35px rgba(64, 206, 224, calc(0.5 + var(--intensity) * 0.3)));
+    }
+
+    .orb[data-audio-level="high"] {
+      filter: drop-shadow(0 0 45px rgba(64, 206, 224, calc(0.6 + var(--intensity) * 0.4)));
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(calc(1 + var(--intensity, 0) * 0.05));
+      }
+    }
+
+    @keyframes pulse-ring {
+      0% {
+        opacity: 0.3;
+        transform: translate(-50%, -50%) scale(1);
+        border-color: #7E57C2;
+      }
+      50% {
+        opacity: 0.7;
+        transform: translate(-50%, -50%) scale(1.1);
+        border-color: #9575CD;
+      }
+      100% {
+        opacity: 0.3;
+        transform: translate(-50%, -50%) scale(1);
+        border-color: #7E57C2;
+      }
+    }
+
+    @keyframes particle-burst {
+      0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(-50%, -50%) translate(var(--x, 50px), var(--y, 50px)) scale(0);
+        opacity: 0;
+      }
+    }
+
+    /* State classes */
+    .state-executing .orb-status-ring {
+      border-color: #7E57C2 !important;
+      border-width: 3px !important;
+      box-shadow: 0 0 15px rgba(126, 87, 194, 0.6) !important;
+      opacity: 0.5 !important;
+      animation: pulse-ring 1.5s infinite ease-in-out !important;
+    }
+
+    .state-processing .wrap {
+      animation-duration: 15s !important;
+    }
+
+    .state-processing .c {
+      animation-duration: 12s !important;
+      filter: blur(6px) brightness(1.5) contrast(1.5) !important;
+    }
+
+    .state-muted .orb {
+      filter: grayscale(1) !important;
+      transition: filter 0.3s ease-in-out !important;
+    }
+
+    .state-disconnected .orb {
+      filter: grayscale(1) !important;
+    }
+
+    .state-disconnected .wrap,
+    .state-disconnected .wrap *,
+    .state-disconnected .c,
+    .state-disconnected .orb::before,
+    .state-disconnected .orb::after {
+      animation-play-state: paused !important;
+      transition: none !important;
+    }
+
+    /* Styles for Orb Effects Container */
+    .orb-status-effects {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Ring effect for Executing state */
+    .orb-status-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: calc(100% + 16px);
+      height: calc(100% + 16px);
+      border-radius: 50%;
+      border: 3px solid transparent;
+      opacity: 0;
+      transition: border-color 0.3s ease, opacity 0.3s ease;
+    }
+
+    /* Particle container for Notifying state */
+    .orb-particles {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Individual particle styling */
+    .particle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      pointer-events: none;
+      box-shadow: 0 0 8px 2px rgba(100, 181, 246, 0.8);
+      z-index: 2;
+    }
+
+    /* Status display styling */
+    .status-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 16px;
+      color: #555;
+      opacity: 0.9;
+    }
+
+    .status-icon {
+      display: inline-block;
+    }
+
+    .status-text {
+      display: inline-block;
+    }
+
+    /* Dark theme */
+    .overlay-dark .status-display {
+      color: #D0D0D0 !important;
+      opacity: 0.85 !important;
+    }
+
+    .overlay-dark .status-text {
+      color: #D0D0D0 !important;
+    }
+
+    .overlay-dark .status-icon {
+      color: #81C784 !important;
+    }
+
+    /* Container styling */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: radial-gradient(circle at center, rgba(64, 206, 224, 0.02) 0%, transparent 70%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 20px;
+    }
+
+    .orb-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="orb-container">
+    <div class="orb">
+      <div class="orb-status-effects">
+        <div class="orb-status-ring"></div>
+        <div class="orb-particles"></div>
+      </div>
+      <div class="wrap">
+        <div class="c"></div>
+        <div class="c"></div>
+        <div class="c"></div>
+      </div>
+    </div>
+    <div id="status-display" class="status-display">
+      <span class="status-icon"></span>
+      <span class="status-text">Ready to assist...</span>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      let currentAIState = 'idle';
+      let underlyingAIState = 'idle';
+      const ALL_STATES = ['idle', 'executing', 'notifying', 'processing', 'muted', 'disconnected'];
+      
+      let statusIcon = null;
+      let statusText = null;
+      let orbElement = null;
+      let orbParticles = null;
+      
+      // Initialize elements
+      function initializeElements() {
+        statusIcon = document.querySelector('.status-icon');
+        statusText = document.querySelector('.status-text');
+        orbElement = document.querySelector('.orb');
+        orbParticles = document.querySelector('.orb-particles');
+      }
+
+      // Create particles for notification effect
+      function createParticles() {
+        if (!orbParticles) return;
+        
+        // Clear any existing particles
+        orbParticles.innerHTML = '';
+        
+        // Create 7-10 particles
+        const particleCount = Math.floor(Math.random() * 3) + 7;
+        
+        for (let i = 0; i < particleCount; i++) {
+          const particle = document.createElement('div');
+          particle.className = 'particle';
+          
+          // Random angle for trajectory
+          const angle = Math.random() * Math.PI * 2;
+          // Random distance (40-100px)
+          const distance = 40 + Math.random() * 60;
+          
+          // Calculate x,y destination based on angle and distance
+          const x = Math.cos(angle) * distance;
+          const y = Math.sin(angle) * distance;
+          
+          // Set random color from options
+          const colors = ['#42A5F5', '#64B5F6', '#29B6F6', '#03A9F4', '#00BCD4'];
+          const color = colors[Math.floor(Math.random() * colors.length)];
+          
+          // Apply styles
+          particle.style.setProperty('--x', x + 'px');
+          particle.style.setProperty('--y', y + 'px');
+          particle.style.backgroundColor = color;
+          
+          // Larger particles (8-16px)
+          const size = 8 + Math.random() * 8;
+          particle.style.width = size + 'px';
+          particle.style.height = size + 'px';
+          
+          // Animation duration (500-700ms)
+          const duration = 500 + Math.random() * 200;
+          particle.style.animation = 'particle-burst ' + duration + 'ms forwards ease-out';
+          
+          // Add to container
+          orbParticles.appendChild(particle);
+        }
+      }
+
+      // Update UI state
+      function updateUIState(newState, detail = '') {
+        if (!ALL_STATES.includes(newState)) {
+          console.warn('Invalid AI state provided:', newState);
+          return;
+        }
+
+        console.log('Updating UI State: ' + newState + ', Detail: ' + detail);
+
+        // Manage State Classes on Body
+        ALL_STATES.forEach(state => document.body.classList.remove('state-' + state));
+        document.body.classList.add('state-' + newState);
+        
+        console.log('Applied state class "state-' + newState + '" to document.body');
+        
+        // Store the state before mute if not already muted
+        if (newState === 'muted' && currentAIState !== 'muted') {
+          underlyingAIState = currentAIState === 'muted' ? 'idle' : currentAIState;
+        }
+        
+        currentAIState = newState;
+
+        // Update Status Bar
+        if (!statusIcon || !statusText) {
+          return;
+        }
+        
+        let textContent = 'Ready to assist...';
+        let iconContent = '';
+
+        switch (newState) {
+          case 'idle':
+            textContent = 'Ready to assist...';
+            iconContent = '●';
+            break;
+          case 'executing':
+            textContent = detail || 'Executing tool...';
+            iconContent = '⚙️';
+            break;
+          case 'processing':
+            textContent = detail || 'Processing';
+            iconContent = '';
+            break;
+          case 'notifying':
+            textContent = detail || 'Notification Received';
+            iconContent = '🔔';
+            
+            // Create particle effect with slight delay to ensure DOM is ready
+            setTimeout(() => createParticles(), 10);
+            
+            // Revert state after a longer delay to show the full effect
+            setTimeout(() => {
+              if (currentAIState === 'notifying') {
+                updateUIState(underlyingAIState || 'idle');
+              }
+            }, 2500);
+            break;
+          case 'muted':
+            textContent = 'Microphone Muted';
+            iconContent = '🔇';
+            break;
+          case 'disconnected':
+            textContent = 'Disconnected';
+            iconContent = '❌';
+            break;
+        }
+
+        statusIcon.textContent = iconContent;
+        statusText.textContent = textContent;
+
+        console.log('UI updated for state: ' + newState);
+      }
+      
+      // Global update function
+      window.updateOrbOverlay = function(payload) {
+        console.log('Updating orb overlay:', payload);
+        
+        // Handle commands first (highest priority)
+        if (payload.command) {
+          console.log('Processing command:', payload.command);
+          if (payload.command === 'show') {
+            console.log('Showing overlay');
+            // Show is implicit in WebView - just continue processing
+          } else if (payload.command === 'hide') {
+            console.log('Hide command received');
+            // Hide is implicit in WebView - just continue processing
+          }
+        }
+        
+        // Handle theme
+        if (payload.theme) {
+          console.log('Processing theme:', payload.theme);
+          if (payload.theme === 'dark') {
+            document.body.classList.add('overlay-dark');
+            console.log('Applied dark theme');
+          } else {
+            document.body.classList.remove('overlay-dark');
+            console.log('Applied light theme');
+          }
+        }
+        
+        // Handle state changes
+        if (payload.state) {
+          updateUIState(payload.state, payload.status || '');
+        }
+        
+        // Handle status (if state not provided but status is)
+        if (payload.status && !payload.state) {
+          updateUIState(currentAIState, payload.status);
+        }
+        
+        // Handle audio level - support both 'level' and 'audioLevel' property names
+        var audioLevel = payload.level !== undefined ? payload.level : payload.audioLevel;
+        if (audioLevel !== undefined && orbElement) {
+          var level = parseFloat(audioLevel) || 0;
+          console.log('Setting audio level:', level);
+          
+          orbElement.style.setProperty('--intensity', level.toFixed(3));
+          
+          // Set audio level data attribute
+          if (level > 0.75) {
+            orbElement.dataset.audioLevel = 'high';
+            console.log('Set data-audio-level="high"');
+          } else if (level > 0.5) {
+            orbElement.dataset.audioLevel = 'medium';
+            console.log('Set data-audio-level="medium"');
+          } else if (level > 0.25) {
+            orbElement.dataset.audioLevel = 'low';
+            console.log('Set data-audio-level="low"');
+          } else {
+            delete orbElement.dataset.audioLevel;
+            console.log('Removed data-audio-level attribute');
+          }
+        }
+      };
+
+      // Initialize elements
+      initializeElements();
+      
+      // Initial state
+      updateUIState('idle');
+      
+      console.log('Orb initialization complete');
+    })();
+  </script>
+
+  <script>
+    <!-- Enhanced LiveKit Integration Layer -->
+    window.mapLiveKitToOrbState = function(liveKitState) {
+      const mapping = {
+        'initializing': 'idle',
+        'listening': 'idle', 
+        'thinking': 'processing',
+        'speaking': 'speaking'  // Changed from 'executing' to 'speaking'
+      };
+      return mapping[liveKitState] || 'idle';
+    };
+    
+    // Custom tool execution handler
+    window.triggerToolExecution = function() {
+      if (window.updateOrbOverlay) {
+        window.updateOrbOverlay({
+          state: 'executing',
+          status: 'Executing tool...',
+          command: 'show'
+        });
+      }
+    };
+    
+    // Flutter-WebView bridge
+    window.updateOrbFromLiveKit = function(liveKitData) {
+      const orbData = {
+        state: window.mapLiveKitToOrbState(liveKitData.state),
+        level: liveKitData.level || 0,
+        theme: liveKitData.theme || 'dark',
+        status: liveKitData.status || ''
+      };
+      
+      if (window.updateOrbOverlay) {
+        window.updateOrbOverlay(orbData);
+      }
+    };
+    
+    // Listen for Flutter messages
+    window.addEventListener('message', function(event) {
+      if (event.data.type === 'livekit-update') {
+        window.updateOrbFromLiveKit(event.data.payload);
+      } else if (event.data.type === 'manual-state') {
+        // Handle manual state changes for testing
+        if (window.updateOrbOverlay) {
+          window.updateOrbOverlay(event.data.payload);
+        }
+      }
+    });
+    
+    // Manual initialization function for testing
+    window.testOrbState = function(state) {
+      console.log('Testing orb state:', state);
+      updateUIState(state, 'Manual test state');
+    };
+    
+    // Initialize after a short delay to ensure DOM is ready
+    setTimeout(function() {
+      console.log('Initializing orb elements...');
+      initializeElements();
+      updateUIState('idle', 'Ready to assist...');
+      console.log('Orb initialized successfully');
+    }, 100);
+  </script>
+</body>
+</html>
