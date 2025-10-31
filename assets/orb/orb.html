@@ -235,13 +235,115 @@
       }
     }
 
+    @keyframes fade-out {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    @keyframes expand-wave {
+      0% {
+        width: 100%;
+        height: 100%;
+        opacity: 0.8;
+      }
+      100% {
+        width: 200%;
+        height: 200%;
+        opacity: 0;
+      }
+    }
+
+    @keyframes state-transition-flash {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.3); }
+    }
+
+    @keyframes appear-from-center {
+      0% {
+        transform: translate(-50%, -50%) scale(0.1);
+        opacity: 0;
+      }
+      60% {
+        transform: translate(-50%, -50%) scale(1.15);
+        opacity: 0.95;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.9;
+      }
+    }
+
+    @keyframes rotate-gear {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
     /* State classes */
+    .state-executing .orb {
+      position: relative;
+    }
+
+    .state-executing .orb .c {
+      opacity: 0.35;
+    }
+
+    .state-executing .orb::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(
+        circle at 30% 25%,
+        rgba(255, 255, 255, 0.9) 0%,
+        rgba(255, 255, 255, 0.7) 5%,
+        rgba(255, 255, 255, 0.4) 15%,
+        rgba(200, 200, 255, 0.1) 40%,
+        rgba(200, 200, 255, 0) 70%
+      );
+      box-shadow:
+        inset 0 0 20px rgba(255, 255, 255, 0.4),
+        0 0 15px rgba(126, 87, 194, 0.5);
+      opacity: 0.95;
+      z-index: 5;
+      pointer-events: none;
+      mix-blend-mode: overlay;
+    }
+
     .state-executing .orb-status-ring {
-      border-color: #7E57C2 !important;
+      border-color: rgba(126, 87, 194, 0.7) !important;
       border-width: 3px !important;
-      box-shadow: 0 0 15px rgba(126, 87, 194, 0.6) !important;
+      box-shadow:
+        inset 0 0 10px rgba(126, 87, 194, 0.2),
+        0 0 15px rgba(126, 87, 194, 0.4) !important;
       opacity: 0.5 !important;
       animation: pulse-ring 1.5s infinite ease-in-out !important;
+    }
+
+    .state-executing .orb::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 60%;
+      height: 60%;
+      transform: translate(-50%, -50%) scale(0.1);
+      transform-origin: center center;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='gearGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23EEEEEE' /%3E%3Cstop offset='45%25' stop-color='%23AAAAAA' /%3E%3Cstop offset='100%25' stop-color='%23666666' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z' fill='url(%23gearGradient)' stroke='%23444444' stroke-width='0.4'/%3E%3C/svg%3E");
+      background-size: 80% 80%;
+      background-repeat: no-repeat;
+      background-position: center center;
+      opacity: 0;
+      filter: drop-shadow(0 0 8px rgba(126, 87, 194, 0.5));
+      pointer-events: none;
+      z-index: 3;
+      animation:
+        appear-from-center 0.8s forwards ease-out,
+        rotate-gear 5s infinite linear 0.8s;
+    }
+
+    .state-executing .orb .c {
+      animation-duration: 1.8s;
     }
 
     .state-processing .wrap {
@@ -262,13 +364,31 @@
       filter: grayscale(1) !important;
     }
 
+    /* Add subtle static noise effect to disconnected state */
+    .state-disconnected .orb::before {
+      background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='noise' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='0.1'/%3E%3CfeFuncG type='linear' slope='0.1'/%3E%3CfeFuncB type='linear' slope='0.1'/%3E%3C/feComponentTransfer%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='3' intercept='-0.9'/%3E%3CfeFuncG type='linear' slope='3' intercept='-0.9'/%3E%3CfeFuncB type='linear' slope='3' intercept='-0.9'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"), radial-gradient(
+        circle at 25% 25%,
+        rgba(255, 255, 255, 0.95) 0%,
+        rgba(255, 255, 255, 0.9) 4%,
+        rgba(148, 148, 148, 0.5) 8%,
+        rgba(64, 64, 64, 0.3) 12%,
+        rgba(64, 64, 64, 0.1) 20%,
+        transparent 30%
+      );
+      opacity: 0.9;
+      mix-blend-mode: overlay;
+    }
+
     .state-disconnected .wrap,
     .state-disconnected .wrap *,
     .state-disconnected .c,
-    .state-disconnected .orb::before,
     .state-disconnected .orb::after {
       animation-play-state: paused !important;
       transition: none !important;
+    }
+
+    .transitioning .orb {
+      animation: state-transition-flash 0.15s ease-in-out;
     }
 
     /* Styles for Orb Effects Container */
@@ -460,6 +580,31 @@
           // Add to container
           orbParticles.appendChild(particle);
         }
+        
+        // Create a flash effect on the orb for notification emphasis
+        const flash = document.createElement('div');
+        flash.className = 'notification-flash';
+        flash.style.position = 'absolute';
+        flash.style.inset = '0';
+        flash.style.backgroundColor = 'rgba(100, 181, 246, 0.3)';
+        flash.style.borderRadius = '50%';
+        flash.style.animation = 'fade-out 400ms forwards';
+        orbParticles.appendChild(flash);
+        
+        // Create expanding wave effect
+        const wave = document.createElement('div');
+        wave.className = 'notification-wave';
+        wave.style.position = 'absolute';
+        wave.style.top = '50%';
+        wave.style.left = '50%';
+        wave.style.transform = 'translate(-50%, -50%)';
+        wave.style.width = '100%';
+        wave.style.height = '100%';
+        wave.style.borderRadius = '50%';
+        wave.style.border = '3px solid rgba(100, 181, 246, 0.8)';
+        wave.style.boxShadow = '0 0 15px rgba(100, 181, 246, 0.6)';
+        wave.style.animation = 'expand-wave 1s forwards ease-out';
+        orbParticles.appendChild(wave);
       }
 
       // Update UI state
@@ -660,16 +805,10 @@
     // Manual initialization function for testing
     window.testOrbState = function(state) {
       console.log('Testing orb state:', state);
-      updateUIState(state, 'Manual test state');
+      if (window.updateOrbOverlay) {
+        window.updateOrbOverlay({ state: state, status: 'Manual test state' });
+      }
     };
-    
-    // Initialize after a short delay to ensure DOM is ready
-    setTimeout(function() {
-      console.log('Initializing orb elements...');
-      initializeElements();
-      updateUIState('idle', 'Ready to assist...');
-      console.log('Orb initialized successfully');
-    }, 100);
   </script>
 </body>
 </html>

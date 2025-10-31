@@ -206,7 +206,7 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Test Orb States',
+            'Test Orb States (Original 6)',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -219,7 +219,6 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
               _buildTestButton('Idle', 'idle', Icons.play_circle_outline, theme),
               _buildTestButton('Executing', 'executing', Icons.build, theme),
               _buildTestButton('Processing', 'processing', Icons.autorenew, theme),
-              _buildTestButton('Speaking', 'speaking', Icons.record_voice_over, theme),
               _buildTestButton('Muted', 'muted', Icons.mic_off, theme),
               _buildTestButton('Notify', 'notifying', Icons.notifications_active, theme),
               _buildTestButton('Disconnected', 'disconnected', Icons.link_off, theme),
