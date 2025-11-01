@@ -94,10 +94,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                  child: Row(
                    mainAxisSize: MainAxisSize.min,
                    children: [
-                     Icon(
+                     const Icon(
                        Icons.close,
                        size: 16.0,
-                       color: const Color(0xFFE53E3E), // Exact red color matching web UI
+                       color: Color(0xFFE53E3E), // Exact red color matching web UI
                      ),
                      const SizedBox(width: 8.0),
                      Text(
@@ -151,7 +151,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
              const SizedBox(width: 8.0),
 
              // Upload button
-             Icon(
+             const Icon(
                Icons.upload,
                color: AppTheme.textLightColor,
                size: 20.0,
@@ -159,7 +159,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
              const SizedBox(width: 16.0),
 
              // Send button (blue arrow, no circular background)
-             Icon(
+             const Icon(
                Icons.send,
                color: AppTheme.primaryColor,
                size: 20.0,

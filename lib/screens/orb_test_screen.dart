@@ -3,6 +3,8 @@ import '../widgets/orb_webview_widget.dart';
 import '../controllers/livekit_orb_controller.dart';
 
 class OrbTestScreen extends StatefulWidget {
+  const OrbTestScreen({super.key});
+
   @override
   _OrbTestScreenState createState() => _OrbTestScreenState();
 }
@@ -35,7 +37,7 @@ class _OrbTestScreenState extends State<OrbTestScreen> {
     final theme = Theme.of(context);
     
     return Scaffold(
-      backgroundColor: _isDarkMode ? Color(0xFF1A1A1A) : Color(0xFFF5F5F5),
+      backgroundColor: _isDarkMode ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -47,11 +49,11 @@ class _OrbTestScreenState extends State<OrbTestScreen> {
             
             // Theme toggle button at bottom
             Padding(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: ElevatedButton.icon(
                 onPressed: _toggleTheme,
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   backgroundColor: _isDarkMode
                     ? Colors.white.withOpacity(0.1)
                     : Colors.black.withOpacity(0.1),
@@ -64,7 +66,7 @@ class _OrbTestScreenState extends State<OrbTestScreen> {
                 ),
                 label: Text(
                   _isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),

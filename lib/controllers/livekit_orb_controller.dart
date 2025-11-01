@@ -23,12 +23,18 @@ class LiveKitOrbData {
 
 class LiveKitOrbController extends ChangeNotifier {
   LiveKitOrbData? _currentData;
-  LiveKitOrbData get currentData => _currentData ?? LiveKitOrbData(
-    state: 'idle',
-    level: 0.0,
-    theme: 'light',
-    status: 'Ready to assist...',
-  );
+  LiveKitOrbData get currentData {
+    if (_currentData != null) {
+      return _currentData!;
+    }
+    // Return a default only if truly no data exists
+    return LiveKitOrbData(
+      state: 'idle',
+      level: 0.0,
+      theme: 'light',
+      status: 'Ready to assist...',
+    );
+  }
   
   void updateFromLiveKit(String liveKitState, {double? level, String? status}) {
     final orbState = _mapLiveKitToOrbState(liveKitState);
@@ -57,8 +63,18 @@ class LiveKitOrbController extends ChangeNotifier {
   }
   
   void updateAudioLevel(double level) {
-    final data = currentData.copyWith(level: level);
-    _currentData = data;
+    if (_currentData == null) {
+      // If no data exists yet, create initial data with current slider level
+      _currentData = LiveKitOrbData(
+        state: 'idle',
+        level: level,
+        theme: 'light',
+        status: 'Ready to assist...',
+      );
+    } else {
+      // Only update the level field while preserving everything else
+      _currentData = _currentData!.copyWith(level: level);
+    }
     notifyListeners();
   }
   
@@ -80,6 +96,9 @@ class LiveKitOrbController extends ChangeNotifier {
     _currentData = data;
     notifyListeners();
   }
+  
+  // Get the current audio level independently
+  double get currentAudioLevel => _currentData?.level ?? 0.0;
   
   // Fixed state mapping for speaking vs executing
   String _mapLiveKitToOrbState(String liveKitState) {

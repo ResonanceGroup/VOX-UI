@@ -149,9 +149,9 @@ class _McpServersScreenState extends State<McpServersScreen> {
                         name: 'brave_web_search',
                         description: 'Performs a web search using the Brave Search API',
                         parameters: [
-                          ToolParameter(name: 'query', description: 'Search query (max 400 chars, 50 words)'),
-                          ToolParameter(name: 'count', description: 'Number of results (1-20, default 10)'),
-                          ToolParameter(name: 'offset', description: 'Pagination offset (max 9, default 0)'),
+                          const ToolParameter(name: 'query', description: 'Search query (max 400 chars, 50 words)'),
+                          const ToolParameter(name: 'count', description: 'Number of results (1-20, default 10)'),
+                          const ToolParameter(name: 'offset', description: 'Pagination offset (max 9, default 0)'),
                         ],
                         isAlwaysAllowed: true,
                         onAlwaysAllowChanged: (value) {
@@ -163,8 +163,8 @@ class _McpServersScreenState extends State<McpServersScreen> {
                         name: 'brave_local_search',
                         description: 'Searches for local businesses and places',
                         parameters: [
-                          ToolParameter(name: 'query', description: 'Local search query (e.g. \'pizza near Central Park\')'),
-                          ToolParameter(name: 'count', description: 'Number of results (1-20, default 5)'),
+                          const ToolParameter(name: 'query', description: 'Local search query (e.g. \'pizza near Central Park\')'),
+                          const ToolParameter(name: 'count', description: 'Number of results (1-20, default 5)'),
                         ],
                         isAlwaysAllowed: true,
                         onAlwaysAllowChanged: (value) {
@@ -173,7 +173,7 @@ class _McpServersScreenState extends State<McpServersScreen> {
                         },
                       ),
                     ],
-                    resources: [],
+                    resources: const [],
                   ),
                   const SizedBox(height: 16.0),
 
@@ -196,7 +196,7 @@ class _McpServersScreenState extends State<McpServersScreen> {
                         name: 'search_google',
                         description: 'Search Google for a query',
                         parameters: [
-                          ToolParameter(name: 'query', description: 'Search query'),
+                          const ToolParameter(name: 'query', description: 'Search query'),
                         ],
                         isAlwaysAllowed: false,
                         onAlwaysAllowChanged: (value) {
@@ -208,8 +208,8 @@ class _McpServersScreenState extends State<McpServersScreen> {
                         name: 'visit_page',
                         description: 'Visit a webpage and extract its content',
                         parameters: [
-                          ToolParameter(name: 'url', description: 'URL to visit'),
-                          ToolParameter(name: 'takeScreenshot', description: 'Whether to take a screenshot'),
+                          const ToolParameter(name: 'url', description: 'URL to visit'),
+                          const ToolParameter(name: 'takeScreenshot', description: 'Whether to take a screenshot'),
                         ],
                         isAlwaysAllowed: false,
                         onAlwaysAllowChanged: (value) {
@@ -218,7 +218,7 @@ class _McpServersScreenState extends State<McpServersScreen> {
                         },
                       ),
                     ],
-                    resources: [],
+                    resources: const [],
                   ),
                   const SizedBox(height: 16.0),
 
@@ -241,9 +241,9 @@ class _McpServersScreenState extends State<McpServersScreen> {
                         name: 'generate_text',
                         description: 'Generate text using OpenAI models',
                         parameters: [
-                          ToolParameter(name: 'prompt', description: 'The prompt to generate from'),
-                          ToolParameter(name: 'model', description: 'Model to use (default: gpt-4)'),
-                          ToolParameter(name: 'max_tokens', description: 'Maximum tokens to generate'),
+                          const ToolParameter(name: 'prompt', description: 'The prompt to generate from'),
+                          const ToolParameter(name: 'model', description: 'Model to use (default: gpt-4)'),
+                          const ToolParameter(name: 'max_tokens', description: 'Maximum tokens to generate'),
                         ],
                         isAlwaysAllowed: true,
                         onAlwaysAllowChanged: (value) {
@@ -252,7 +252,7 @@ class _McpServersScreenState extends State<McpServersScreen> {
                         },
                       ),
                     ],
-                    resources: [],
+                    resources: const [],
                   ),
 
                   const SizedBox(height: 32.0),

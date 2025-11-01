@@ -719,8 +719,8 @@
           }
         }
         
-        // Handle state changes
-        if (payload.state) {
+        // Handle state changes - only update if state actually changed
+        if (payload.state && payload.state !== currentAIState) {
           updateUIState(payload.state, payload.status || '');
         }
         
@@ -787,13 +787,17 @@
       }
     };
     
-    // Flutter-WebView bridge
-    window.updateOrbFromLiveKit = function(liveKitData) {
+    // Flutter-WebView bridge - handles both LiveKit states and direct orb states
+    window.updateOrbFromFlutter = function(data) {
+      // Check if this is already an orb state or needs mapping
+      const orbStates = ['idle', 'executing', 'processing', 'speaking', 'muted', 'notifying', 'disconnected'];
+      const isOrbState = orbStates.includes(data.state);
+      
       const orbData = {
-        state: window.mapLiveKitToOrbState(liveKitData.state),
-        level: liveKitData.level || 0,
-        theme: liveKitData.theme || 'dark',
-        status: liveKitData.status || ''
+        state: isOrbState ? data.state : window.mapLiveKitToOrbState(data.state),
+        level: data.level !== undefined ? data.level : 0,
+        theme: data.theme || 'light',
+        status: data.status || ''
       };
       
       if (window.updateOrbOverlay) {
@@ -804,9 +808,10 @@
     // Listen for Flutter messages
     window.addEventListener('message', function(event) {
       if (event.data.type === 'livekit-update') {
-        window.updateOrbFromLiveKit(event.data.payload);
+        // All messages from Flutter come through here
+        window.updateOrbFromFlutter(event.data.payload);
       } else if (event.data.type === 'manual-state') {
-        // Handle manual state changes for testing
+        // Legacy support for manual state changes
         if (window.updateOrbOverlay) {
           window.updateOrbOverlay(event.data.payload);
         }
