@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:html' as html;
+import 'dart:ui_web' as ui_web;
 
-/// OrbWidget - Visual feedback component for VOX UI
-/// Phase 1: Solid circle placeholder (matches web UI visual design)
-/// Phase 2: Will integrate with LiveKit for real-time state and animations
+import '../controllers/livekit_orb_controller.dart';
+
+/// OrbWidget - Clean orb widget for main UI integration
+/// Uses the fully functional OrbWebViewWidget internally but presents a clean interface
 class OrbWidget extends StatefulWidget {
   final double size;
-  final Color? color;
-  final VoidCallback? onTap;
+  final LiveKitOrbController? controller;
 
   const OrbWidget({
     super.key,
     this.size = 200.0,
-    this.color,
-    this.onTap,
+    this.controller,
   });
 
   @override
@@ -20,67 +22,259 @@ class OrbWidget extends StatefulWidget {
 }
 
 class _OrbWidgetState extends State<OrbWidget> {
+  late html.IFrameElement _iframeElement;
+  late String _viewType;
+  bool _isLoading = true;
+  late VoidCallback _stateUpdateCallback;
+  late LiveKitOrbController _orbController;
+  
+  // Widget's internal state cache - this is the source of truth for the iframe
+  String _currentState = 'idle';
+  double _currentLevel = 0.0;
+  String _currentTheme = 'light';
+  String _currentStatus = 'Ready to assist...';
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Use provided controller or create a new one
+    _orbController = widget.controller ?? LiveKitOrbController();
+    
+    // Generate unique view type for this iframe
+    _viewType = 'orb-main-iframe-${DateTime.now().millisecondsSinceEpoch}';
+    
+    // Set up state update listener - merge controller updates with our cache
+    _stateUpdateCallback = () {
+      final data = _orbController.currentData;
+      _updateOrbFromController(
+        state: data.state,
+        level: data.level,
+        theme: data.theme,
+        status: data.status,
+      );
+    };
+    _orbController.addListener(_stateUpdateCallback);
+    
+    // Create iframe element immediately (synchronously)
+    _iframeElement = html.IFrameElement()
+      ..style.border = 'none'
+      ..style.width = '100%'
+      ..style.height = '100%'
+      ..style.borderRadius = '12px'
+      ..style.overflow = 'hidden';
+    
+    // Register the view factory synchronously
+    // ignore: undefined_prefixed_name
+    ui_web.platformViewRegistry.registerViewFactory(
+      _viewType,
+      (int viewId) => _iframeElement,
+    );
+    
+    // Load content asynchronously
+    _loadIFrameContent();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Set initial theme and update when context changes
+    final newTheme = Theme.of(context).brightness == Brightness.dark ? 'dark' : 'light';
+    if (newTheme != _currentTheme) {
+      _currentTheme = newTheme;
+      // Don't send update here during initialization, will be sent after iframe loads
+      if (!_isLoading) {
+        _sendOrbUpdate();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _orbController.removeListener(_stateUpdateCallback);
+    // Only dispose if we created the controller
+    if (widget.controller == null) {
+      _orbController.dispose();
+    }
+    super.dispose();
+  }
+
+  void _loadIFrameContent() async {
+    try {
+      // Load HTML content from assets
+      final htmlContent = await rootBundle.loadString('assets/orb/orb.html');
+      
+      // Set iframe content using srcdoc
+      _iframeElement.srcdoc = htmlContent;
+      
+      // Wait for iframe to load
+      _iframeElement.onLoad.listen((_) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        // Send initial state after a short delay
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _sendOrbUpdate();
+        });
+      });
+      
+    } catch (e) {
+      print('Error loading orb iframe content: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Update internal cache from controller and send to iframe
+  void _updateOrbFromController({
+    String? state,
+    double? level,
+    String? theme,
+    String? status,
+  }) {
+    // Merge with current cache (only update what's provided)
+    if (state != null) _currentState = state;
+    if (level != null) _currentLevel = level;
+    if (theme != null) _currentTheme = theme;
+    if (status != null) _currentStatus = status;
+    
+    // Send complete state to iframe
+    _sendOrbUpdate();
+  }
+  
+  // The ONLY method that sends to iframe - always sends complete cached state
+  void _sendOrbUpdate() {
+    if (_isLoading) return;
+    
+    try {
+      final message = {
+        'type': 'livekit-update',
+        'payload': {
+          'state': _currentState,
+          'level': _currentLevel,
+          'theme': _currentTheme,
+          'status': _currentStatus,
+        }
+      };
+      
+      _iframeElement.contentWindow?.postMessage(message, '*');
+    } catch (e) {
+      print('Error sending orb update: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Using the primary color from the web UI design
-    final orbColor = widget.color ?? const Color(0xFF4A4A4A); // Charcoal gray from web UI
-
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: Container(
-        width: widget.size,
-        height: widget.size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: orbColor,
-          // Subtle shadow for depth (matching web UI visual design)
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8.0,
-              offset: const Offset(0, 4),
-            ),
-          ],
+    return Stack(
+      children: [
+        // IFrame view fills entire available space
+        Positioned.fill(
+          child: HtmlElementView(
+            viewType: _viewType,
+          ),
         ),
-        // TODO(phase-2): Add visual state effects here
-        // - Pulsing ring for active states
-        // - Particle effects for notifications
-        // - Gradient overlays for different statuses
-        // - Breathing animation for idle state
-      ),
+        
+        // Loading overlay
+        if (_isLoading)
+          Positioned.fill(
+            child: Container(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Loading...',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
 
-/// OrbController interface for future LiveKit integration
-/// Currently no-op, but provides the API surface for Phase 2
+/// OrbController interface for main UI integration
+/// Provides clean API surface for the main application
 class OrbController {
+  final LiveKitOrbController _controller = LiveKitOrbController();
+
+  LiveKitOrbController get internalController => _controller;
+
   void setState(OrbState state) {
-    // TODO(phase-2): Implement state management
-    // This will control visual feedback based on LiveKit connection status
+    final stateString = _mapOrbStateToString(state);
+    _controller.updateFromLiveKit(stateString);
   }
 
-  void setAmplitude(double level) {
-    // TODO(phase-2): Implement amplitude visualization
-    // This will show audio levels and voice activity
+  void setAudioLevel(double level) {
+    _controller.updateAudioLevel(level.clamp(0.0, 1.0));
   }
 
-  void triggerNotification(String message) {
-    // TODO(phase-2): Implement notification effects
-    // This will show particle bursts and status messages
+  void triggerToolExecution() {
+    _controller.triggerToolExecution();
   }
+
+  void setTheme(String theme) {
+    _controller.updateTheme(theme);
+  }
+
+  double get currentAudioLevel => _controller.currentAudioLevel;
 
   void dispose() {
-    // TODO(phase-2): Cleanup resources
+    _controller.dispose();
+  }
+
+  String _mapOrbStateToString(OrbState state) {
+    switch (state) {
+      case OrbState.idle:
+        return 'idle';
+      case OrbState.listening:
+        return 'listening';
+      case OrbState.processing:
+        return 'processing';
+      case OrbState.speaking:
+        return 'speaking';
+      case OrbState.executing:
+        return 'executing';
+      case OrbState.muted:
+        return 'muted';
+      case OrbState.notifying:
+        return 'notifying';
+      case OrbState.error:
+        return 'error';
+      case OrbState.disconnected:
+        return 'disconnected';
+    }
   }
 }
 
-/// Orb states for future implementation
+/// Orb states for main UI integration
 enum OrbState {
   idle,
   listening,
   processing,
   speaking,
+  executing,
+  muted,
+  notifying,
   error,
   disconnected,
 }

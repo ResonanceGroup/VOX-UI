@@ -14,12 +14,8 @@ void main() {
 }
 
 final GoRouter _router = GoRouter(
-  initialLocation: '/orb-test',
+  initialLocation: '/chat',
   routes: [
-    GoRoute(
-      path: '/orb-test',
-      builder: (context, state) => OrbTestScreen(),
-    ),
     GoRoute(
       path: '/chat',
       builder: (context, state) => const ChatScreen(),
@@ -31,6 +27,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/settings',
       builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: '/orb-test',
+      builder: (context, state) => OrbTestScreen(),
     ),
   ],
 );

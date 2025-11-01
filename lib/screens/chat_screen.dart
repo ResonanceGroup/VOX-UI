@@ -45,71 +45,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
       ),
       drawer: const VOXNavigationDrawer(currentRoute: '/chat'),
-      body: Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Orb Widget (Phase 1: solid circle)
-              const OrbWidget(
-                size: 200.0,
-              ),
-              const SizedBox(height: 20.0),
-
-              // Microphone icon (matching web UI)
-              Container(
-                width: 40.0,
-                height: 40.0,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.grey.shade800
-                      : Colors.grey.shade200,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.grey.shade600
-                        : Colors.grey.shade400,
-                    width: 1.0,
-                  ),
-                ),
-                child: Icon(
-                  Icons.mic,
-                  size: 20.0,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.grey.shade300
-                      : Colors.grey.shade700,
-                ),
-              ),
-              const SizedBox(height: 20.0),
-
-              // Status indicator (matching web UI)
-               Container(
-                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                 decoration: BoxDecoration(
-                   color: Colors.red.withOpacity(0.1),
-                   borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-                   border: Border.all(color: Colors.red.withOpacity(0.3)),
-                 ),
-                 child: Row(
-                   mainAxisSize: MainAxisSize.min,
-                   children: [
-                     const Icon(
-                       Icons.close,
-                       size: 16.0,
-                       color: Color(0xFFE53E3E), // Exact red color matching web UI
-                     ),
-                     const SizedBox(width: 8.0),
-                     Text(
-                       'Ready to assist...',
-                       style: AppTheme.statusTextStyle.copyWith(
-                         color: const Color(0xFFE53E3E), // Exact red color matching web UI
-                       ),
-                     ),
-                   ],
-                 ),
-               ),
-            ],
+      body: Center(
+        child: SizedBox(
+          width: 350.0, // Orb (300px) + padding
+          height: 450.0, // Orb (300px) + status (40px) + mic button (80px) + spacing
+          child: const OrbWidget(
+            size: 300.0,
           ),
         ),
       ),
@@ -141,11 +82,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                    focusedBorder: InputBorder.none,
                    filled: false,
                    contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                   hintStyle: AppTheme.bodyTextStyle.copyWith(
-                     color: AppTheme.textLightColor,
+                   hintStyle: TextStyle(
+                     fontSize: 14.4,
+                     fontWeight: FontWeight.w400,
+                     color: Theme.of(context).brightness == Brightness.dark
+                         ? const Color(0xFF555555)  // Darker gray for dark mode - more subtle
+                         : const Color(0xFF999999), // Lighter gray for light mode - more subtle
                    ),
                  ),
-                 style: AppTheme.bodyTextStyle,
+                 style: TextStyle(
+                   fontSize: 14.4,
+                   fontWeight: FontWeight.w400,
+                   color: Theme.of(context).brightness == Brightness.dark
+                       ? const Color(0xFFEEEEEE)  // Light text for dark mode
+                       : AppTheme.textColor,      // Dark text for light mode
+                 ),
                ),
              ),
              const SizedBox(width: 8.0),

@@ -10,7 +10,7 @@
       position: relative;
       width: 300px;
       height: 300px;
-      margin-bottom: 1rem;
+      margin: 0;  /* Reset all margins */
       display: flex;
       justify-content: center;
       align-items: center;
@@ -19,6 +19,7 @@
       overflow: visible;
       border-radius: 50%;
       --intensity: 0;
+      transform: scale(1); /* Scale down by ~50px equivalent (250/300) */
     }
 
     /* Glass sphere effect */
@@ -485,26 +486,108 @@
       font-weight: bold !important;
     }
 
+    /* Mic Button Styling */
+    .mic-button {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 1px solid #cccccc;
+      background: rgba(242, 242, 242, 0.9);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      margin-top: 20px;
+    }
+
+    .mic-button:hover {
+      background: rgba(242, 242, 242, 1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transform: scale(1.05);
+    }
+
+    .mic-button:active {
+      transform: scale(0.95);
+    }
+
+    .mic-button svg {
+      color: #555555;
+      transition: color 0.3s ease;
+    }
+
+    .mic-button:hover svg {
+      color: #333333;
+    }
+
+    /* Muted state styling */
+    .state-muted .mic-button {
+      background: rgba(244, 67, 54, 0.15);
+      border-color: #f44336;
+    }
+
+    .state-muted .mic-button svg {
+      color: #f44336;
+    }
+
+    .state-muted .mic-button:hover {
+      background: rgba(244, 67, 54, 0.25);
+    }
+
+    /* Dark theme */
+    .overlay-dark .mic-button {
+      background: rgba(80, 80, 80, 0.9);
+      border-color: #666666;
+    }
+
+    .overlay-dark .mic-button:hover {
+      background: rgba(96, 96, 96, 1);
+    }
+
+    .overlay-dark .mic-button svg {
+      color: #d0d0d0;
+    }
+
+    .overlay-dark .mic-button:hover svg {
+      color: #ffffff;
+    }
+
+    .overlay-dark.state-muted .mic-button {
+      background: rgba(244, 67, 54, 0.2);
+      border-color: #f44336;
+    }
+
+    .overlay-dark.state-muted .mic-button:hover {
+      background: rgba(244, 67, 54, 0.3);
+    }
+
     /* Container styling */
     body {
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: radial-gradient(circle at center, rgba(64, 206, 224, 0.02) 0%, transparent 70%);
+      background: transparent;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
-      gap: 20px;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
     }
-
+    
+    html {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+    }
+    
     .orb-container {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 2rem;
+      gap: 15px;  /* ← ADJUST THIS to control spacing between orb, status, and mic button */
     }
   </style>
 </head>
@@ -525,6 +608,14 @@
       <span class="status-icon"></span>
       <span class="status-text">Ready to assist...</span>
     </div>
+    <button id="mic-button" class="mic-button" title="Toggle Microphone">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+        <line x1="12" y1="19" x2="12" y2="23"></line>
+        <line x1="8" y1="23" x2="16" y2="23"></line>
+      </svg>
+    </button>
   </div>
 
   <script>
