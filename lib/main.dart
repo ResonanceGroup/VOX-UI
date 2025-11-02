@@ -30,7 +30,7 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/orb-test',
-      builder: (context, state) => OrbTestScreen(),
+      builder: (context, state) => const OrbTestScreen(),
     ),
   ],
 );

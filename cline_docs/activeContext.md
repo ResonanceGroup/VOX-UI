@@ -59,6 +59,13 @@
 - `lib/controllers/livekit_orb_controller.dart`: 
   - Fixed corrupted import statement
 
+- `lib/services/livekit_service.dart`:
+  - **NEW**: Implemented automatic reconnection with exponential backoff (2s, 4s, 8s, 16s, 32s, 64s delays)
+  - Added reconnection state management (_isConnecting, _shouldReconnect, _reconnectAttempts, _reconnectTimer)
+  - Enhanced event listeners to handle disconnect/reconnect scenarios
+  - Added _scheduleReconnect() method for delayed retry logic
+  - Maximum 10 reconnection attempts to prevent infinite loops
+
 ### Previous Orb Implementation (Still Working)
 **All 6 Orb States:**
 1. **Idle** - Gentle swirling with status dot (●)
@@ -81,8 +88,17 @@
 4. **Add Audio Visualization** - Use LiveKit audio levels for orb feedback
 5. **Connect Microphone Control** - Link mute button to LiveKit microphone
 6. **Test End-to-End** - Verify all features work with real LiveKit agent
+7. **Debug Settings Persistence** - Fix issue with settings being wiped on restart
 
 ### Implementation Resources
 - **LiveKit Integration Guide**: `cline_docs/livekit_integration_guide.md` (contains all essential implementation details)
 - **State Mapping Requirements**: Clear mappings from LiveKit states to orb visual states
 - **Existing Infrastructure**: Leverage working orb controller and widget
+
+### Testing Objectives for Reconnection Feature
+1. **Verify Automatic Reconnection**: Test that app attempts to reconnect when network is lost
+2. **Check Exponential Backoff**: Confirm delays increase properly (2s, 4s, 8s, etc.)
+3. **Validate Orb Status Updates**: Ensure "Reconnecting... (attempt X)" messages appear
+4. **Test Connection Limits**: Verify stops after 10 failed attempts
+5. **Confirm Successful Reconnection**: Validate app reconnects when network returns
+6. **Check Resource Cleanup**: Ensure timers and resources are properly disposed

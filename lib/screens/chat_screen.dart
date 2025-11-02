@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../widgets/orb_widget.dart';
 import '../widgets/navigation_drawer.dart';
 import '../theme/app_theme.dart';
+import '../controllers/livekit_orb_controller.dart';
+import '../services/livekit_service.dart';
+import '../providers/settings_provider.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -14,6 +16,124 @@ class ChatScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
+  late LiveKitOrbController _orbController;
+  late LiveKitService _liveKitService;
+  final TextEditingController _textController = TextEditingController();
+  bool _isConnecting = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    
+    // Initialize orb controller and LiveKit service
+    _orbController = LiveKitOrbController();
+    _liveKitService = LiveKitService(_orbController);
+    
+    // Defer connection until after first frame and settings are loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectToLiveKit();
+    });
+  }
+  
+  /// Connect to LiveKit server using settings from provider
+  Future<void> _connectToLiveKit() async {
+    if (_isConnecting) return;
+    
+    setState(() {
+      _isConnecting = true;
+    });
+    
+    try {
+      // Wait for settings to be loaded
+      final settingsAsync = ref.read(voiceAgentSettingsProvider);
+      
+      // Check if still loading
+      if (settingsAsync.isLoading) {
+        debugPrint('[Chat] Settings still loading, waiting...');
+        // Wait a bit and try again
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          setState(() {
+            _isConnecting = false;
+          });
+          _connectToLiveKit();
+        }
+        return;
+      }
+      
+      // Get settings value
+      final settings = settingsAsync.valueOrNull;
+      if (settings == null) {
+        throw Exception('Settings not available');
+      }
+      
+      // Validate settings before connecting
+      if (settings.serverUrl.isEmpty) {
+        throw Exception('Server URL not configured. Please set it in Settings.');
+      }
+      
+      if (settings.token.isEmpty) {
+        throw Exception('LiveKit token not configured. Please set it in Settings.');
+      }
+      
+      await _liveKitService.connect(settings.serverUrl, settings.token);
+      debugPrint('[Chat] Connected to LiveKit: ${settings.serverUrl}');
+    } catch (e) {
+      debugPrint('[Chat] Failed to connect to LiveKit: $e');
+      // Show error to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to connect: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Settings',
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.pushNamed(context, '/settings');
+              },
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isConnecting = false;
+        });
+      }
+    }
+  }
+  
+  /// Send text message to agent
+  Future<void> _sendMessage() async {
+    final text = _textController.text.trim();
+    if (text.isEmpty) return;
+    
+    // Send message via LiveKit
+    await _liveKitService.sendMessage(text);
+    
+    // Clear input
+    _textController.clear();
+    
+    debugPrint('[Chat] Message sent: $text');
+  }
+  
+  /// Toggle microphone mute state
+  Future<void> _toggleMute() async {
+    await _liveKitService.toggleMute();
+    setState(() {}); // Refresh UI to show mute state
+  }
+  
+  @override
+  void dispose() {
+    // Clean up resources
+    _liveKitService.dispose();
+    _textController.dispose();
+    super.dispose();
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -23,17 +143,51 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             : Colors.white,
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
-        title: const Text('AI Assistant'),
+        title: Row(
+          children: [
+            const Text('AI Assistant'),
+            const SizedBox(width: 8),
+            // Connection status indicator
+            if (_isConnecting)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else if (_liveKitService.isConnected)
+              Icon(
+                Icons.circle,
+                size: 12,
+                color: _liveKitService.hasAgent ? Colors.green : Colors.orange,
+              )
+            else
+              const Icon(
+                Icons.circle,
+                size: 12,
+                color: Colors.red,
+              ),
+          ],
+        ),
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu),
-            padding: const EdgeInsets.all(8.0), // 8px padding to match original
+            padding: const EdgeInsets.all(8.0),
             onPressed: () {
               Scaffold.of(context).openDrawer();
             },
           ),
         ),
-        // Add bottom border to match original
+        actions: [
+          // Microphone mute button
+          IconButton(
+            icon: Icon(
+              _liveKitService.isMuted ? Icons.mic_off : Icons.mic,
+              color: _liveKitService.isMuted ? Colors.red : null,
+            ),
+            onPressed: _toggleMute,
+            tooltip: _liveKitService.isMuted ? 'Unmute' : 'Mute',
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1.0),
           child: Container(
@@ -47,77 +201,89 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       drawer: const VOXNavigationDrawer(currentRoute: '/chat'),
       body: Center(
         child: SizedBox(
-          width: 350.0, // Orb (300px) + padding
-          height: 450.0, // Orb (300px) + status (40px) + mic button (80px) + spacing
-          child: const OrbWidget(
+          width: 350.0,
+          height: 450.0,
+          child: OrbWidget(
             size: 300.0,
+            controller: _orbController,
           ),
         ),
       ),
 
-      // Bottom input controls (matching web UI)
-       bottomNavigationBar: Container(
-         height: AppTheme.navHeight,
-         padding: const EdgeInsets.symmetric(horizontal: 32.0),
-         decoration: BoxDecoration(
-           color: Theme.of(context).scaffoldBackgroundColor,
-           border: Border(
-             top: BorderSide(
-               color: Theme.of(context).brightness == Brightness.dark
-                   ? const Color(0xFF444444) // Unified border color
-                   : const Color(0xFFDDDDDD), // Unified border color
-               width: 1.0,
-             ),
-           ),
-         ),
-         child: Row(
-           children: [
-             // Text input (completely borderless and seamless)
-             Expanded(
-               child: TextField(
-                 decoration: InputDecoration(
-                   hintText: 'Type a message...',
-                   border: InputBorder.none,
-                   enabledBorder: InputBorder.none,
-                   focusedBorder: InputBorder.none,
-                   filled: false,
-                   contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                   hintStyle: TextStyle(
-                     fontSize: 14.4,
-                     fontWeight: FontWeight.w400,
-                     color: Theme.of(context).brightness == Brightness.dark
-                         ? const Color(0xFF555555)  // Darker gray for dark mode - more subtle
-                         : const Color(0xFF999999), // Lighter gray for light mode - more subtle
-                   ),
-                 ),
-                 style: TextStyle(
-                   fontSize: 14.4,
-                   fontWeight: FontWeight.w400,
-                   color: Theme.of(context).brightness == Brightness.dark
-                       ? const Color(0xFFEEEEEE)  // Light text for dark mode
-                       : AppTheme.textColor,      // Dark text for light mode
-                 ),
-               ),
-             ),
-             const SizedBox(width: 8.0),
+      // Bottom input controls
+      bottomNavigationBar: Container(
+        height: AppTheme.navHeight,
+        padding: const EdgeInsets.symmetric(horizontal: 32.0),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF444444)
+                  : const Color(0xFFDDDDDD),
+              width: 1.0,
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            // Text input
+            Expanded(
+              child: TextField(
+                controller: _textController,
+                enabled: _liveKitService.isConnected,
+                onSubmitted: (_) => _sendMessage(),
+                decoration: InputDecoration(
+                  hintText: _liveKitService.isConnected 
+                      ? 'Type a message...' 
+                      : 'Connecting...',
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, 
+                    vertical: 12.0
+                  ),
+                  hintStyle: TextStyle(
+                    fontSize: 14.4,
+                    fontWeight: FontWeight.w400,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF555555)
+                        : const Color(0xFF999999),
+                  ),
+                ),
+                style: TextStyle(
+                  fontSize: 14.4,
+                  fontWeight: FontWeight.w400,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFFEEEEEE)
+                      : AppTheme.textColor,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8.0),
 
-             // Upload button
-             const Icon(
-               Icons.upload,
-               color: AppTheme.textLightColor,
-               size: 20.0,
-             ),
-             const SizedBox(width: 16.0),
+            // Upload button (placeholder for future)
+            const Icon(
+              Icons.upload,
+              color: AppTheme.textLightColor,
+              size: 20.0,
+            ),
+            const SizedBox(width: 16.0),
 
-             // Send button (blue arrow, no circular background)
-             const Icon(
-               Icons.send,
-               color: AppTheme.primaryColor,
-               size: 20.0,
-             ),
-           ],
-         ),
-       ),
+            // Send button
+            IconButton(
+              icon: const Icon(
+                Icons.send,
+                color: AppTheme.primaryColor,
+                size: 20.0,
+              ),
+              onPressed: _liveKitService.isConnected ? _sendMessage : null,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -100,18 +100,37 @@ class LiveKitOrbController extends ChangeNotifier {
   // Get the current audio level independently
   double get currentAudioLevel => _currentData?.level ?? 0.0;
   
-  // Fixed state mapping for speaking vs executing
+  // State mapping based on LiveKit integration requirements
   String _mapLiveKitToOrbState(String liveKitState) {
     switch (liveKitState) {
+      // Connection states
+      case 'disconnected':
+        return 'disconnected';
+      case 'connecting':
+        return 'muted';  // Show muted state while connecting
+      case 'connected_with_agent':
+        return 'idle';  // Agent present and ready
+      case 'connected_no_agent':
+        return 'disconnected';  // No agent = off state
+      
+      // Activity states
+      case 'talking':
+        return 'processing';  // Agent is speaking/active
+      case 'silent':
+        return 'idle';  // Connected but silent
+      case 'muted':
+        return 'muted';  // Microphone muted
+        
+      // Legacy states for backward compatibility
       case 'initializing':
       case 'listening':
         return 'idle';
       case 'thinking':
         return 'processing';
       case 'speaking':
-        return 'speaking';  // Speaking is separate from executing
+        return 'processing';
       default:
-        return 'idle';
+        return 'disconnected';
     }
   }
   

@@ -5,6 +5,8 @@ import 'package:monaco_editor/monaco_editor.dart';
 
 import '../theme/app_theme.dart';
 import '../providers/theme_provider.dart';
+import '../providers/settings_provider.dart';
+import '../models/voice_agent_settings.dart';
 import '../widgets/navigation_drawer.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -15,11 +17,15 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  // Form state
-  String serverUrl = 'ws://localhost:5005';
-  String systemPrompt = 'Test Prompt';
-  String model = 'ultravox';
-  String voice = 'en-US/amy';
+  // Voice Agent form controllers
+  final _serverUrlController = TextEditingController();
+  final _tokenController = TextEditingController();
+  final _systemPromptController = TextEditingController();
+  final _modelController = TextEditingController();
+  final _voiceController = TextEditingController();
+  
+  // Track if settings have been modified
+  bool _settingsModified = false;
   
   // MCP Config state
   final _monacoController = MonacoEditorController();
@@ -33,6 +39,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void initState() {
     super.initState();
     _loadMcpConfig();
+    
     // Listen for focus changes to detect when editor loses focus
     _mcpEditorFocusNode.addListener(() {
       if (!_mcpEditorFocusNode.hasFocus && _mcpEditorFocused) {
@@ -41,10 +48,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         });
       }
     });
+
+    // Add listeners to detect changes
+    _serverUrlController.addListener(_onSettingsChanged);
+    _tokenController.addListener(_onSettingsChanged);
+    _systemPromptController.addListener(_onSettingsChanged);
+    _modelController.addListener(_onSettingsChanged);
+    _voiceController.addListener(_onSettingsChanged);
+  }
+
+  void _onSettingsChanged() {
+    if (!_settingsModified) {
+      setState(() => _settingsModified = true);
+    }
   }
 
   @override
   void dispose() {
+    _serverUrlController.dispose();
+    _tokenController.dispose();
+    _systemPromptController.dispose();
+    _modelController.dispose();
+    _voiceController.dispose();
     _mcpEditorFocusNode.dispose();
     super.dispose();
   }
@@ -91,9 +116,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _currentMcpConfig = text;
       _mcpConfigModified = false;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('MCP config saved successfully!')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('MCP config saved successfully!')),
+      );
+    }
   }
 
   void _revertMcpConfig() {
@@ -106,10 +133,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   void _copyMcpConfig() async {
     final text = await _monacoController.getText();
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Config copied to clipboard!')),
-    );
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Config copied to clipboard!')),
+      );
+    }
   }
 
   Future<void> _checkForChanges() async {
@@ -120,9 +149,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
   }
 
+  Future<void> _saveAllSettings() async {
+    final notifier = ref.read(voiceAgentSettingsProvider.notifier);
+    
+    final settings = VoiceAgentSettings(
+      serverUrl: _serverUrlController.text,
+      token: _tokenController.text,
+      systemPrompt: _systemPromptController.text,
+      model: _modelController.text,
+      voice: _voiceController.text,
+    );
+
+    await notifier.updateAll(settings);
+    
+    setState(() => _settingsModified = false);
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Settings saved successfully!')),
+      );
+    }
+  }
+
+  void _resetToDefaults() async {
+    final notifier = ref.read(voiceAgentSettingsProvider.notifier);
+    await notifier.resetToDefaults();
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Settings reset to defaults')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final settingsAsync = ref.watch(voiceAgentSettingsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -154,224 +217,248 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       drawer: const VOXNavigationDrawer(currentRoute: '/settings'),
       body: Container(
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 800),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF252526) : const Color(0xFFF9F9F9),
-                borderRadius: BorderRadius.circular(8.0),
-                border: Border.all(
-                  color: isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
-                ),
-                boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
-                      blurRadius: 10.0,
-                      offset: const Offset(0, 2),
+        child: settingsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(
+            child: Text('Error loading settings: $error'),
+          ),
+          data: (settings) {
+            // Update controllers when settings load
+            if (_serverUrlController.text.isEmpty) {
+              _serverUrlController.text = settings.serverUrl;
+              _tokenController.text = settings.token;
+              _systemPromptController.text = settings.systemPrompt;
+              _modelController.text = settings.model;
+              _voiceController.text = settings.voice;
+            }
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF252526) : const Color(0xFFF9F9F9),
+                    borderRadius: BorderRadius.circular(8.0),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF444444) : const Color(0xFFDDDDDD),
                     ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Voice Agent accordion (expanded by default)
-                  _SettingsAccordion(
-                    title: 'Voice Agent',
-                    initiallyExpanded: true,
-                    children: [
-                      _buildTextField(
-                        label: 'Server URL',
-                        value: serverUrl,
-                        onChanged: (value) => setState(() => serverUrl = value),
-                        placeholder: 'Enter server URL',
-                      ),
-                      _buildTextField(
-                        label: 'System Prompt',
-                        value: systemPrompt,
-                        onChanged: (value) => setState(() => systemPrompt = value),
-                        placeholder: 'Enter system prompt...',
-                        maxLines: 7,
-                      ),
-                      _buildDropdownField(
-                        label: 'Model',
-                        value: model,
-                        onChanged: (value) => setState(() => model = value ?? model),
-                        items: const ['UltraVOX'],
-                      ),
-                      _buildTextField(
-                        label: 'Voice',
-                        value: voice,
-                        onChanged: (value) => setState(() => voice = value),
-                        placeholder: 'Enter voice ID',
-                      ),
-                      _buildDropdownField(
-                        label: 'Language',
-                        value: 'english',
-                        onChanged: (value) {},
-                        items: const ['english', 'chinese'],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+                        blurRadius: 10.0,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 16.0),
-
-                  // MCP accordion (collapsed by default)
-                  _SettingsAccordion(
-                    title: 'MCP',
-                    initiallyExpanded: false,
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      // Voice Agent accordion (expanded by default)
+                      _SettingsAccordion(
+                        title: 'Voice Agent',
+                        initiallyExpanded: true,
                         children: [
-                          Text(
-                            'MCP Config (JSON)',
-                            style: TextStyle(
-                              fontSize: 14.4,
-                              fontWeight: FontWeight.w500,
-                              color: isDark
-                                  ? const Color(0xFFE0E0E0)
-                                  : const Color(0xFF333333),
-                            ),
+                          _buildTextField(
+                            label: 'Server URL',
+                            controller: _serverUrlController,
+                            placeholder: 'ws://localhost:7880',
+                            hint: 'LiveKit server WebSocket URL',
+                          ),
+                          _buildTextField(
+                            label: 'LiveKit Token',
+                            controller: _tokenController,
+                            placeholder: 'Enter your LiveKit access token',
+                            hint: 'Get this from your LiveKit server or dev mode',
+                            maxLines: 4,
+                          ),
+                          _buildTextField(
+                            label: 'System Prompt',
+                            controller: _systemPromptController,
+                            placeholder: 'Enter system prompt...',
+                            maxLines: 7,
+                            hint: 'Instructions for how the agent should behave',
+                          ),
+                          _buildTextField(
+                            label: 'Model',
+                            controller: _modelController,
+                            placeholder: 'qwen2:1.5b',
+                            hint: 'LLM model name (e.g., qwen2:1.5b, llama3.2:3b)',
+                          ),
+                          _buildTextField(
+                            label: 'Voice',
+                            controller: _voiceController,
+                            placeholder: 'af_heart',
+                            hint: 'TTS voice ID (e.g., af_heart, am_adam)',
                           ),
                           const SizedBox(height: 8.0),
-                          // Monaco Editor - rounded on all corners with focus indication
-                          Focus(
-                            focusNode: _mcpEditorFocusNode,
-                            descendantsAreFocusable: false,
-                            child: Listener(
-                              onPointerDown: (_) {
-                                setState(() {
-                                  _mcpEditorFocused = true;
-                                });
-                                _mcpEditorFocusNode.requestFocus();
-                              },
-                              child: Container(
-                                height: 400.0,
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                                  border: Border.all(
-                                    color: _mcpEditorFocused
-                                        ? const Color(0xFF347AB7)
-                                        : (isDark
-                                            ? const Color(0xFF555555)
-                                            : const Color(0xFFCCCCCC)),
-                                    width: _mcpEditorFocused ? 2.0 : 1.0,
-                                  ),
-                                  borderRadius: BorderRadius.circular(6.0),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(6.0),
-                                  child: MonacoEditorWidget(
-                                    controller: _monacoController,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          // Action buttons bar - adjusted spacing
-                          const SizedBox(height: 16.0),
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              // Copy button on the left
-                              IconButton(
-                                icon: const Icon(Icons.content_copy, size: 18.0),
-                                onPressed: _copyMcpConfig,
-                                color: isDark
-                                    ? const Color(0xFFCCCCCC)
-                                    : const Color(0xFF666666),
-                                tooltip: 'Copy to clipboard',
-                                padding: const EdgeInsets.all(8.0),
-                                constraints: const BoxConstraints(),
-                              ),
-                              const Spacer(),
-                              // Save and Revert buttons on the right
-                              _buildButton(
-                                label: 'Save',
-                                isPrimary: true,
-                                onPressed: () async {
-                                  await _checkForChanges();
-                                  if (_mcpConfigModified) {
-                                    _saveMcpConfig();
-                                  }
-                                },
-                              ),
-                              const SizedBox(width: 12.0),
-                              _buildButton(
-                                label: 'Revert',
-                                isPrimary: false,
-                                onPressed: () async {
-                                  await _checkForChanges();
-                                  if (_mcpConfigModified) {
-                                    _revertMcpConfig();
-                                  }
-                                },
+                              TextButton(
+                                onPressed: _resetToDefaults,
+                                child: const Text('Reset to Defaults'),
                               ),
                             ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
 
-                  const SizedBox(height: 16.0),
+                      const SizedBox(height: 16.0),
 
-                  // n8n Integration accordion (collapsed by default)
-                  _SettingsAccordion(
-                    title: 'n8n Integration',
-                    initiallyExpanded: false,
-                    children: [
-                      _buildTextField(
-                        label: 'Webhook URL',
-                        value: '',
-                        onChanged: (value) {},
-                        placeholder: 'https://your-n8n-webhook-url',
+                      // MCP accordion (collapsed by default)
+                      _SettingsAccordion(
+                        title: 'MCP',
+                        initiallyExpanded: false,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'MCP Config (JSON)',
+                                style: TextStyle(
+                                  fontSize: 14.4,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark
+                                      ? const Color(0xFFE0E0E0)
+                                      : const Color(0xFF333333),
+                                ),
+                              ),
+                              const SizedBox(height: 8.0),
+                              // Monaco Editor - rounded on all corners with focus indication
+                              Focus(
+                                focusNode: _mcpEditorFocusNode,
+                                descendantsAreFocusable: false,
+                                child: Listener(
+                                  onPointerDown: (_) {
+                                    setState(() {
+                                      _mcpEditorFocused = true;
+                                    });
+                                    _mcpEditorFocusNode.requestFocus();
+                                  },
+                                  child: Container(
+                                    height: 400.0,
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                                      border: Border.all(
+                                        color: _mcpEditorFocused
+                                            ? const Color(0xFF347AB7)
+                                            : (isDark
+                                                ? const Color(0xFF555555)
+                                                : const Color(0xFFCCCCCC)),
+                                        width: _mcpEditorFocused ? 2.0 : 1.0,
+                                      ),
+                                      borderRadius: BorderRadius.circular(6.0),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(6.0),
+                                      child: MonacoEditorWidget(
+                                        controller: _monacoController,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Action buttons bar - adjusted spacing
+                              const SizedBox(height: 16.0),
+                              Row(
+                                children: [
+                                  // Copy button on the left
+                                  IconButton(
+                                    icon: const Icon(Icons.content_copy, size: 18.0),
+                                    onPressed: _copyMcpConfig,
+                                    color: isDark
+                                        ? const Color(0xFFCCCCCC)
+                                        : const Color(0xFF666666),
+                                    tooltip: 'Copy to clipboard',
+                                    padding: const EdgeInsets.all(8.0),
+                                    constraints: const BoxConstraints(),
+                                  ),
+                                  const Spacer(),
+                                  // Save and Revert buttons on the right
+                                  _buildButton(
+                                    label: 'Save',
+                                    isPrimary: true,
+                                    onPressed: () async {
+                                      await _checkForChanges();
+                                      if (_mcpConfigModified) {
+                                        _saveMcpConfig();
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 12.0),
+                                  _buildButton(
+                                    label: 'Revert',
+                                    isPrimary: false,
+                                    onPressed: () async {
+                                      await _checkForChanges();
+                                      if (_mcpConfigModified) {
+                                        _revertMcpConfig();
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16.0),
+
+                      // n8n Integration accordion (collapsed by default)
+                      _SettingsAccordion(
+                        title: 'n8n Integration',
+                        initiallyExpanded: false,
+                        children: [
+                          _buildTextField(
+                            label: 'Webhook URL',
+                            controller: TextEditingController(),
+                            placeholder: 'https://your-n8n-webhook-url',
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16.0),
+
+                      // General UI accordion (collapsed by default)
+                      _SettingsAccordion(
+                        title: 'General UI',
+                        initiallyExpanded: false,
+                        children: [
+                          _buildThemeSelector(),
+                        ],
+                      ),
+
+                      const SizedBox(height: 32.0),
+
+                      // Action buttons - not full width, aligned right
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          _buildButton(
+                            label: 'Cancel',
+                            isPrimary: false,
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                          const SizedBox(width: 12.0),
+                          _buildButton(
+                            label: 'Save Changes',
+                            isPrimary: true,
+                            onPressed: _settingsModified ? _saveAllSettings : null,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 16.0),
-
-                  // General UI accordion (collapsed by default)
-                  _SettingsAccordion(
-                    title: 'General UI',
-                    initiallyExpanded: false,
-                    children: [
-                      _buildThemeSelector(),
-                    ],
-                  ),
-
-                  const SizedBox(height: 32.0),
-
-                  // Action buttons - not full width, aligned right
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      _buildButton(
-                        label: 'Cancel',
-                        isPrimary: false,
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      const SizedBox(width: 12.0),
-                      _buildButton(
-                        label: 'Save Changes',
-                        isPrimary: true,
-                        onPressed: () {
-                          // TODO: Save all settings
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
@@ -426,10 +513,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildTextField({
     required String label,
-    required String value,
-    required Function(String) onChanged,
+    required TextEditingController controller,
     String? placeholder,
+    String? hint,
     int maxLines = 1,
+    bool obscureText = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -446,13 +534,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   : const Color(0xFF333333),
             ),
           ),
+          if (hint != null) ...[
+            const SizedBox(height: 4.0),
+            Text(
+              hint,
+              style: TextStyle(
+                fontSize: 12.0,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF999999)
+                    : const Color(0xFF666666),
+              ),
+            ),
+          ],
           const SizedBox(height: 8.0),
           TextField(
-            controller: TextEditingController(text: value)
-              ..selection = TextSelection.collapsed(offset: value.length),
-            onChanged: onChanged,
-            maxLines: maxLines,
+            controller: controller,
+            maxLines: obscureText ? 1 : maxLines,
             minLines: maxLines > 1 ? maxLines : 1,
+            obscureText: obscureText,
             decoration: InputDecoration(
               hintText: placeholder,
               border: OutlineInputBorder(
@@ -485,69 +584,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ? const Color(0xFFE0E0E0)
                   : const Color(0xFF333333),
               fontSize: 14.0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDropdownField({
-    required String label,
-    required String value,
-    required Function(String?) onChanged,
-    required List<String> items,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14.4,
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFFE0E0E0)
-                  : const Color(0xFF333333),
-            ),
-          ),
-          const SizedBox(height: 8.0),
-          DropdownButtonFormField<String>(
-            value: value,
-            onChanged: onChanged,
-            items: items.map<DropdownMenuItem<String>>((item) {
-              return DropdownMenuItem<String>(
-                value: item.toLowerCase(),
-                child: Text(item),
-              );
-            }).toList(),
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6.0),
-                borderSide: BorderSide(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF555555)
-                      : const Color(0xFFCCCCCC),
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6.0),
-                borderSide: BorderSide(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF555555)
-                      : const Color(0xFFCCCCCC),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6.0),
-                borderSide: const BorderSide(
-                  color: Color(0xFF347AB7),
-                  width: 2.0,
-                ),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             ),
           ),
         ],
