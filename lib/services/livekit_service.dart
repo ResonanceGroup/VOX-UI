@@ -22,13 +22,14 @@ class LiveKitService {
   bool _isMuted = false;
   String _serverUrl = '';
   String _authToken = '';
+  Timer? _localAudioTimer;
   
   LiveKitService._internal() : _orbController = LiveKitOrbController();
   
   /// Simple connect - let LiveKit handle everything
   Future<void> connect(String url, String token) async {
     final urlPreview = url.length > 50 ? '${url.substring(0, 50)}...' : url;
-    debugPrint('[LiveKit] 🔌 CONNECT CALLED - URL: $urlPreview');
+    debugPrint('[LiveKit] 🔌 Connecting to: $urlPreview');
     
     _serverUrl = url;
     _authToken = token;
@@ -45,32 +46,26 @@ class LiveKitService {
       // Set up listeners BEFORE connecting
       _setupEventListeners();
       
-      debugPrint('[LiveKit] 🟡 ORB UPDATE - State: connecting, Status: "Connecting to server..."');
       _orbController.updateFromLiveKit('connecting', status: 'Connecting to server...');
       
       // Single connect call - LiveKit handles ICE, reconnection, etc.
       await _room!.connect(url, token);
       debugPrint('[LiveKit] Room connected successfully');
-      debugPrint('[LiveKit] Local participant: ${_room!.localParticipant?.identity}');
       
       // Enable microphone
-      debugPrint('[LiveKit] Enabling microphone...');
       await _room!.localParticipant?.setMicrophoneEnabled(true);
-      debugPrint('[LiveKit] Microphone enabled successfully');
       
       // Check if agent is already present
       _checkForAgent();
       
       // Update with successful connection status
-      debugPrint('[LiveKit] 🟢 ORB UPDATE - State: connected_with_agent, Status: "Connection established"');
+      debugPrint('[LiveKit] 🟢 Connected successfully');
       _orbController.updateFromLiveKit('connected_with_agent',
           status: 'Connection established');
           
     } catch (e, stackTrace) {
       debugPrint('[LiveKit] ❌ Connection error: $e');
-      debugPrint('[LiveKit] Stack trace: $stackTrace');
       // Let LiveKit's built-in reconnection handle network issues
-      debugPrint('[LiveKit] 🔴 ORB UPDATE - State: disconnected, Status: "Connection failed - check network"');
       _orbController.updateFromLiveKit('disconnected',
           status: 'Connection failed - check network');
     }
@@ -91,8 +86,12 @@ class LiveKitService {
       _listener = null;
       _agent = null;
       
+      // Cancel any active timers
+      _localAudioTimer?.cancel();
+      _localAudioTimer = null;
+      
       _orbController.updateFromLiveKit('disconnected');
-      debugPrint('[LiveKit] Disconnected from room successfully');
+      debugPrint('[LiveKit] Disconnected from room');
       
     } catch (e) {
       debugPrint('[LiveKit] Error disconnecting: $e');
@@ -100,6 +99,8 @@ class LiveKitService {
       _room = null;
       _listener = null;
       _agent = null;
+      _localAudioTimer?.cancel();
+      _localAudioTimer = null;
     }
   }
   
@@ -111,7 +112,7 @@ class LiveKitService {
     
     // Connection state changes - just update UI
     _listener!.on<RoomDisconnectedEvent>((event) {
-      debugPrint('[LiveKit] Room disconnected - let LiveKit handle reconnection');
+      debugPrint('[LiveKit] Room disconnected');
       // Don't trigger manual reconnection - LiveKit does this automatically
       _orbController.updateFromLiveKit('disconnected');
     });
@@ -132,7 +133,7 @@ class LiveKitService {
     
     // Track published (agent starts publishing audio/video)
     _listener!.on<TrackPublishedEvent>((event) {
-      debugPrint('[LiveKit] Track published: ${event.publication.kind}');
+      // debugPrint('[LiveKit] Track published: ${event.publication.kind}');
     });
     
     // Track subscribed (receiving agent audio)
@@ -145,19 +146,37 @@ class LiveKitService {
     
     // Track muted/unmuted
     _listener!.on<TrackMutedEvent>((event) {
-      debugPrint('[LiveKit] Track muted');
+      // debugPrint('[LiveKit] Track muted');
       if (_agent != null && !_isMuted) {
         _orbController.updateFromLiveKit('silent', status: 'Listening...');
       }
     });
     
     _listener!.on<TrackUnmutedEvent>((event) {
-      debugPrint('[LiveKit] Track unmuted');
+      // debugPrint('[LiveKit] Track unmuted');
+    });
+    
+    // Active speakers changed - for real-time speaking detection
+    _listener!.on<ActiveSpeakersChangedEvent>((event) {
+      if (_agent != null && !_isMuted) {
+        // Check if our agent is in the active speakers list
+        final agentIsSpeaking = event.speakers.contains(_agent);
+        
+        if (agentIsSpeaking) {
+          _orbController.updateFromLiveKit('talking',
+              status: 'Agent speaking...',
+              level: _agent!.audioLevel);
+        } else {
+          _orbController.updateFromLiveKit('silent',
+              status: 'Listening...',
+              level: 0.0);
+        }
+      }
     });
     
     // Data received (for text messages and commands)
     _listener!.on<DataReceivedEvent>((event) {
-      debugPrint('[LiveKit] Data received from ${event.participant?.identity}');
+      // debugPrint('[LiveKit] Data received from ${event.participant?.identity}');
       // Handle incoming data/messages from agent if needed
     });
   }
@@ -170,69 +189,68 @@ class LiveKitService {
     final participants = _room!.remoteParticipants.values.toList();
     if (participants.isNotEmpty) {
       _agent = participants.first;
-      debugPrint('[LiveKit] Agent found: ${_agent!.identity}');
+      debugPrint('[LiveKit] Agent connected: ${_agent!.identity}');
       
       if (_isMuted) {
-        _orbController.updateFromLiveKit('muted', 
+        _orbController.updateFromLiveKit('muted',
             status: 'Microphone muted');
       } else {
-        _orbController.updateFromLiveKit('connected_with_agent', 
+        _orbController.updateFromLiveKit('connected_with_agent',
             status: 'Agent connected - Ready');
       }
     } else {
       _agent = null;
-      _orbController.updateFromLiveKit('connected_no_agent', 
+      _orbController.updateFromLiveKit('connected_no_agent',
           status: 'No agent available');
     }
   }
   
   /// Track audio activity from an audio track
   void _setupAudioTracking(AudioTrack track) {
-    // Listen for audio activity (speaking detection)
+    // Listen for audio activity (speaking detection) using actual audio levels
     track.addListener(() {
-      // Track state changed - monitor for audio activity
-      debugPrint('[LiveKit] Audio track state changed');
+      // Track state changed - monitor for actual audio activity
+      // debugPrint('[LiveKit] Audio track state changed');
       
-      // Update orb state based on audio activity
+      // Check if participant is speaking based on actual audio levels
       if (_agent != null && !_isMuted) {
-        // Check if track is active (has audio data)
-        if (track.isActive) {
+        // Use participant's isSpeaking property for accurate detection
+        final isSpeaking = _agent!.isSpeaking;
+        // debugPrint('[LiveKit] Agent speaking status: $isSpeaking, audioLevel: ${_agent!.audioLevel}');
+        
+        if (isSpeaking) {
           _orbController.updateFromLiveKit('talking',
-              status: 'Agent speaking...');
-          
-          // Reset to idle after a short delay (simulating end of speech)
-          Future.delayed(const Duration(milliseconds: 800), () {
-            if (_agent != null) {
-              _orbController.updateFromLiveKit('silent',
-                  status: 'Listening...');
-            }
-          });
+              status: 'Agent speaking...',
+              level: _agent!.audioLevel);
+        } else {
+          // Only update to silent if we were previously talking
+          _orbController.updateFromLiveKit('silent',
+              status: 'Listening...',
+              level: 0.0);
         }
       }
     });
     
-    // Start monitoring audio levels
+    // Start monitoring actual audio levels for visualization
     _monitorAudioLevel(track);
   }
   
-  /// Monitor audio levels for visualization
+  /// Monitor audio levels for visualization using actual audio data
   void _monitorAudioLevel(AudioTrack track) {
-    // Create a timer to periodically check audio levels
-    Timer.periodic(const Duration(milliseconds: 200), (timer) {
+    // Create a timer to periodically check actual audio levels
+    Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (_agent == null || track.isDisposed) {
         timer.cancel();
         return;
       }
       
-      // Simulate audio level detection based on track activity
-      double audioLevel = 0.0;
-      if (track.isActive && _agent != null) {
-        // If agent is active, simulate varying audio levels
-        audioLevel = 0.3 + (DateTime.now().millisecond % 100) / 1000.0;
-      }
+      // Get actual audio level from participant
+      double audioLevel = _agent!.audioLevel;
       
-      // Update orb with audio level
-      _orbController.updateAudioLevel(audioLevel);
+      // Update orb with actual audio level for visualization
+      if (audioLevel > 0.01) { // Only update if there's actual audio
+        _orbController.updateAudioLevel(audioLevel);
+      }
     });
   }
   
@@ -269,12 +287,11 @@ class LiveKitService {
     }
     
     _isMuted = !_isMuted;
-    debugPrint('[LiveKit] Toggling mute to: ${!_isMuted}');
+    debugPrint('[LiveKit] Microphone ${_isMuted ? "muted" : "unmuted"}');
     
     try {
       // Use setMicrophoneEnabled to properly handle track publishing
       await _room!.localParticipant?.setMicrophoneEnabled(!_isMuted);
-      debugPrint('[LiveKit] Microphone enabled set to: ${!_isMuted}');
       
       if (_isMuted) {
         _orbController.updateFromLiveKit('muted',
@@ -286,11 +303,45 @@ class LiveKitService {
         _orbController.updateFromLiveKit('connected_no_agent',
             status: 'No agent available');
       }
+      
+      // Start monitoring local audio levels for user feedback
+      if (!_isMuted && _room!.localParticipant != null) {
+        _monitorLocalAudioLevel();
+      }
     } catch (e) {
       debugPrint('[LiveKit] Error toggling mute: $e');
       // Revert mute state if operation failed
       _isMuted = !_isMuted;
     }
+  }
+  
+  /// Monitor local audio levels for user microphone feedback
+  void _monitorLocalAudioLevel() {
+    // Clear any existing local audio monitoring
+    if (_localAudioTimer != null) {
+      _localAudioTimer!.cancel();
+      _localAudioTimer = null;
+    }
+    
+    // Only monitor when not muted
+    if (_isMuted) return;
+    
+    // Create a timer to periodically check local audio levels
+    _localAudioTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (_room?.localParticipant == null || _isMuted) {
+        timer.cancel();
+        _localAudioTimer = null;
+        return;
+      }
+      
+      // Get actual local audio level from local participant
+      double audioLevel = _room!.localParticipant!.audioLevel;
+      
+      // Update orb with local audio level for user feedback
+      if (audioLevel > 0.01) { // Only update if there's actual audio
+        _orbController.updateAudioLevel(audioLevel);
+      }
+    });
   }
   
   /// Get current mute state
