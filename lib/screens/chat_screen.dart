@@ -6,7 +6,7 @@ import '../widgets/navigation_drawer.dart';
 import '../theme/app_theme.dart';
 import '../controllers/livekit_orb_controller.dart';
 import '../services/livekit_service.dart';
-import '../providers/settings_provider.dart';
+import '../providers/app_settings_provider.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -45,7 +45,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     
     try {
       // Wait for settings to be loaded
-      final settingsAsync = ref.read(voiceAgentSettingsProvider);
+      final settingsAsync = ref.read(appSettingsProvider);
       
       // Check if still loading
       if (settingsAsync.isLoading) {
@@ -68,16 +68,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
       
       // Validate settings before connecting
-      if (settings.serverUrl.isEmpty) {
+      if (settings.voiceAgent.serverUrl.isEmpty) {
         throw Exception('Server URL not configured. Please set it in Settings.');
       }
       
-      if (settings.token.isEmpty) {
+      if (settings.voiceAgent.token.isEmpty) {
         throw Exception('LiveKit token not configured. Please set it in Settings.');
       }
       
-      await _liveKitService.connect(settings.serverUrl, settings.token);
-      debugPrint('[Chat] Connected to LiveKit: ${settings.serverUrl}');
+      await _liveKitService.connect(settings.voiceAgent.serverUrl, settings.voiceAgent.token);
+      debugPrint('[Chat] Connected to LiveKit: ${settings.voiceAgent.serverUrl}');
     } catch (e) {
       debugPrint('[Chat] Failed to connect to LiveKit: $e');
       // Show error to user

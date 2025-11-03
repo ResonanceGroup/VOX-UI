@@ -62,8 +62,9 @@ flutter pub get
 # Run on connected device/emulator
 flutter run
 
-# Run on web (for design reference)
-flutter run -d chrome
+# Run on web with FIXED PORT (REQUIRED for localStorage persistence)
+# IMPORTANT: Always use --web-port=8080 to ensure settings persist
+flutter run -d chrome --web-port=8080
 
 # Hot reload during development
 # Changes are reflected instantly in running app
@@ -73,6 +74,19 @@ flutter build apk  # Android
 flutter build ios  # iOS
 flutter build web  # Web
 ```
+
+### Web Development Important Note
+**CRITICAL**: When running the web app in Chrome for development, **always use a fixed port number** (`--web-port=8080`).
+
+**Why?** Flutter's default behavior uses random ports (e.g., `localhost:2026`, then `localhost:5234` on the next run), which causes localStorage to be isolated per port. This means settings saved on one port won't be available on another port, making it appear as if localStorage is being cleared.
+
+**Solution**: Using `--web-port=8080` ensures:
+- Settings save to `localhost:8080`
+- Settings load from `localhost:8080` on every run
+- localStorage persists across app restarts
+- Consistent development experience
+
+**Default Port**: `8080` (documented standard for this project)
 
 ## Technical Constraints
 

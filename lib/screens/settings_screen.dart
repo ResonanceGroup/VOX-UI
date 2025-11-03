@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monaco_editor/monaco_editor.dart';
 
 import '../theme/app_theme.dart';
-import '../providers/theme_provider.dart';
-import '../providers/settings_provider.dart';
+import '../providers/app_settings_provider.dart';
+import '../models/app_settings.dart';
 import '../models/voice_agent_settings.dart';
 import '../widgets/navigation_drawer.dart';
 
@@ -150,9 +150,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _saveAllSettings() async {
-    final notifier = ref.read(voiceAgentSettingsProvider.notifier);
+    final appSettingsNotifier = ref.read(appSettingsProvider.notifier);
+    final currentSettings = ref.read(appSettingsProvider).valueOrNull ?? AppSettings.defaults();
     
-    final settings = VoiceAgentSettings(
+    // Create updated voice agent settings
+    final voiceAgentSettings = VoiceAgentSettings(
       serverUrl: _serverUrlController.text,
       token: _tokenController.text,
       systemPrompt: _systemPromptController.text,
@@ -160,7 +162,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       voice: _voiceController.text,
     );
 
-    await notifier.updateAll(settings);
+    // Create updated app settings with both voice agent and current theme
+    final updatedSettings = currentSettings.copyWith(
+      voiceAgent: voiceAgentSettings,
+    );
+
+    await appSettingsNotifier.updateAll(updatedSettings);
     
     setState(() => _settingsModified = false);
     
@@ -172,8 +179,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _resetToDefaults() async {
-    final notifier = ref.read(voiceAgentSettingsProvider.notifier);
-    await notifier.resetToDefaults();
+    final appSettingsNotifier = ref.read(appSettingsProvider.notifier);
+    await appSettingsNotifier.resetToDefaults();
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -185,7 +192,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final settingsAsync = ref.watch(voiceAgentSettingsProvider);
+    final settingsAsync = ref.watch(appSettingsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -224,13 +231,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           data: (settings) {
             // Update controllers when settings load
-            if (_serverUrlController.text.isEmpty) {
-              _serverUrlController.text = settings.serverUrl;
-              _tokenController.text = settings.token;
-              _systemPromptController.text = settings.systemPrompt;
-              _modelController.text = settings.model;
-              _voiceController.text = settings.voice;
-            }
+            _serverUrlController.text = settings.voiceAgent.serverUrl;
+            _tokenController.text = settings.voiceAgent.token;
+            _systemPromptController.text = settings.voiceAgent.systemPrompt;
+            _modelController.text = settings.voiceAgent.model;
+            _voiceController.text = settings.voiceAgent.voice;
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
@@ -592,28 +597,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildThemeSelector() {
-    final currentTheme = ref.watch(themeModeProvider);
+    final appSettings = ref.watch(appSettingsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Theme',
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 14.0,
-            color: isDark ? const Color(0xFFE0E0E0) : const Color(0xFF333333),
-          ),
-        ),
-        const SizedBox(height: 8.0),
-        _ThemeToggle(
-          currentTheme: currentTheme,
-          onChanged: (mode) {
-            ThemeService.updateTheme(ref, mode);
-          },
-        ),
-      ],
+    return appSettings.when(
+      loading: () => const CircularProgressIndicator(),
+      error: (error, stack) => Text('Error: $error'),
+      data: (settings) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Theme',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 14.0,
+                color: isDark ? const Color(0xFFE0E0E0) : const Color(0xFF333333),
+              ),
+            ),
+            const SizedBox(height: 8.0),
+            _ThemeToggle(
+              currentTheme: settings.themeMode,
+              onChanged: (mode) async {
+                final notifier = ref.read(appSettingsProvider.notifier);
+                await notifier.updateThemeMode(mode);
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }

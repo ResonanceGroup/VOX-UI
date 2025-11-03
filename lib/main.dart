@@ -7,7 +7,7 @@ import 'screens/mcp_servers_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/orb_test_screen.dart';
 import 'theme/app_theme.dart';
-import 'providers/theme_provider.dart';
+import 'providers/app_settings_provider.dart';
 
 void main() {
   runApp(const ProviderScope(child: MainApp()));
@@ -40,15 +40,30 @@ class MainApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
-
-    return MaterialApp.router(
-      routerConfig: _router,
-      title: 'VOX UI',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
-      debugShowCheckedModeBanner: false,
+    // Watch the app settings provider to ensure settings are loaded
+    final settingsAsync = ref.watch(appSettingsProvider);
+    
+    return settingsAsync.when(
+      loading: () => const MaterialApp(
+        home: Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      error: (error, stack) => MaterialApp(
+        home: Scaffold(
+          body: Center(child: Text('Error loading settings: $error')),
+        ),
+      ),
+      data: (settings) {
+        return MaterialApp.router(
+          routerConfig: _router,
+          title: 'VOX UI',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: settings.themeMode,
+          debugShowCheckedModeBanner: false,
+        );
+      },
     );
   }
 }
