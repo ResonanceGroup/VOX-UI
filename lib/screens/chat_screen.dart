@@ -25,9 +25,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void initState() {
     super.initState();
     
-    // Initialize orb controller and LiveKit service
-    _orbController = LiveKitOrbController();
-    _liveKitService = LiveKitService(_orbController);
+    // Use singleton instances for both controller and service
+    _orbController = LiveKitOrbController(); // Singleton
+    _liveKitService = LiveKitService(_orbController); // Singleton
     
     // Defer connection until after first frame and settings are loaded
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -37,13 +37,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   
   /// Connect to LiveKit server using settings from provider
   Future<void> _connectToLiveKit() async {
-    if (_isConnecting) return;
+    // Check if already connected or connecting
+    if (_isConnecting) {
+      debugPrint('[Chat] Already connecting, skipping duplicate connection attempt');
+      return;
+    }
+    
+    // Check if LiveKit service is already connected
+    if (_liveKitService.isConnected) {
+      debugPrint('[Chat] Already connected to LiveKit, skipping connection');
+      return;
+    }
     
     setState(() {
       _isConnecting = true;
     });
     
     try {
+      debugPrint('[Chat] Attempting to connect to LiveKit...');
+      
       // Wait for settings to be loaded
       final settingsAsync = ref.read(appSettingsProvider);
       
@@ -76,10 +88,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         throw Exception('LiveKit token not configured. Please set it in Settings.');
       }
       
+      debugPrint('[Chat] Connecting with URL: ${settings.voiceAgent.serverUrl}');
       await _liveKitService.connect(settings.voiceAgent.serverUrl, settings.voiceAgent.token);
-      debugPrint('[Chat] Connected to LiveKit: ${settings.voiceAgent.serverUrl}');
+      debugPrint('[Chat] ✅ Connected to LiveKit: ${settings.voiceAgent.serverUrl}');
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Connected to LiveKit successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     } catch (e) {
-      debugPrint('[Chat] Failed to connect to LiveKit: $e');
+      debugPrint('[Chat] ❌ Failed to connect to LiveKit: $e');
       // Show error to user
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -122,14 +146,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   
   /// Toggle microphone mute state
   Future<void> _toggleMute() async {
+    debugPrint('[Chat] _toggleMute method called');
+    debugPrint('[Chat] Current mute state before toggle: ${_liveKitService.isMuted}');
     await _liveKitService.toggleMute();
     setState(() {}); // Refresh UI to show mute state
+    debugPrint('[Chat] Microphone mute state toggled: ${_liveKitService.isMuted}');
+    debugPrint('[Chat] _toggleMute method completed');
   }
   
   @override
   void dispose() {
-    // Clean up resources
-    _liveKitService.dispose();
+    // Clean up text controller, but not singleton service
     _textController.dispose();
     super.dispose();
   }
@@ -143,31 +170,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             : Colors.white,
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
-        title: Row(
-          children: [
-            const Text('AI Assistant'),
-            const SizedBox(width: 8),
-            // Connection status indicator
-            if (_isConnecting)
-              const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            else if (_liveKitService.isConnected)
-              Icon(
-                Icons.circle,
-                size: 12,
-                color: _liveKitService.hasAgent ? Colors.green : Colors.orange,
-              )
-            else
-              const Icon(
-                Icons.circle,
-                size: 12,
-                color: Colors.red,
-              ),
-          ],
-        ),
+        title: const Text('AI Assistant'),
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu),
@@ -178,15 +181,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
         ),
         actions: [
-          // Microphone mute button
-          IconButton(
-            icon: Icon(
-              _liveKitService.isMuted ? Icons.mic_off : Icons.mic,
-              color: _liveKitService.isMuted ? Colors.red : null,
-            ),
-            onPressed: _toggleMute,
-            tooltip: _liveKitService.isMuted ? 'Unmute' : 'Mute',
-          ),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1.0),
@@ -206,6 +200,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           child: OrbWidget(
             size: 300.0,
             controller: _orbController,
+            onToggleMute: _toggleMute,
           ),
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 
@@ -10,11 +11,13 @@ import '../controllers/livekit_orb_controller.dart';
 class OrbWidget extends StatefulWidget {
   final double size;
   final LiveKitOrbController? controller;
+  final VoidCallback? onToggleMute;
 
   const OrbWidget({
     super.key,
     this.size = 200.0,
     this.controller,
+    this.onToggleMute,
   });
 
   @override
@@ -38,7 +41,7 @@ class _OrbWidgetState extends State<OrbWidget> {
   void initState() {
     super.initState();
     
-    // Use provided controller or create a new one
+    // Use provided controller or get the singleton instance
     _orbController = widget.controller ?? LiveKitOrbController();
     
     // Generate unique view type for this iframe
@@ -47,6 +50,7 @@ class _OrbWidgetState extends State<OrbWidget> {
     // Set up state update listener - merge controller updates with our cache
     _stateUpdateCallback = () {
       final data = _orbController.currentData;
+      debugPrint('[OrbWidget] 🔔 Controller callback triggered - State: ${data.state}, Status: "${data.status}", Level: ${data.level}');
       _updateOrbFromController(
         state: data.state,
         level: data.level,
@@ -92,9 +96,9 @@ class _OrbWidgetState extends State<OrbWidget> {
   @override
   void dispose() {
     _orbController.removeListener(_stateUpdateCallback);
-    // Only dispose if we created the controller
+    // Only dispose if we created the controller (not singleton)
     if (widget.controller == null) {
-      _orbController.dispose();
+      _orbController.dispose(); // Don't dispose the singleton
     }
     super.dispose();
   }
@@ -111,6 +115,47 @@ class _OrbWidgetState extends State<OrbWidget> {
       _iframeElement.onLoad.listen((_) {
         setState(() {
           _isLoading = false;
+        });
+        
+        // Add message event listener to receive messages from iframe
+        html.window.addEventListener('message', (event) {
+          if (event is html.MessageEvent) {
+            print('Received message from iframe: ${event.data}');
+            print('Message origin: ${event.origin}');
+            
+            // Handle different data formats
+            dynamic data = event.data;
+            String? messageType;
+            
+            if (data is Map) {
+              messageType = data['type'] as String?;
+            } else if (data is String) {
+              try {
+                // Try to parse as JSON
+                final parsed = jsonDecode(data);
+                if (parsed is Map) {
+                  messageType = parsed['type'] as String?;
+                  data = parsed;
+                }
+              } catch (e) {
+                print('Failed to parse message data as JSON: $e');
+              }
+            }
+            
+            if (messageType == 'toggle-mute') {
+              print('Received toggle-mute message from iframe');
+              print('Current widget.onToggleMute is null: ${widget.onToggleMute == null}');
+              // Handle toggle mute message from iframe
+              if (widget.onToggleMute != null) {
+                print('Calling onToggleMute callback');
+                widget.onToggleMute!();
+              } else {
+                print('No onToggleMute callback provided');
+              }
+            } else {
+              print('Unknown message type: $messageType');
+            }
+          }
         });
         
         // Send initial state after a short delay
@@ -146,7 +191,10 @@ class _OrbWidgetState extends State<OrbWidget> {
   
   // The ONLY method that sends to iframe - always sends complete cached state
   void _sendOrbUpdate() {
-    if (_isLoading) return;
+    if (_isLoading) {
+      debugPrint('[OrbWidget] ⏳ Skipping update - iframe still loading');
+      return;
+    }
     
     try {
       final message = {
@@ -159,9 +207,11 @@ class _OrbWidgetState extends State<OrbWidget> {
         }
       };
       
+      debugPrint('[OrbWidget] 📤 Sending to iframe - State: $_currentState, Status: "$_currentStatus", Level: $_currentLevel');
       _iframeElement.contentWindow?.postMessage(message, '*');
+      debugPrint('[OrbWidget] ✅ Message posted to iframe');
     } catch (e) {
-      print('Error sending orb update: $e');
+      debugPrint('[OrbWidget] ❌ Error sending orb update: $e');
     }
   }
 
@@ -215,7 +265,7 @@ class _OrbWidgetState extends State<OrbWidget> {
 /// OrbController interface for main UI integration
 /// Provides clean API surface for the main application
 class OrbController {
-  final LiveKitOrbController _controller = LiveKitOrbController();
+  final LiveKitOrbController _controller = LiveKitOrbController(); // Uses singleton
 
   LiveKitOrbController get internalController => _controller;
 

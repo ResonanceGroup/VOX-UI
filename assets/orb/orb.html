@@ -851,6 +851,19 @@
       // Initialize elements
       initializeElements();
       
+      // Add click handler for microphone button
+      if (document.getElementById('mic-button')) {
+        document.getElementById('mic-button').addEventListener('click', function() {
+          console.log('Microphone button clicked - sending toggle-mute message');
+          console.log('Current document.body classes:', document.body.className);
+          // Send message to Flutter to toggle mute
+          window.parent.postMessage({
+            type: 'toggle-mute'
+          }, '*');
+          console.log('Toggle-mute message sent');
+        });
+      }
+      
       // Initial state
       updateUIState('idle');
       
