@@ -41,13 +41,8 @@ class LiveKitOrbController extends ChangeNotifier {
   }
   
   void updateFromLiveKit(String liveKitState, {double? level, String? status}) {
-    debugPrint('[OrbController] 📝 Received update - LiveKit State: "$liveKitState", Level: ${level ?? 'null'}, Status: "${status ?? 'null'}"');
-    
     final orbState = _mapLiveKitToOrbState(liveKitState);
-    debugPrint('[OrbController] 🔄 Mapped to Orb State: "$orbState"');
-    
     final finalStatus = status ?? _getDefaultStatus(orbState);
-    debugPrint('[OrbController] 💬 Final Status: "$finalStatus"');
     
     final data = LiveKitOrbData(
       state: orbState,
@@ -57,9 +52,7 @@ class LiveKitOrbController extends ChangeNotifier {
     );
     
     _currentData = data;
-    debugPrint('[OrbController] ✅ Data set - Notifying listeners');
     notifyListeners();
-    debugPrint('[OrbController] 🔔 Listeners notified');
   }
   
   // Manual tool execution trigger

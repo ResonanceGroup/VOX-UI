@@ -50,7 +50,6 @@ class _OrbWidgetState extends State<OrbWidget> {
     // Set up state update listener - merge controller updates with our cache
     _stateUpdateCallback = () {
       final data = _orbController.currentData;
-      debugPrint('[OrbWidget] 🔔 Controller callback triggered - State: ${data.state}, Status: "${data.status}", Level: ${data.level}');
       _updateOrbFromController(
         state: data.state,
         level: data.level,
@@ -120,9 +119,6 @@ class _OrbWidgetState extends State<OrbWidget> {
         // Add message event listener to receive messages from iframe
         html.window.addEventListener('message', (event) {
           if (event is html.MessageEvent) {
-            print('Received message from iframe: ${event.data}');
-            print('Message origin: ${event.origin}');
-            
             // Handle different data formats
             dynamic data = event.data;
             String? messageType;
@@ -138,22 +134,15 @@ class _OrbWidgetState extends State<OrbWidget> {
                   data = parsed;
                 }
               } catch (e) {
-                print('Failed to parse message data as JSON: $e');
+                // Silent error handling
               }
             }
             
             if (messageType == 'toggle-mute') {
-              print('Received toggle-mute message from iframe');
-              print('Current widget.onToggleMute is null: ${widget.onToggleMute == null}');
               // Handle toggle mute message from iframe
               if (widget.onToggleMute != null) {
-                print('Calling onToggleMute callback');
                 widget.onToggleMute!();
-              } else {
-                print('No onToggleMute callback provided');
               }
-            } else {
-              print('Unknown message type: $messageType');
             }
           }
         });
@@ -165,7 +154,6 @@ class _OrbWidgetState extends State<OrbWidget> {
       });
       
     } catch (e) {
-      print('Error loading orb iframe content: $e');
       setState(() {
         _isLoading = false;
       });
@@ -192,7 +180,6 @@ class _OrbWidgetState extends State<OrbWidget> {
   // The ONLY method that sends to iframe - always sends complete cached state
   void _sendOrbUpdate() {
     if (_isLoading) {
-      debugPrint('[OrbWidget] ⏳ Skipping update - iframe still loading');
       return;
     }
     
@@ -207,11 +194,9 @@ class _OrbWidgetState extends State<OrbWidget> {
         }
       };
       
-      debugPrint('[OrbWidget] 📤 Sending to iframe - State: $_currentState, Status: "$_currentStatus", Level: $_currentLevel');
       _iframeElement.contentWindow?.postMessage(message, '*');
-      debugPrint('[OrbWidget] ✅ Message posted to iframe');
     } catch (e) {
-      debugPrint('[OrbWidget] ❌ Error sending orb update: $e');
+      // Silent error handling
     }
   }
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+e <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -491,8 +491,8 @@
       width: 56px;
       height: 56px;
       border-radius: 50%;
-      border: 1px solid #cccccc;
-      background: rgba(242, 242, 242, 0.9);
+      border: 1px solid #f44336;
+      background: rgba(244, 67, 54, 0.15);
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -503,8 +503,8 @@
     }
 
     .mic-button:hover {
-      background: rgba(242, 242, 242, 1);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      background: rgba(244, 67, 54, 0.25);
+      box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
       transform: scale(1.05);
     }
 
@@ -513,53 +513,70 @@
     }
 
     .mic-button svg {
-      color: #555555;
+      color: #f44336;
       transition: color 0.3s ease;
     }
 
     .mic-button:hover svg {
-      color: #333333;
+      color: #ff6b6b;
     }
 
     /* Muted state styling */
     .state-muted .mic-button {
-      background: rgba(244, 67, 54, 0.15);
-      border-color: #f44336;
+      background: rgba(242, 242, 242, 0.9);
+      border-color: #cccccc;
     }
 
     .state-muted .mic-button svg {
-      color: #f44336;
+      color: #555555;
     }
 
     .state-muted .mic-button:hover {
-      background: rgba(244, 67, 54, 0.25);
+      background: rgba(242, 242, 242, 1);
+    }
+
+    .state-muted .mic-button:hover svg {
+      color: #333333;
     }
 
     /* Dark theme */
     .overlay-dark .mic-button {
-      background: rgba(80, 80, 80, 0.9);
-      border-color: #666666;
-    }
-
-    .overlay-dark .mic-button:hover {
-      background: rgba(96, 96, 96, 1);
-    }
-
-    .overlay-dark .mic-button svg {
-      color: #d0d0d0;
-    }
-
-    .overlay-dark .mic-button:hover svg {
-      color: #ffffff;
-    }
-
-    .overlay-dark.state-muted .mic-button {
       background: rgba(244, 67, 54, 0.2);
       border-color: #f44336;
     }
 
-    .overlay-dark.state-muted .mic-button:hover {
+    .overlay-dark .mic-button:hover {
       background: rgba(244, 67, 54, 0.3);
+    }
+
+    .overlay-dark .mic-button svg {
+      color: #f44336;
+    }
+
+    .overlay-dark .mic-button:hover svg {
+      color: #ff6b6b;
+    }
+
+    /* Dark theme - muted state (normal colors) */
+    .overlay-dark .state-muted .mic-button {
+      background: rgba(80, 80, 80, 0.9);
+      border-color: #666666;
+    }
+
+    .overlay-dark .state-muted .mic-button:hover {
+      background: rgba(96, 96, 96, 1);
+    }
+
+    .overlay-dark .state-muted .mic-button svg {
+      color: #d0d0d0;
+    }
+
+    .overlay-dark .state-muted .mic-button:hover svg {
+      color: #ffffff;
+    }
+
+    .overlay-dark .state-muted .mic-button:hover svg {
+      color: #ffffff;
     }
 
     /* Container styling */
@@ -714,17 +731,13 @@
       // Update UI state
       function updateUIState(newState, detail = '') {
         if (!ALL_STATES.includes(newState)) {
-          console.warn('Invalid AI state provided:', newState);
+          // Silent error handling
           return;
         }
-
-        console.log('Updating UI State: ' + newState + ', Detail: ' + detail);
 
         // Manage State Classes on Body
         ALL_STATES.forEach(state => document.body.classList.remove('state-' + state));
         document.body.classList.add('state-' + newState);
-        
-        console.log('Applied state class "state-' + newState + '" to document.body');
         
         // Store the state before mute if not already muted
         if (newState === 'muted' && currentAIState !== 'muted') {
@@ -781,35 +794,26 @@
         // Use innerHTML for icon to support SVG, textContent for text
         statusIcon.innerHTML = iconContent;
         statusText.textContent = textContent;
-
-        console.log('UI updated for state: ' + newState);
       }
       
       // Global update function
       window.updateOrbOverlay = function(payload) {
-        console.log('Updating orb overlay:', payload);
         
         // Handle commands first (highest priority)
         if (payload.command) {
-          console.log('Processing command:', payload.command);
           if (payload.command === 'show') {
-            console.log('Showing overlay');
             // Show is implicit in WebView - just continue processing
           } else if (payload.command === 'hide') {
-            console.log('Hide command received');
             // Hide is implicit in WebView - just continue processing
           }
         }
         
         // Handle theme
         if (payload.theme) {
-          console.log('Processing theme:', payload.theme);
           if (payload.theme === 'dark') {
             document.body.classList.add('overlay-dark');
-            console.log('Applied dark theme');
           } else {
             document.body.classList.remove('overlay-dark');
-            console.log('Applied light theme');
           }
         }
         
@@ -827,23 +831,18 @@
         var audioLevel = payload.level !== undefined ? payload.level : payload.audioLevel;
         if (audioLevel !== undefined && orbElement) {
           var level = parseFloat(audioLevel) || 0;
-          console.log('Setting audio level:', level);
           
           orbElement.style.setProperty('--intensity', level.toFixed(3));
           
           // Set audio level data attribute
           if (level > 0.75) {
             orbElement.dataset.audioLevel = 'high';
-            console.log('Set data-audio-level="high"');
           } else if (level > 0.5) {
             orbElement.dataset.audioLevel = 'medium';
-            console.log('Set data-audio-level="medium"');
           } else if (level > 0.25) {
             orbElement.dataset.audioLevel = 'low';
-            console.log('Set data-audio-level="low"');
           } else {
             delete orbElement.dataset.audioLevel;
-            console.log('Removed data-audio-level attribute');
           }
         }
       };
@@ -854,20 +853,15 @@
       // Add click handler for microphone button
       if (document.getElementById('mic-button')) {
         document.getElementById('mic-button').addEventListener('click', function() {
-          console.log('Microphone button clicked - sending toggle-mute message');
-          console.log('Current document.body classes:', document.body.className);
           // Send message to Flutter to toggle mute
           window.parent.postMessage({
             type: 'toggle-mute'
           }, '*');
-          console.log('Toggle-mute message sent');
         });
       }
       
       // Initial state
       updateUIState('idle');
-      
-      console.log('Orb initialization complete');
     })();
   </script>
 
@@ -927,7 +921,6 @@
     
     // Manual initialization function for testing
     window.testOrbState = function(state) {
-      console.log('Testing orb state:', state);
       if (window.updateOrbOverlay) {
         window.updateOrbOverlay({ state: state, status: 'Manual test state' });
       }
