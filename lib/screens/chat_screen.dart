@@ -180,7 +180,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             },
           ),
         ),
-        actions: [
+        actions: const [
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1.0),
