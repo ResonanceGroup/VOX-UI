@@ -20,10 +20,14 @@ from livekit.agents.types import APIConnectOptions
 from livekit.plugins import silero, openai
 
 from a2a_llm import A2ALLM
+from clawdbot_llm import ClawdbotLLM
 
 load_dotenv(override=True)
 
 A2A_URL = os.getenv("A2A_URL")
+CLAWDBOT_GATEWAY_BASE_URL = os.getenv("CLAWDBOT_GATEWAY_BASE_URL")
+CLAWDBOT_GATEWAY_TOKEN = os.getenv("CLAWDBOT_GATEWAY_TOKEN")
+CLAWDBOT_AGENT_ID = os.getenv("CLAWDBOT_AGENT_ID", "main")
 
 # Simple example tool
 @function_tool
@@ -71,9 +75,17 @@ async def entrypoint(ctx: JobContext):
             api_key=os.getenv("WHISPER_API_KEY", "not-needed"),
             model=os.getenv("WHISPER_MODEL", "Systran/faster-whisper-large-v3"),
         ),
-        # LLM: Agent Zero via A2A (preferred) or local Ollama fallback
+        # LLM backend order: Clawdbot Gateway -> Agent Zero (A2A) -> local Ollama
         llm=(
-            A2ALLM(
+            ClawdbotLLM(
+                base_url=CLAWDBOT_GATEWAY_BASE_URL,
+                token=CLAWDBOT_GATEWAY_TOKEN or "",
+                agent_id=CLAWDBOT_AGENT_ID,
+                participant=ctx.room.local_participant,
+                timeout_s=float(os.getenv("CLAWDBOT_TIMEOUT_S", "120")),
+            )
+            if CLAWDBOT_GATEWAY_BASE_URL
+            else A2ALLM(
                 a2a_url=A2A_URL,
                 participant=ctx.room.local_participant,
                 timeout_s=float(os.getenv("A2A_TIMEOUT_S", "120")),

@@ -34,3 +34,16 @@ curl -s http://localhost:8787/token \
   -H 'content-type: application/json' \
   -d '{"room":"vox","identity":"phone","name":"Jason","canPublish":true,"canSubscribe":true}'
 ```
+
+
+## Clawdbot agent discovery
+
+If you run Clawdbot Gateway on your network, you can expose a safe agent list to the UI (without putting the gateway token in the browser):
+
+- `GET /clawdbot/agents` → `{ "agents": ["main", ...] }`
+
+Environment variables:
+- `CLAWDBOT_GATEWAY_BASE_URL` (example: `http://10.0.0.50:1234`)
+- `CLAWDBOT_GATEWAY_TOKEN` (Bearer token, keep server-side)
+- `CLAWDBOT_AGENT_ID` (default agent id, default `main`)
+- `CLAWDBOT_AGENTS` (optional comma list fallback)
