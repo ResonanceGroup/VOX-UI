@@ -41,7 +41,11 @@ const server = http.createServer((req, res) => {
   let filePath = path.join(STATIC_DIR, req.url === '/' ? '/index.html' : req.url.split('?')[0]);
   if (!fs.existsSync(filePath)) filePath = path.join(STATIC_DIR, 'index.html');
   const ext = path.extname(filePath);
-  res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+  const isFlutterAsset = ['.js', '.html', '.json'].includes(ext);
+  res.writeHead(200, {
+    'Content-Type': MIME[ext] || 'application/octet-stream',
+    'Cache-Control': isFlutterAsset ? 'no-store, no-cache, must-revalidate' : 'public, max-age=86400',
+  });
   fs.createReadStream(filePath).pipe(res);
 });
 

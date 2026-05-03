@@ -1,4 +1,4 @@
-import '../widgets/orb_webview_widget.dart';
+import '../widgets/orb_widget.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

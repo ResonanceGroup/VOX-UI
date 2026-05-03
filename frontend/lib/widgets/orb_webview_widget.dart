@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -187,49 +188,54 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   }
 
   Future<void> _initWebView() async {
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..enableZoom(false)
-      ..setBackgroundColor(Colors.transparent)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (String url) {
-            // Push correct initial state BEFORE revealing the WebView so
-            // there is no visible flash from the HTML default (idle).
-            // _isLoading stays true until after the post-frame callback below.
-            // Wire mic button → orbChannel after page is fully loaded
-            _controller.runJavaScript('''
-              (function() {
-                var micBtn = document.getElementById('mic-button');
-                if (micBtn) {
-                  var newBtn = micBtn.cloneNode(true);
-                  micBtn.parentNode.replaceChild(newBtn, micBtn);
-                  newBtn.addEventListener('click', function() {
-                    orbChannel.postMessage(JSON.stringify({type: 'toggle-mute'}));
-                  });
-                }
-              })();
-            ''');
-            _sendOrbUpdate();
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) { setState(() { _isLoading = false; }); _sendOrbUpdate(); }
-            });
-          },
-        ),
-      )
-      ..addJavaScriptChannel(
-        'orbChannel',
-        onMessageReceived: (JavaScriptMessage message) {
-          try {
-            final data = jsonDecode(message.message);
-            if (data['type'] == 'toggle-mute') {
-              widget.onToggleMute?.call();
-            }
-          } catch (e) {
-            // Ignore parse errors
-          }
+    // Assign controller first so _controller is always valid even if
+    // later platform calls throw (e.g., enableZoom on web).
+    _controller = WebViewController();
+    await _controller.setJavaScriptMode(JavaScriptMode.unrestricted);
+    // enableZoom not supported on web — skip to avoid PlatformException
+    if (!kIsWeb) {
+      await _controller.enableZoom(false);
+    }
+    await _controller.setBackgroundColor(Colors.transparent);
+    await _controller.setNavigationDelegate(
+      NavigationDelegate(
+        onPageFinished: (String url) {
+          // Push correct initial state BEFORE revealing the WebView so
+          // there is no visible flash from the HTML default (idle).
+          // _isLoading stays true until after the post-frame callback below.
+          // Wire mic button → orbChannel after page is fully loaded
+          _controller.runJavaScript('''
+            (function() {
+              var micBtn = document.getElementById('mic-button');
+              if (micBtn) {
+                var newBtn = micBtn.cloneNode(true);
+                micBtn.parentNode.replaceChild(newBtn, micBtn);
+                newBtn.addEventListener('click', function() {
+                  orbChannel.postMessage(JSON.stringify({type: 'toggle-mute'}));
+                });
+              }
+            })();
+          ''');
+          _sendOrbUpdate();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) { setState(() { _isLoading = false; }); _sendOrbUpdate(); }
+          });
         },
-      );
+      ),
+    );
+    await _controller.addJavaScriptChannel(
+      'orbChannel',
+      onMessageReceived: (JavaScriptMessage message) {
+        try {
+          final data = jsonDecode(message.message);
+          if (data['type'] == 'toggle-mute') {
+            widget.onToggleMute?.call();
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+      },
+    );
 
     final htmlContent = await rootBundle.loadString('assets/orb/orb.html');
 

@@ -13,7 +13,7 @@ class AppConstants {
   static const String profilesRoute = '/profiles';
 
   // AI Voice Agent Settings
-  static const String aiTokenServiceUrl = 'http://10.0.0.200:7882';
+  static const String aiTokenServiceUrl = 'https://rg-w00-chat.resonancegroupusa.com/api';
   static const String aiDefaultRoom = 'ai-assistant-room';
   static const String aiParticipantIdentity = 'dashboard-tablet';
 
