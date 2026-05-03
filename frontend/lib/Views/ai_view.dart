@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../debug/ui_tuning_values.dart';
 import '../Controllers/ai_controller.dart';
 import '../models/services/livekit_service.dart';
-import '../models/services/json_rpc_service.dart';
 import '../models/app_preferences_notifier.dart';
 import '../permissions_helper.dart';
 import 'theme_manager.dart';

@@ -1,168 +1,149 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../app_preferences.dart';
+import '../llm_profile.dart';
 
 /// PreferencesService - Handles persistent storage of app preferences
-/// 
-/// This service is responsible for saving and loading user preferences to/from
-/// persistent storage (SharedPreferences, Hive, SQLite, etc.)
-/// 
-/// Separation of concerns:
-/// - AppPreferences: Pure data model (what to store)
-/// - PreferencesService: Storage operations (how to store)
-/// - AppPreferencesNotifier: State management (when to store)
+///
+/// Uses SharedPreferences for persistence. Stores the main preferences
+/// blob as JSON under a single key, and LLM profiles as a separate key.
 class PreferencesService {
-  static const String _storageKey = 'app_preferences_v1';
+  static const String _prefsKey = 'vox_ui_preferences_v1';
+  static const String _llmProfilesKey = 'vox_ui_llm_profiles';
+  static const String _activeProfileIdKey = 'vox_ui_active_profile_id';
+  static const String _livekitUrlKey = 'vox_ui_livekit_url';
+  static const String _tokenServiceUrlKey = 'vox_ui_token_service_url';
+  static const String _sttBaseUrlKey = 'vox_ui_stt_base_url';
+  static const String _ttsBaseUrlKey = 'vox_ui_tts_base_url';
+  static const String _ttsVoiceKey = 'vox_ui_tts_voice';
+
+  SharedPreferences? _prefs;
+
+  /// Initialize SharedPreferences (call once at startup)
+  Future<void> init() async {
+    _prefs = await SharedPreferences.getInstance();
+    if (kDebugMode) {
+      debugPrint('PreferencesService: Initialized');
+    }
+  }
+
+  SharedPreferences get _p {
+    assert(_prefs != null, 'PreferencesService not initialized. Call init() first.');
+    return _prefs!;
+  }
+
+  // ========== General Preferences ==========
 
   /// Save preferences to persistent storage
-  /// 
-  /// TODO: Implement actual persistence using SharedPreferences or Hive
-  /// Dependencies needed:
-  /// - Add to pubspec.yaml: shared_preferences: ^2.2.0
-  /// - Import: import 'package:shared_preferences/shared_preferences.dart';
-  /// 
-  /// Example implementation:
-  /// ```dart
-  /// final prefs = await SharedPreferences.getInstance();
-  /// final jsonString = jsonEncode(preferences.toJson());
-  /// await prefs.setString(_storageKey, jsonString);
-  /// ```
   Future<void> save(AppPreferences preferences) async {
-    // TODO: Implement SharedPreferences save logic
-    if (kDebugMode) {
-      print('TODO: Save preferences to storage');
-      print('  Data to save: ${jsonEncode(preferences.toJson())}');
+    try {
+      final jsonString = jsonEncode(preferences.toJson());
+      await _p.setString(_prefsKey, jsonString);
+      if (kDebugMode) {
+        debugPrint('PreferencesService: Saved preferences');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PreferencesService: Error saving preferences: $e');
+      }
     }
-    
-    // For now, just simulate async operation
-    await Future.delayed(const Duration(milliseconds: 10));
-    
-    // TODO: Error handling
-    // try {
-    //   final prefs = await SharedPreferences.getInstance();
-    //   final jsonString = jsonEncode(preferences.toJson());
-    //   await prefs.setString(_storageKey, jsonString);
-    //   if (kDebugMode) {
-    //     print('✅ Preferences saved successfully');
-    //   }
-    // } catch (e) {
-    //   if (kDebugMode) {
-    //     print('❌ Error saving preferences: $e');
-    //   }
-    //   rethrow;
-    // }
   }
 
   /// Load preferences from persistent storage
-  /// Returns null if no saved preferences exist
-  /// 
-  /// TODO: Implement actual persistence using SharedPreferences or Hive
-  /// 
-  /// Example implementation:
-  /// ```dart
-  /// final prefs = await SharedPreferences.getInstance();
-  /// final jsonString = prefs.getString(_storageKey);
-  /// if (jsonString == null) return null;
-  /// final json = jsonDecode(jsonString);
-  /// return AppPreferences.fromJson(json);
-  /// ```
   Future<AppPreferences?> load() async {
-    // TODO: Implement SharedPreferences load logic
-    if (kDebugMode) {
-      print('TODO: Load preferences from storage');
-      print('  Using default preferences for now');
+    try {
+      final jsonString = _p.getString(_prefsKey);
+      if (jsonString == null) return null;
+      final json = jsonDecode(jsonString) as Map<String, dynamic>;
+      return AppPreferences.fromJson(json);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PreferencesService: Error loading preferences: $e');
+      }
+      return null;
     }
-    
-    // For now, return null to indicate no saved preferences
-    // This will cause AppPreferencesNotifier to use defaults
-    return null;
-    
-    // TODO: Error handling
-    // try {
-    //   final prefs = await SharedPreferences.getInstance();
-    //   final jsonString = prefs.getString(_storageKey);
-    //   
-    //   if (jsonString == null) {
-    //     if (kDebugMode) {
-    //       print('ℹ️ No saved preferences found, using defaults');
-    //     }
-    //     return null;
-    //   }
-    //   
-    //   final json = jsonDecode(jsonString) as Map<String, dynamic>;
-    //   final preferences = AppPreferences.fromJson(json);
-    //   
-    //   if (kDebugMode) {
-    //     print('✅ Preferences loaded successfully');
-    //   }
-    //   
-    //   return preferences;
-    // } catch (e) {
-    //   if (kDebugMode) {
-    //     print('❌ Error loading preferences: $e');
-    //     print('   Using default preferences');
-    //   }
-    //   return null; // Fail gracefully with defaults
-    // }
   }
 
   /// Clear all saved preferences (reset to defaults)
-  /// 
-  /// TODO: Implement storage clear logic
-  /// 
-  /// Example implementation:
-  /// ```dart
-  /// final prefs = await SharedPreferences.getInstance();
-  /// await prefs.remove(_storageKey);
-  /// ```
   Future<void> clear() async {
-    // TODO: Implement SharedPreferences clear logic
-    if (kDebugMode) {
-      print('TODO: Clear preferences from storage');
+    try {
+      await _p.remove(_prefsKey);
+      if (kDebugMode) {
+        debugPrint('PreferencesService: Cleared preferences');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PreferencesService: Error clearing preferences: $e');
+      }
     }
-    
-    // For now, just simulate async operation
-    await Future.delayed(const Duration(milliseconds: 10));
-    
-    // TODO: Actual implementation
-    // try {
-    //   final prefs = await SharedPreferences.getInstance();
-    //   await prefs.remove(_storageKey);
-    //   if (kDebugMode) {
-    //     print('✅ Preferences cleared successfully');
-    //   }
-    // } catch (e) {
-    //   if (kDebugMode) {
-    //     print('❌ Error clearing preferences: $e');
-    //   }
-    //   rethrow;
-    // }
   }
 
-  // ========== FUTURE ENHANCEMENTS ==========
-  
-  /// TODO: Add migration support for version changes
-  /// When AppPreferences structure changes, this helps migrate old data
-  /// 
-  /// Example:
-  /// ```dart
-  /// Future<void> _migrateIfNeeded(Map<String, dynamic> json) async {
-  ///   final version = json['version'] ?? 1;
-  ///   if (version < 2) {
-  ///     // Migrate from v1 to v2
-  ///   }
-  /// }
-  /// ```
-  
-  /// TODO: Add export/import functionality
-  /// Allow users to backup/restore preferences
-  /// 
-  /// Example:
-  /// ```dart
-  /// Future<String> exportToJson() async { }
-  /// Future<void> importFromJson(String jsonString) async { }
-  /// ```
-  
-  /// TODO: Consider cloud sync (Firebase, iCloud, etc.)
-  /// Sync preferences across user's devices
+  // ========== LLM Profiles ==========
+
+  /// Load LLM profiles
+  List<LlmProfile> loadLlmProfiles() {
+    try {
+      final jsonString = _p.getString(_llmProfilesKey);
+      if (jsonString == null) return [];
+      final list = jsonDecode(jsonString) as List<dynamic>;
+      return list
+          .map((e) => LlmProfile.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PreferencesService: Error loading LLM profiles: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Save LLM profiles
+  Future<void> saveLlmProfiles(List<LlmProfile> profiles) async {
+    try {
+      final jsonString =
+          jsonEncode(profiles.map((p) => p.toJson()).toList());
+      await _p.setString(_llmProfilesKey, jsonString);
+      if (kDebugMode) {
+        debugPrint('PreferencesService: Saved ${profiles.length} LLM profiles');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PreferencesService: Error saving LLM profiles: $e');
+      }
+    }
+  }
+
+  /// Get active profile ID
+  String? getActiveProfileId() {
+    return _p.getString(_activeProfileIdKey);
+  }
+
+  /// Set active profile ID
+  Future<void> setActiveProfileId(String? id) async {
+    if (id != null) {
+      await _p.setString(_activeProfileIdKey, id);
+    } else {
+      await _p.remove(_activeProfileIdKey);
+    }
+  }
+
+  // ========== Connection Settings ==========
+
+  String get livekitUrl => _p.getString(_livekitUrlKey) ?? 'ws://localhost:7880';
+  set livekitUrl(String v) => _p.setString(_livekitUrlKey, v);
+
+  String get tokenServiceUrl => _p.getString(_tokenServiceUrlKey) ?? 'http://localhost:7882';
+  set tokenServiceUrl(String v) => _p.setString(_tokenServiceUrlKey, v);
+
+  // ========== Voice Endpoints ==========
+
+  String get sttBaseUrl => _p.getString(_sttBaseUrlKey) ?? 'https://jetson-whisper.resonancegroupusa.com';
+  set sttBaseUrl(String v) => _p.setString(_sttBaseUrlKey, v);
+
+  String get ttsBaseUrl => _p.getString(_ttsBaseUrlKey) ?? 'https://jetson-kokoro.resonancegroupusa.com';
+  set ttsBaseUrl(String v) => _p.setString(_ttsBaseUrlKey, v);
+
+  String get ttsVoice => _p.getString(_ttsVoiceKey) ?? 'af_heart';
+  set ttsVoice(String v) => _p.setString(_ttsVoiceKey, v);
 }

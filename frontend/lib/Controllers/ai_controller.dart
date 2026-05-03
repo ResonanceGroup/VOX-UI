@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/services/livekit_service.dart';
+import '../models/services/preferences_service.dart';
 import '../models/constants.dart';
 
 /// Controller for managing AI voice agent state and interactions
 class AIController extends ChangeNotifier {
   final LiveKitService _livekitService;
+  final PreferencesService? _preferencesService;
 
   // Subscriptions
   StreamSubscription<AIConnectionState>? _connectionStateSubscription;
@@ -28,13 +30,14 @@ class AIController extends ChangeNotifier {
   String? _errorMessage;
   double _currentAudioLevel = 0.0;
 
-  // Connection availability
-  bool _isTcpConnected = false;
+  // Device info
   bool _isTablet = false;
 
   AIController({
     LiveKitService? livekitService,
-  })  : _livekitService = livekitService ?? LiveKitService() {
+    PreferencesService? preferencesService,
+  })  : _livekitService = livekitService ?? LiveKitService(),
+        _preferencesService = preferencesService {
     _initialize();
   }
 
@@ -51,20 +54,9 @@ class AIController extends ChangeNotifier {
   bool get isMuted => _livekitService.isMuted;
   double get currentAudioLevel => _currentAudioLevel;
 
-  /// Check if AI is available based on connection type and device
+  /// Check if AI is available
   bool get isAIAvailable {
-    // In debug mode, always available
-    if (kDebugMode && AppConstants.isDemoMode) {
-      return true;
-    }
-
-    // Check if device is tablet or larger
-    if (!_isTablet) {
-      return false;
-    }
-
-    // AI voice connection is independent of the RV backend TCP connection —
-    // it connects directly to LiveKit on the Jetson via the local network.
+    if (kDebugMode && AppConstants.isDemoMode) return true;
     return true;
   }
 
@@ -75,12 +67,6 @@ class AIController extends ChangeNotifier {
 
   /// Get status message for UI
   String get statusMessage {
-    if (!isAIAvailable) {
-      if (!_isTablet) {
-        return 'AI is only available on tablets';
-      }
-    }
-
     switch (_connectionState) {
       case AIConnectionState.disconnected:
         return 'AI Disconnected';
@@ -104,13 +90,17 @@ class AIController extends ChangeNotifier {
     }
   }
 
+  /// Get the token service URL from preferences or defaults
+  String get _tokenServiceUrl {
+    return _preferencesService?.tokenServiceUrl ?? AppConstants.aiTokenServiceUrl;
+  }
+
   /// Initialize the controller
   void _initialize() {
     if (AppConstants.aiEnableDebugLogs) {
-      debugPrint('🤖 AIController: Initializing...');
+      debugPrint('AIController: Initializing...');
     }
 
-    // Listen to connection state changes
     _connectionStateSubscription =
         _livekitService.connectionState.listen((state) {
       _connectionState = state;
@@ -119,32 +109,28 @@ class AIController extends ChangeNotifier {
       } else {
         _errorMessage = null;
       }
-      // Auto-reconnect on unexpected disconnect (not from explicit user action)
       if (state == AIConnectionState.disconnected && isAIAvailable) {
         _reconnectTimer?.cancel();
         _reconnectTimer = Timer(const Duration(seconds: 3), () {
           if (_connectionState == AIConnectionState.disconnected) {
             if (AppConstants.aiEnableDebugLogs) {
-              debugPrint('🤖 AIController: Auto-reconnecting after unexpected disconnect...');
+              debugPrint('AIController: Auto-reconnecting...');
             }
             connect();
           }
         });
       } else {
-        // Connected or connecting — cancel any pending reconnect
         _reconnectTimer?.cancel();
         _reconnectTimer = null;
       }
       notifyListeners();
     });
 
-    // Listen to agent state changes
     _agentStateSubscription = _livekitService.agentState.listen((state) {
       _agentState = state;
       notifyListeners();
     });
 
-    // Listen to transcript updates
     _transcriptSubscription = _livekitService.transcript.listen((text) {
       _currentTranscript = text;
       _addToHistory(ConversationMessage(
@@ -155,10 +141,9 @@ class AIController extends ChangeNotifier {
       notifyListeners();
     });
 
-    // Listen to response updates
     _responseSubscription = _livekitService.response.listen((text) {
       _currentResponse = text;
-      _streamingAgentMessage = null; // final arrived — clear the preview
+      _streamingAgentMessage = null;
       _addToHistory(ConversationMessage(
         text: text,
         isUser: false,
@@ -167,73 +152,51 @@ class AIController extends ChangeNotifier {
       notifyListeners();
     });
 
-    // Listen to streaming (non-final) agent response for live preview
     _streamingResponseSubscription = _livekitService.streamingResponse.listen((text) {
-      // Empty string = clear signal (final segment incoming)
       _streamingAgentMessage = text.isEmpty ? null : text;
       notifyListeners();
     });
 
-    // Listen to audio level updates
     _audioLevelSubscription = _livekitService.audioLevel.listen((level) {
       _currentAudioLevel = level;
       notifyListeners();
-    });    
-    // Log audio levels periodically for debugging
+    });
+
     if (AppConstants.aiEnableDebugLogs) {
       _audioLevelLogTimer = Timer.periodic(const Duration(seconds: 2), (_) {
         if (_currentAudioLevel > 0.0) {
-          debugPrint('🎤 AIController: Audio level: ${(_currentAudioLevel * 100).toStringAsFixed(1)}%');
+          debugPrint('AIController: Audio level: ${(_currentAudioLevel * 100).toStringAsFixed(1)}%');
         }
       });
     }
-    
-    // In debug mode, start audio monitoring with a delay to avoid native crashes
+
     if (kDebugMode && AppConstants.isDemoMode) {
-      // Delay audio initialization to ensure UI is fully rendered and
-      // native audio subsystem is ready (prevents thread attachment crashes)
       Future.delayed(const Duration(milliseconds: 1500), () {
         _startDebugAudioMonitoring();
       });
     }
   }
 
-  /// Start audio monitoring in debug mode
   Future<void> _startDebugAudioMonitoring() async {
-    if (AppConstants.aiEnableDebugLogs) {
-      debugPrint('🎤 AIController: Starting debug audio monitoring...');
-    }
-    
     try {
       await _livekitService.startAudioMonitoring();
     } catch (e) {
-      if (AppConstants.aiEnableDebugLogs) {
-        debugPrint('❌ AIController: Failed to start audio monitoring: $e');
-      }
-      // Don't let audio monitoring failures crash the app
       _errorMessage = 'Audio monitoring unavailable';
     }
   }
 
-  /// Update device type (tablet or not)
   void updateDeviceType(bool isTablet) {
     _isTablet = isTablet;
     notifyListeners();
   }
 
-  /// Update TCP connection status
   void updateTcpConnectionStatus(bool isConnected) {
-    _isTcpConnected = isConnected;
     notifyListeners();
   }
 
   /// Connect to AI service
   Future<bool> connect() async {
-    // Skip connection in demo mode to avoid sending data
     if (kDebugMode && AppConstants.isDemoMode) {
-      if (AppConstants.aiEnableDebugLogs) {
-        debugPrint('🎭 AIController: Demo mode - simulating connection');
-      }
       _connectionState = AIConnectionState.connected;
       _agentState = AIAgentState.idle;
       notifyListeners();
@@ -241,25 +204,21 @@ class AIController extends ChangeNotifier {
     }
 
     if (!isAIAvailable) {
-      if (AppConstants.aiEnableDebugLogs) {
-        debugPrint('⚠️ AIController: AI not available');
-      }
-      _errorMessage = 'AI is not available on this device or connection';
+      _errorMessage = 'AI is not available';
       notifyListeners();
       return false;
     }
 
     try {
       if (AppConstants.aiEnableDebugLogs) {
-        debugPrint('🤖 AIController: Connecting to AI service...');
+        debugPrint('AIController: Connecting to AI service...');
       }
 
-      // Initialize LiveKit service
       await _livekitService.initialize();
 
-      // Fetch token from Jetson token service (no secrets in the app)
       final tokenData = await _livekitService.fetchToken(
         identity: AppConstants.aiParticipantIdentity,
+        tokenServiceUrl: _tokenServiceUrl,
       );
 
       final success = await _livekitService.connect(
@@ -268,23 +227,14 @@ class AIController extends ChangeNotifier {
       );
 
       if (success) {
-        if (AppConstants.aiEnableDebugLogs) {
-          debugPrint('✅ AIController: Connected to AI service');
-        }
         _errorMessage = null;
       } else {
-        if (AppConstants.aiEnableDebugLogs) {
-          debugPrint('❌ AIController: Failed to connect to AI service');
-        }
         _errorMessage = 'Failed to connect to AI service';
       }
 
       notifyListeners();
       return success;
     } catch (e) {
-      if (AppConstants.aiEnableDebugLogs) {
-        debugPrint('❌ AIController: Connection error: $e');
-      }
       _errorMessage = 'Connection error: $e';
       notifyListeners();
       return false;
@@ -293,11 +243,6 @@ class AIController extends ChangeNotifier {
 
   /// Disconnect from AI service
   Future<void> disconnect() async {
-    if (AppConstants.aiEnableDebugLogs) {
-      debugPrint('🤖 AIController: Disconnecting from AI service...');
-    }
-
-    // In demo mode, just update state
     if (kDebugMode && AppConstants.isDemoMode) {
       _connectionState = AIConnectionState.disconnected;
       _agentState = AIAgentState.idle;
@@ -315,42 +260,26 @@ class AIController extends ChangeNotifier {
 
   /// Send a text message to the AI
   Future<void> sendMessage(String message) async {
-    if (!isAIEnabled) {
-      if (AppConstants.aiEnableDebugLogs) {
-        debugPrint('⚠️ AIController: AI not enabled, cannot send message');
-      }
-      return;
-    }
+    if (!isAIEnabled) return;
 
-    // In demo mode, simulate response
     if (kDebugMode && AppConstants.isDemoMode) {
       _addToHistory(ConversationMessage(
         text: message,
         isUser: true,
         timestamp: DateTime.now(),
       ));
-      
-      // Simulate AI thinking
       _agentState = AIAgentState.processing;
       notifyListeners();
-      
       await Future.delayed(const Duration(seconds: 1));
-      
-      // Simulate response
       final demoResponse = 'This is a demo response. In production, the AI would respond based on your input: "$message"';
       _addToHistory(ConversationMessage(
         text: demoResponse,
         isUser: false,
         timestamp: DateTime.now(),
       ));
-      
       _agentState = AIAgentState.idle;
       notifyListeners();
       return;
-    }
-
-    if (AppConstants.aiEnableDebugLogs) {
-      debugPrint('💬 AIController: Sending message: $message');
     }
 
     await _livekitService.sendTextMessage(message);
@@ -363,61 +292,30 @@ class AIController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Start voice recording
   void startRecording() {
     _isRecording = true;
     notifyListeners();
-
-    if (AppConstants.aiEnableDebugLogs) {
-      debugPrint('🎙️ AIController: Started recording');
-    }
   }
 
-  /// Stop voice recording
   void stopRecording() {
     _isRecording = false;
     notifyListeners();
-
-    if (AppConstants.aiEnableDebugLogs) {
-      debugPrint('🛑 AIController: Stopped recording');
-    }
   }
 
-  /// Toggle microphone mute
   Future<void> toggleMute() async {
-    if (AppConstants.aiEnableDebugLogs) {
-      debugPrint('🎙️ AIController: Toggling mute (current: ${_livekitService.isMuted})');
-    }
-    
     await _livekitService.toggleMute();
-    // Notify listeners to update UI immediately
     notifyListeners();
-    
-    if (AppConstants.aiEnableDebugLogs) {
-      debugPrint('🎙️ AIController: Mute state changed to ${_livekitService.isMuted}');
-      debugPrint('🎙️ AIController: Current agent state: $_agentState');
-      debugPrint('🎙️ AIController: Is AI enabled: $isAIEnabled');
-      debugPrint('🎙️ AIController: Is AI available: $isAIAvailable');
-    }
   }
 
-  /// Clear conversation history
   void clearHistory() {
     _conversationHistory.clear();
     _currentTranscript = '';
     _currentResponse = '';
     notifyListeners();
-
-    if (AppConstants.aiEnableDebugLogs) {
-      debugPrint('🗑️ AIController: Cleared conversation history');
-    }
   }
 
-  /// Add message to conversation history
   void _addToHistory(ConversationMessage message) {
     _conversationHistory.add(message);
-    
-    // Keep only last 50 messages to prevent memory issues
     if (_conversationHistory.length > 50) {
       _conversationHistory.removeAt(0);
     }
@@ -425,52 +323,29 @@ class AIController extends ChangeNotifier {
 
   @override
   void dispose() {
-    if (AppConstants.aiEnableDebugLogs) {
-      debugPrint('🤖 AIController: Disposing...');
-    }
-
-    // Cancel audio level logging timer first
     _audioLevelLogTimer?.cancel();
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _audioLevelLogTimer = null;
-    
-    // Stop audio monitoring before disposing service
-    // This ensures the AudioStreamer stops before stream controllers close
+
     try {
       _livekitService.stopAudioMonitoring();
-    } catch (e) {
-      if (AppConstants.aiEnableDebugLogs) {
-        debugPrint('⚠️ AIController: Error stopping audio monitoring: $e');
-      }
-    }
-    
-    // Cancel all subscriptions
+    } catch (_) {}
+
     _connectionStateSubscription?.cancel();
     _connectionStateSubscription = null;
-    
     _agentStateSubscription?.cancel();
     _agentStateSubscription = null;
-    
     _transcriptSubscription?.cancel();
     _transcriptSubscription = null;
-    
     _responseSubscription?.cancel();
     _responseSubscription = null;
-    
     _streamingResponseSubscription?.cancel();
     _streamingResponseSubscription = null;
-
     _audioLevelSubscription?.cancel();
     _audioLevelSubscription = null;
-    
-    // Dispose LiveKit service (will clean up remaining resources)
+
     _livekitService.dispose();
-    
-    if (AppConstants.aiEnableDebugLogs) {
-      debugPrint('✅ AIController: Disposed successfully');
-    }
-    
     super.dispose();
   }
 }
