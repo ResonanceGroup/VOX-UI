@@ -50,3 +50,4 @@ frontend/**/*.g.dart
 frontend/android/.gradle/
 frontend/ios/Pods/
 
+backend/config_override.json

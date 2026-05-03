@@ -56,6 +56,11 @@ from livekit.plugins import openai, silero
 
 from api import BackendClient
 from config import config
+try:
+    from token_service import get_effective_config, load_config_override
+    load_config_override()
+except Exception:
+    def get_effective_config(): return {}
 
 # Conditional import for Letta LLM (only needed when using Letta)
 if config.llm_provider == "letta" and config.tools_enabled:
@@ -187,46 +192,47 @@ async def entrypoint(ctx: JobContext) -> None:
     if backend:
         logger.info(f"Backend status: connected={backend.connected}, devices={len(backend.cache.device_ids())}")
 
-    # Build the voice pipeline
+    # Build the voice pipeline.
+    # Read live config each session so settings changed via PUT /config
+    # take effect immediately on the next connection without restart.
+    eff = get_effective_config()
+
+    def _v1(url: str) -> str:
+        """Ensure URL ends with /v1."""
+        url = url.rstrip("/")
+        return url if url.endswith("/v1") else url + "/v1"
+
     session = AgentSession(
         # VAD: Silero (pre-loaded in prewarm)
         vad=ctx.proc.userdata["vad"],
 
-        # STT: Speaches / faster-whisper (port 9010)
+        # STT — reads live config
         stt=openai.STT(
-            base_url=config.stt_base_url,
+            base_url=_v1(eff.get("stt_url", config.stt_url)),
             api_key="dummy",
-            model=config.stt_model,
+            model=eff.get("stt_model", config.stt_model),
             language="en",
         ),
 
-        # LLM: Ollama (Phase 1) or Letta (Phase 2+)
-        llm=(
-            LettaLLM(LettaLLMConfig(
-                agent_id=config.letta_agent_id,
-                letta_url="http://localhost:8283",
-                letta_api_key=config.llm_api_key,
-            ))
-            if config.llm_provider == "letta" and config.tools_enabled
-            else openai.LLM(
-                base_url=config.llm_url,
-                api_key=config.llm_api_key,
-                model=config.llm_model_id,
-                temperature=config.llm_temperature,
-                max_completion_tokens=config.llm_max_completion_tokens,
-                tool_choice="auto",
-                timeout=httpx.Timeout(connect=30.0, read=120.0, write=30.0, pool=30.0),
-                extra_body={"think": False} if config.llm_disable_thinking else None,
-            )
+        # LLM — reads live config
+        llm=openai.LLM(
+            base_url=_v1(eff.get("llm_base_url", config.llm_base_url)),
+            api_key=eff.get("llm_api_key", config.llm_api_key),
+            model=eff.get("llm_model", config.llm_model),
+            temperature=float(eff.get("llm_temperature", config.llm_temperature)),
+            max_completion_tokens=int(eff.get("llm_max_completion_tokens", config.llm_max_completion_tokens)),
+            tool_choice="none",
+            timeout=httpx.Timeout(connect=30.0, read=120.0, write=30.0, pool=30.0),
+            extra_body={"think": False} if eff.get("llm_disable_thinking", config.llm_disable_thinking) else None,
         ),
 
-        # TTS: Kokoro (port 8880)
+        # TTS — reads live config
         tts=openai.TTS(
-            base_url=config.tts_base_url,
+            base_url=_v1(eff.get("tts_url", config.tts_url)),
             api_key="dummy",
             model="tts-1",
-            voice=config.tts_voice,
-            speed=config.tts_speed,
+            voice=eff.get("tts_voice", config.tts_voice),
+            speed=float(eff.get("tts_speed", config.tts_speed)),
         ),
     )
 
