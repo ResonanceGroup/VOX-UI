@@ -119,7 +119,12 @@ class _MainViewContentState extends State<_MainViewContent> {
             child: Column(
               children: [
                 _buildAppBar(scale),
-                Expanded(child: _destinations[_selectedIndex].view),
+                Expanded(
+                child: IndexedStack(
+                  index: _selectedIndex,
+                  children: _destinations.map((d) => d.view).toList(),
+                ),
+              ),
               ],
             ),
           ),
@@ -132,7 +137,10 @@ class _MainViewContentState extends State<_MainViewContent> {
   Widget _buildSmallScreenLayout(double scale) {
     return Scaffold(
       appBar: _buildAppBar(scale),
-      body: _destinations[_selectedIndex].view,
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _destinations.map((d) => d.view).toList(),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {

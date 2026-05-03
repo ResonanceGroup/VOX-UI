@@ -45,6 +45,8 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, {
     'Content-Type': MIME[ext] || 'application/octet-stream',
     'Cache-Control': isFlutterAsset ? 'no-store, no-cache, must-revalidate' : 'public, max-age=86400',
+    'CDN-Cache-Control': 'no-store',
+    'Cloudflare-CDN-Cache-Control': 'no-store',
   });
   fs.createReadStream(filePath).pipe(res);
 });
