@@ -19,6 +19,7 @@ class PreferencesService {
   static const String _ttsVoiceKey = 'vox_ui_tts_voice';
   static const String _ttsSpeedKey = 'vox_ui_tts_speed';
   static const String _themeModeKey = 'vox_ui_theme_mode';
+  static const String _backendBaseUrlKey = 'vox_ui_backend_base_url';
 
   SharedPreferences? _prefs;
 
@@ -135,7 +136,12 @@ class PreferencesService {
   String get livekitUrl => _p.getString(_livekitUrlKey) ?? 'ws://localhost:7880';
   set livekitUrl(String v) => _p.setString(_livekitUrlKey, v);
 
-  String get tokenServiceUrl => _p.getString(_tokenServiceUrlKey) ?? 'https://rg-w00-chat.resonancegroupusa.com/api';
+  /// Root backend URL, e.g. https://rg-w00-chat.resonancegroupusa.com
+  /// All API endpoints are derived from this: /api/token, /api/config, etc.
+  String get backendBaseUrl => _p.getString(_backendBaseUrlKey) ?? 'https://rg-w00-chat.resonancegroupusa.com';
+  set backendBaseUrl(String v) => _p.setString(_backendBaseUrlKey, v);
+
+  String get tokenServiceUrl => _p.getString(_tokenServiceUrlKey) ?? '${backendBaseUrl}/api';
   set tokenServiceUrl(String v) => _p.setString(_tokenServiceUrlKey, v);
 
   // ========== Voice Endpoints ==========

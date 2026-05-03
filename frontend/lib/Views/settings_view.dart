@@ -30,6 +30,7 @@ class _SettingsBody extends StatefulWidget {
 
 class _SettingsBodyState extends State<_SettingsBody> {
   // ── Text controllers ────────────────────────────────────────────────────
+  late final TextEditingController _backendBaseUrlCtrl;
   late final TextEditingController _livekitUrlCtrl;
   late final TextEditingController _tokenServiceUrlCtrl;
   late final TextEditingController _sttUrlCtrl;
@@ -66,6 +67,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
     _ttsSpeed = prefs.ttsSpeed;
     _selectedVoice = prefs.ttsVoice;
 
+    _backendBaseUrlCtrl  = TextEditingController(text: prefs.backendBaseUrl);
     _livekitUrlCtrl     = TextEditingController(text: prefs.livekitUrl);
     _tokenServiceUrlCtrl = TextEditingController(text: prefs.tokenServiceUrl);
     _sttUrlCtrl         = TextEditingController(text: prefs.sttBaseUrl);
@@ -90,6 +92,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
 
   @override
   void dispose() {
+    _backendBaseUrlCtrl.dispose();
     _livekitUrlCtrl.dispose();
     _tokenServiceUrlCtrl.dispose();
     _sttUrlCtrl.dispose();
@@ -144,6 +147,12 @@ class _SettingsBodyState extends State<_SettingsBody> {
     final notifier = context.read<AppPreferencesNotifier>();
 
     // Persist connection settings locally
+    final backendBase = _backendBaseUrlCtrl.text.trim().trimRight();
+    // Remove trailing slash for consistency
+    prefs.backendBaseUrl  = backendBase.endsWith('/') ? backendBase.substring(0, backendBase.length - 1) : backendBase;
+    // Derive tokenServiceUrl from base unless user has overridden it manually
+    prefs.tokenServiceUrl = '${prefs.backendBaseUrl}/api';
+    _tokenServiceUrlCtrl.text = prefs.tokenServiceUrl;
     prefs.livekitUrl      = _livekitUrlCtrl.text.trim();
     prefs.tokenServiceUrl = _tokenServiceUrlCtrl.text.trim();
     prefs.sttBaseUrl      = _sttUrlCtrl.text.trim();
@@ -292,6 +301,15 @@ class _SettingsBodyState extends State<_SettingsBody> {
         child: Padding(
           padding: EdgeInsets.all(16 * scale),
           child: Column(children: [
+            _field(
+              label: 'Backend Base URL',
+              ctrl: _backendBaseUrlCtrl,
+              scale: scale,
+              isDark: isDark,
+              hint: 'https://rg-w00-chat.resonancegroupusa.com',
+              helperText: 'Root URL for all backend API calls (/api/token, /api/config, etc.)',
+            ),
+            SizedBox(height: 16 * scale),
             _field(label: 'LiveKit Server URL',   ctrl: _livekitUrlCtrl,      scale: scale, isDark: isDark),
             SizedBox(height: 16 * scale),
             _field(label: 'Token Service URL',    ctrl: _tokenServiceUrlCtrl, scale: scale, isDark: isDark,
@@ -644,6 +662,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
     required double scale,
     required bool isDark,
     String? hint,
+    String? helperText,
     Widget? suffix,
     bool obscure = false,
   }) {

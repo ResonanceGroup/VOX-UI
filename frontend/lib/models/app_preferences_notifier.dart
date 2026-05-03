@@ -109,6 +109,9 @@ class AppPreferencesNotifier extends ChangeNotifier {
   String get livekitUrl => _preferencesService.livekitUrl;
   set livekitUrl(String v) => _preferencesService.livekitUrl = v;
 
+  String get backendBaseUrl => _preferencesService.backendBaseUrl;
+  set backendBaseUrl(String v) => _preferencesService.backendBaseUrl = v;
+
   String get tokenServiceUrl => _preferencesService.tokenServiceUrl;
   set tokenServiceUrl(String v) => _preferencesService.tokenServiceUrl = v;
 
