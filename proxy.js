@@ -1,0 +1,68 @@
+// VoxUI reverse proxy — serves on port 3000
+// Routes: /rtc* (WebSocket) → LiveKit :7880
+//         /api/* → Token service :7882
+//         /* → Flutter static files (from STATIC_DIR)
+const http = require('http');
+const path = require('path');
+const fs   = require('fs');
+const net  = require('net');
+const { WebSocketServer, WebSocket } = require('/home/rgadmin/.npm-global/lib/node_modules/ws');
+
+const STATIC_DIR  = '/home/rgadmin/repos/VOX-UI/frontend/build/web';
+const TOKEN_PORT  = 7882;
+const LK_PORT     = 7880;
+const SERVE_PORT  = 3000;
+
+const MIME = {
+  '.html': 'text/html', '.js': 'application/javascript',
+  '.css': 'text/css',   '.png': 'image/png',
+  '.ico': 'image/x-icon', '.json': 'application/json',
+  '.wasm': 'application/wasm', '.map': 'application/json',
+  '.ttf': 'font/ttf', '.svg': 'image/svg+xml',
+};
+
+function proxyHttp(req, res, targetPort, stripPrefix) {
+  const targetPath = stripPrefix ? req.url.replace(stripPrefix, '') || '/' : req.url;
+  const opts = { hostname: '127.0.0.1', port: targetPort, path: targetPath,
+    method: req.method, headers: { ...req.headers, host: `localhost:${targetPort}` } };
+  const pr = http.request(opts, (pr2) => {
+    res.writeHead(pr2.statusCode, pr2.headers);
+    pr2.pipe(res);
+  });
+  pr.on('error', (e) => { console.error('proxy error', e.message); res.writeHead(502).end(); });
+  req.pipe(pr);
+}
+
+const server = http.createServer((req, res) => {
+  // API proxy
+  if (req.url.startsWith('/api/')) return proxyHttp(req, res, TOKEN_PORT, '/api');
+
+  // Static files
+  let filePath = path.join(STATIC_DIR, req.url === '/' ? '/index.html' : req.url.split('?')[0]);
+  if (!fs.existsSync(filePath)) filePath = path.join(STATIC_DIR, 'index.html');
+  const ext = path.extname(filePath);
+  res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+  fs.createReadStream(filePath).pipe(res);
+});
+
+// WebSocket proxy for /rtc* → LiveKit
+const wss = new WebSocketServer({ noServer: true });
+server.on('upgrade', (req, socket, head) => {
+  if (!req.url.startsWith('/rtc')) { socket.destroy(); return; }
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    const upstream = new WebSocket(`ws://127.0.0.1:${LK_PORT}${req.url}`);
+    upstream.on('open', () => {
+      ws.on('message', (d, binary) => upstream.readyState === 1 && upstream.send(d, { binary }));
+      upstream.on('message', (d, binary) => ws.readyState === 1 && ws.send(d, { binary }));
+    });
+    const close = (code, reason) => {
+      try { ws.close(code, reason); } catch(_) {}
+      try { upstream.close(); } catch(_) {}
+    };
+    ws.on('close', close); upstream.on('close', close);
+    ws.on('error', (e) => { console.error('client ws error', e.message); close(1011); });
+    upstream.on('error', (e) => { console.error('upstream ws error', e.message); close(1011); });
+  });
+});
+
+server.listen(SERVE_PORT, () => console.log(`VoxUI proxy listening on :${SERVE_PORT}`));

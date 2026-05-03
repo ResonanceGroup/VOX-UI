@@ -135,7 +135,7 @@ class PreferencesService {
   String get livekitUrl => _p.getString(_livekitUrlKey) ?? 'ws://localhost:7880';
   set livekitUrl(String v) => _p.setString(_livekitUrlKey, v);
 
-  String get tokenServiceUrl => _p.getString(_tokenServiceUrlKey) ?? 'http://localhost:7882';
+  String get tokenServiceUrl => _p.getString(_tokenServiceUrlKey) ?? 'https://rg-w00-chat.resonancegroupusa.com/api';
   set tokenServiceUrl(String v) => _p.setString(_tokenServiceUrlKey, v);
 
   // ========== Voice Endpoints ==========
