@@ -1,13 +1,13 @@
 """
-config.py — RV Voice Agent Configuration
+config.py — VoxUI Voice Agent Configuration
 
 All settings are read from environment variables with sensible defaults.
-Override any value by setting the corresponding environment variable.
+Override any value by setting the corresponding environment variable or
+creating a .env file (see .env.example).
 
 Usage:
     from config import config
-    print(config.backend_host)
-    print(config.mcp_port)
+    print(config.llm_url)
 """
 
 import os
@@ -24,7 +24,7 @@ def _env(name: str, default):
     if val is None:
         return default
     if isinstance(default, bool):
-        return val.lower() in ("1", "true", "yes", "on")
+        return val.lower() in ('1', 'true', 'yes', 'on')
     if isinstance(default, int):
         try:
             return int(val)
@@ -38,106 +38,132 @@ def _env(name: str, default):
     return val
 
 
+def _normalize_base_url(url: str) -> str:
+    """Ensure URL ends with /v1, tolerating trailing slashes or bare host."""
+    url = url.rstrip('/')
+    if not url.endswith('/v1'):
+        url = url + '/v1'
+    return url
+
+
 @dataclass
 class AgentConfig:
     # ----------------------------------------------------------------
-    # LiveKit server (running locally on Jetson)
+    # LiveKit server
     # ----------------------------------------------------------------
-    livekit_url:    str = field(default_factory=lambda: _env("LIVEKIT_URL",    "ws://localhost:7880"))
-    livekit_api_key: str = field(default_factory=lambda: _env("LIVEKIT_API_KEY", "devkey"))
-    livekit_api_secret: str = field(default_factory=lambda: _env("LIVEKIT_API_SECRET", "devsecret"))
+    livekit_url:        str   = field(default_factory=lambda: _env('LIVEKIT_URL',        'ws://localhost:7880'))
+    livekit_api_key:    str   = field(default_factory=lambda: _env('LIVEKIT_API_KEY',    'devkey'))
+    livekit_api_secret: str   = field(default_factory=lambda: _env('LIVEKIT_API_SECRET', 'devsecret'))
+    livekit_room:       str   = field(default_factory=lambda: _env('LIVEKIT_ROOM',       'vox-ui-room'))
 
     # ----------------------------------------------------------------
-    # STT: Speaches / faster-whisper (running on port 9010)
+    # STT: OpenAI-compatible Whisper endpoint
+    # STT_URL should be the base URL without /v1 — it will be appended.
     # ----------------------------------------------------------------
-    stt_url:    str = field(default_factory=lambda: _env("STT_URL",    "http://localhost:9010"))
-    stt_model:  str = field(default_factory=lambda: _env("STT_MODEL",  "Systran/faster-distil-whisper-small.en"))
+    stt_url:   str = field(default_factory=lambda: _env('STT_URL',   'http://localhost:9010'))
+    stt_model: str = field(default_factory=lambda: _env('STT_MODEL', 'Systran/faster-distil-whisper-small.en'))
+
+    @property
+    def stt_base_url(self) -> str:
+        """STT endpoint with /v1 appended."""
+        return _normalize_base_url(self.stt_url)
 
     # ----------------------------------------------------------------
-    # TTS: Kokoro (running on port 8880)
+    # TTS: OpenAI-compatible Kokoro/TTS endpoint
+    # TTS_URL should be the base URL without /v1 — it will be appended.
     # ----------------------------------------------------------------
-    tts_url:    str = field(default_factory=lambda: _env("TTS_URL",    "http://localhost:8880"))
-    tts_voice:  str = field(default_factory=lambda: _env("TTS_VOICE",  "af_heart"))
-    tts_speed:  float = field(default_factory=lambda: _env("TTS_SPEED", 1.0))
+    tts_url:   str   = field(default_factory=lambda: _env('TTS_URL',   'http://localhost:8880'))
+    tts_voice: str   = field(default_factory=lambda: _env('TTS_VOICE', 'af_heart'))
+    tts_speed: float = field(default_factory=lambda: _env('TTS_SPEED', 1.0))
+
+    @property
+    def tts_base_url(self) -> str:
+        """TTS endpoint with /v1 appended."""
+        return _normalize_base_url(self.tts_url)
 
     # ----------------------------------------------------------------
-    # LLM: Ollama (Phase 1) or Letta (Phase 2+)
+    # LLM: Any OpenAI-compatible endpoint
     #
-    # Switch LLM_PROVIDER to control which backend to use:
-    #   "ollama" — Use Ollama at localhost:11433 (Phase 1)
-    #   "letta"  — Use Letta at localhost:8283 (Phase 2+)
+    # LLM_PROVIDER controls which preset URL to use:
+    #   'openai'  — Use LLM_BASE_URL directly (Hermes, vLLM, any custom)
+    #   'ollama'  — Use Ollama at localhost:11433
+    #   'letta'   — Use Letta at localhost:8283 (legacy, requires TOOLS_ENABLED)
+    #
+    # Set LLM_BASE_URL to override the URL for any provider.
+    # The /v1 suffix is added automatically if missing.
     # ----------------------------------------------------------------
-    llm_provider:   str = field(default_factory=lambda: _env("LLM_PROVIDER", "ollama"))
-    ollama_model:   str = field(default_factory=lambda: _env("OLLAMA_MODEL", "qwen3-30b-a1.5b-q4_k_m:latest"))
-    letta_agent_id: str = field(default_factory=lambda: _env("LETTA_AGENT_ID", ""))
-    letta_conversation_id: str = field(default_factory=lambda: _env("LETTA_CONVERSATION_ID", ""))
-    llm_api_key:    str = field(default_factory=lambda: _env("LLM_API_KEY",    "dummy"))
-    llm_temperature: float = field(default_factory=lambda: _env("LLM_TEMPERATURE", 0.1))
-    llm_max_completion_tokens: int = field(default_factory=lambda: _env("LLM_MAX_COMPLETION_TOKENS", 512))
-    # Set True to inject {"think": false} into every LLM request body.
-    # Disables chain-of-thought thinking on models that support it (e.g. Qwen3, Nemotron).
-    # Only applies when LLM_PROVIDER=ollama.
-    llm_disable_thinking: bool = field(default_factory=lambda: _env("LLM_DISABLE_THINKING", False))
+    llm_provider:              str   = field(default_factory=lambda: _env('LLM_PROVIDER',              'openai'))
+    llm_base_url:              str   = field(default_factory=lambda: _env('LLM_BASE_URL',              'http://localhost:8642'))
+    llm_model:                 str   = field(default_factory=lambda: _env('LLM_MODEL',                 'qwen3-30b-a3b-instruct'))
+    llm_api_key:               str   = field(default_factory=lambda: _env('LLM_API_KEY',               'dummy'))
+    llm_temperature:           float = field(default_factory=lambda: _env('LLM_TEMPERATURE',           0.3))
+    llm_max_completion_tokens: int   = field(default_factory=lambda: _env('LLM_MAX_COMPLETION_TOKENS', 512))
+    # Inject {"think": false} into LLM requests (Qwen3 / Nemotron thinking suppression)
+    llm_disable_thinking:      bool  = field(default_factory=lambda: _env('LLM_DISABLE_THINKING',      True))
+
+    # Legacy Letta fields (only used when LLM_PROVIDER=letta)
+    letta_agent_id:        str = field(default_factory=lambda: _env('LETTA_AGENT_ID',        ''))
+    letta_conversation_id: str = field(default_factory=lambda: _env('LETTA_CONVERSATION_ID', ''))
 
     @property
     def llm_url(self) -> str:
-        """Return the LLM endpoint URL based on the configured provider."""
-        if self.llm_provider == "letta":
-            return "http://localhost:8283/v1"
+        """Return the LLM endpoint base URL (with /v1) based on provider."""
+        if self.llm_provider == 'letta':
+            return 'http://localhost:8283/v1'
+        elif self.llm_provider == 'ollama':
+            return _normalize_base_url(_env('LLM_BASE_URL', 'http://localhost:11433'))
         else:
-            return "http://localhost:11433/v1"
+            # 'openai' or any custom provider — use LLM_BASE_URL directly
+            return _normalize_base_url(self.llm_base_url)
 
     @property
-    def llm_model(self) -> str:
-        """Return the LLM model/agent ID based on the configured provider."""
-        if self.llm_provider == "letta":
+    def llm_model_id(self) -> str:
+        """Return the model identifier for the LLM request."""
+        if self.llm_provider == 'letta':
             return self.letta_agent_id
-        else:
-            return self.ollama_model
+        return self.llm_model
 
     # ----------------------------------------------------------------
-    # Backend: RG Smart Control Backend TCP socket
-    # The backend provides device state and control via TCP JSON-RPC.
+    # RV backend (disabled for VoxUI — no device control)
     # ----------------------------------------------------------------
-    backend_enabled: bool = field(default_factory=lambda: _env("BACKEND_ENABLED", True))
-    backend_host:   str = field(default_factory=lambda: _env("BACKEND_HOST",   "10.0.0.2"))
-    backend_port:   int = field(default_factory=lambda: _env("BACKEND_PORT",   9001))
-    
-    # Backend connection retry strategy (exponential backoff)
-    backend_connect_timeout: float = field(default_factory=lambda: _env("BACKEND_CONNECT_TIMEOUT", 10.0))
-    backend_min_backoff: float = field(default_factory=lambda: _env("BACKEND_MIN_BACKOFF", 0.5))
-    backend_max_backoff: float = field(default_factory=lambda: _env("BACKEND_MAX_BACKOFF", 60.0))
+    backend_enabled: bool = field(default_factory=lambda: _env('BACKEND_ENABLED', False))
+    backend_host:    str  = field(default_factory=lambda: _env('BACKEND_HOST',    'localhost'))
+    backend_port:    int  = field(default_factory=lambda: _env('BACKEND_PORT',    9001))
+    backend_connect_timeout: float = field(default_factory=lambda: _env('BACKEND_CONNECT_TIMEOUT', 10.0))
+    backend_min_backoff:     float = field(default_factory=lambda: _env('BACKEND_MIN_BACKOFF', 0.5))
+    backend_max_backoff:     float = field(default_factory=lambda: _env('BACKEND_MAX_BACKOFF', 60.0))
 
     # ----------------------------------------------------------------
-    # Tools: Enable/disable tool calling
-    # When True, Letta agent can control RV devices via MCP.
+    # Tool calling (disabled for VoxUI — voice only)
     # ----------------------------------------------------------------
-    tools_enabled:  bool = field(default_factory=lambda: _env("TOOLS_ENABLED", False))
-    skip_greeting:   bool = field(default_factory=lambda: _env("SKIP_GREETING", False))
+    tools_enabled: bool = field(default_factory=lambda: _env('TOOLS_ENABLED', False))
+    mcp_enabled:   bool = field(default_factory=lambda: _env('MCP_ENABLED',   False))
+    mcp_port:      int  = field(default_factory=lambda: _env('MCP_PORT',      8284))
+    skip_greeting: bool = field(default_factory=lambda: _env('SKIP_GREETING', False))
 
     # ----------------------------------------------------------------
-    # MCP Server: Model Context Protocol for tool calling
-    # 
-    # The MCP server exposes RV tools (read_parameter, write_parameter, etc.)
-    # to the Letta agent. Tools are defined in mcp_server.py with full
-    # descriptions that Letta uses automatically - no need to duplicate
-    # tool documentation in memory blocks.
+    # Token service
     # ----------------------------------------------------------------
-    mcp_enabled: bool = field(default_factory=lambda: _env("MCP_ENABLED", True))
-    mcp_port: int = field(default_factory=lambda: _env("MCP_PORT", 8284))
+    token_service_port: int = field(default_factory=lambda: _env('TOKEN_SERVICE_PORT', 7882))
 
     # ----------------------------------------------------------------
     # Logging
     # ----------------------------------------------------------------
-    log_level:  str = field(default_factory=lambda: _env("LOG_LEVEL",  "INFO"))
+    log_level: str = field(default_factory=lambda: _env('LOG_LEVEL', 'INFO'))
 
 
-# Singleton — import and use directly: 
+# Singleton — import and use directly:
 config = AgentConfig()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Quick sanity check: print all config values
     import dataclasses
     for f in dataclasses.fields(config):
-        print(f"  {f.name}: {getattr(config, f.name)!r}")
+        print(f'  {f.name}: {getattr(config, f.name)!r}')
+    print()
+    print('Computed properties:')
+    print(f'  llm_url:      {config.llm_url!r}')
+    print(f'  llm_model_id: {config.llm_model_id!r}')
+    print(f'  stt_base_url: {config.stt_base_url!r}')
+    print(f'  tts_base_url: {config.tts_base_url!r}')

@@ -194,7 +194,7 @@ async def entrypoint(ctx: JobContext) -> None:
 
         # STT: Speaches / faster-whisper (port 9010)
         stt=openai.STT(
-            base_url=config.stt_url + "/v1",
+            base_url=config.stt_base_url,
             api_key="dummy",
             model=config.stt_model,
             language="en",
@@ -211,7 +211,7 @@ async def entrypoint(ctx: JobContext) -> None:
             else openai.LLM(
                 base_url=config.llm_url,
                 api_key=config.llm_api_key,
-                model=config.llm_model,
+                model=config.llm_model_id,
                 temperature=config.llm_temperature,
                 max_completion_tokens=config.llm_max_completion_tokens,
                 tool_choice="auto",
@@ -222,7 +222,7 @@ async def entrypoint(ctx: JobContext) -> None:
 
         # TTS: Kokoro (port 8880)
         tts=openai.TTS(
-            base_url=config.tts_url + "/v1",
+            base_url=config.tts_base_url,
             api_key="dummy",
             model="tts-1",
             voice=config.tts_voice,
