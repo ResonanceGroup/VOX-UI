@@ -37,6 +37,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
   late final TextEditingController _ttsUrlCtrl;
   late final TextEditingController _llmUrlCtrl;
   late final TextEditingController _llmModelCtrl;
+  late final TextEditingController _llmApiKeyCtrl;
   late final TextEditingController _previewTextCtrl;
 
   // ── Voice dropdown ───────────────────────────────────────────────────────
@@ -72,6 +73,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
     _ttsUrlCtrl         = TextEditingController(text: prefs.ttsBaseUrl);
     _llmUrlCtrl         = TextEditingController(text: '');
     _llmModelCtrl       = TextEditingController(text: '');
+    _llmApiKeyCtrl      = TextEditingController(text: '');
     _previewTextCtrl    = TextEditingController(
         text: 'Hello! This is a voice preview from VoxUI.');
 
@@ -95,6 +97,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
     _ttsUrlCtrl.dispose();
     _llmUrlCtrl.dispose();
     _llmModelCtrl.dispose();
+    _llmApiKeyCtrl.dispose();
     _previewTextCtrl.dispose();
     _audioPlayer.dispose();
     super.dispose();
@@ -111,6 +114,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
       if (cfg['tts_url']      != null) _ttsUrlCtrl.text   = cfg['tts_url']!;
       if (cfg['llm_base_url'] != null) _llmUrlCtrl.text   = cfg['llm_base_url']!;
       if (cfg['llm_model']    != null) _llmModelCtrl.text = cfg['llm_model']!;
+      if (cfg['llm_api_key']  != null) _llmApiKeyCtrl.text = (cfg['llm_api_key'] ?? '') as String;
       if (cfg['tts_voice']    != null) {
         _selectedVoice = cfg['tts_voice'] as String;
       }
@@ -160,6 +164,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
       'tts_speed':     _ttsSpeed,
       'llm_base_url':  _llmUrlCtrl.text.trim(),
       'llm_model':     _llmModelCtrl.text.trim(),
+      'llm_api_key':   _llmApiKeyCtrl.text.trim(),
     });
 
     if (!mounted) return;
@@ -318,6 +323,9 @@ class _SettingsBodyState extends State<_SettingsBody> {
               SizedBox(height: 16 * scale),
               _field(label: 'Model Name', ctrl: _llmModelCtrl, scale: scale, isDark: isDark,
                   hint: 'qwen3-30b-a3b-instruct'),
+              SizedBox(height: 16 * scale),
+              _field(label: 'API Key', ctrl: _llmApiKeyCtrl, scale: scale, isDark: isDark,
+                  hint: 'Leave blank if not required', obscure: true),
               if (profiles.isNotEmpty) ...[
                 SizedBox(height: 16 * scale),
                 Text('Saved Profiles', style: TextStyle(
@@ -637,6 +645,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
     required bool isDark,
     String? hint,
     Widget? suffix,
+    bool obscure = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -648,6 +657,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
         SizedBox(height: 8 * scale),
         TextField(
           controller: ctrl,
+          obscureText: obscure,
           style: TextStyle(fontSize: 15 * scale),
           decoration: InputDecoration(
             hintText: hint,
