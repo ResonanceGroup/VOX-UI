@@ -122,6 +122,9 @@ class AppPreferencesNotifier extends ChangeNotifier {
   String get ttsVoice => _preferencesService.ttsVoice;
   set ttsVoice(String v) => _preferencesService.ttsVoice = v;
 
+  double get ttsSpeed => _preferencesService.ttsSpeed;
+  set ttsSpeed(double v) => _preferencesService.ttsSpeed = v;
+
   // ========== STATE UPDATE METHODS ==========
 
   void setUISize(UISize size) {

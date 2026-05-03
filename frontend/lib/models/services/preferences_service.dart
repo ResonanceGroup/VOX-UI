@@ -17,6 +17,7 @@ class PreferencesService {
   static const String _sttBaseUrlKey = 'vox_ui_stt_base_url';
   static const String _ttsBaseUrlKey = 'vox_ui_tts_base_url';
   static const String _ttsVoiceKey = 'vox_ui_tts_voice';
+  static const String _ttsSpeedKey = 'vox_ui_tts_speed';
 
   SharedPreferences? _prefs;
 
@@ -146,4 +147,7 @@ class PreferencesService {
 
   String get ttsVoice => _p.getString(_ttsVoiceKey) ?? 'af_heart';
   set ttsVoice(String v) => _p.setString(_ttsVoiceKey, v);
+
+  double get ttsSpeed => _p.getDouble(_ttsSpeedKey) ?? 1.0;
+  set ttsSpeed(double v) => _p.setDouble(_ttsSpeedKey, v);
 }
