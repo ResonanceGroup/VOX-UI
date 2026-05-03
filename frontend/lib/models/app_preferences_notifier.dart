@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'app_preferences.dart';
 import 'services/preferences_service.dart';
@@ -124,6 +125,21 @@ class AppPreferencesNotifier extends ChangeNotifier {
 
   double get ttsSpeed => _preferencesService.ttsSpeed;
   set ttsSpeed(double v) => _preferencesService.ttsSpeed = v;
+
+  ThemeMode get themeMode {
+    switch (_preferencesService.themeModeName) {
+      case 'light': return ThemeMode.light;
+      case 'system': return ThemeMode.system;
+      default: return ThemeMode.dark;
+    }
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    final name = mode == ThemeMode.light ? 'light'
+               : mode == ThemeMode.system ? 'system' : 'dark';
+    _preferencesService.themeModeName = name;
+    notifyListeners();
+  }
 
   // ========== STATE UPDATE METHODS ==========
 

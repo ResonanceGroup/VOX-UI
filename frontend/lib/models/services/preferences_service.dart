@@ -18,6 +18,7 @@ class PreferencesService {
   static const String _ttsBaseUrlKey = 'vox_ui_tts_base_url';
   static const String _ttsVoiceKey = 'vox_ui_tts_voice';
   static const String _ttsSpeedKey = 'vox_ui_tts_speed';
+  static const String _themeModeKey = 'vox_ui_theme_mode';
 
   SharedPreferences? _prefs;
 
@@ -150,4 +151,8 @@ class PreferencesService {
 
   double get ttsSpeed => _p.getDouble(_ttsSpeedKey) ?? 1.0;
   set ttsSpeed(double v) => _p.setDouble(_ttsSpeedKey, v);
+
+  /// 'dark' | 'light' | 'system'
+  String get themeModeName => _p.getString(_themeModeKey) ?? 'dark';
+  set themeModeName(String v) => _p.setString(_themeModeKey, v);
 }

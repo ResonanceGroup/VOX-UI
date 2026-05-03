@@ -239,6 +239,8 @@ class _SettingsBodyState extends State<_SettingsBody> {
                 SizedBox(height: 24 * scale),
                 _buildPreviewCard(isDark, scale),
                 SizedBox(height: 24 * scale),
+                _buildThemeSection(settings, isDark, scale),
+                SizedBox(height: 24 * scale),
                 _buildUIScalingSection(settings, isDark, scale),
                 SizedBox(height: 24 * scale),
                 _buildResetButton(context, settings, scale),
@@ -491,6 +493,36 @@ class _SettingsBodyState extends State<_SettingsBody> {
             ],
           ),
         ));
+  }
+
+  // ── Theme ─────────────────────────────────────────────────────────────────
+
+  Widget _buildThemeSection(AppPreferencesNotifier settings, bool isDark, double scale) {
+    return _Section(title: 'Theme', icon: Icons.brightness_6_outlined,
+        scale: scale, isDark: isDark,
+        child: Column(children: [
+          _themeRadio('Dark',   ThemeMode.dark,   settings, scale),
+          Divider(height: 1 * scale),
+          _themeRadio('Light',  ThemeMode.light,  settings, scale),
+          Divider(height: 1 * scale),
+          _themeRadio('System', ThemeMode.system, settings, scale),
+        ]));
+  }
+
+  Widget _themeRadio(String label, ThemeMode mode,
+      AppPreferencesNotifier settings, double scale) {
+    return RadioListTile<ThemeMode>(
+      title: Text(label, style: TextStyle(fontSize: 16 * scale, fontWeight: FontWeight.w500)),
+      value: mode,
+      groupValue: settings.themeMode,
+      onChanged: (v) {
+        if (v == null) return;
+        settings.setThemeMode(v);
+        // Also update ThemeManager so the app reacts immediately
+        context.read<ThemeManager>().setThemeMode(v);
+      },
+      activeColor: AppColors.primaryBlue,
+    );
   }
 
   // ── UI Scaling ────────────────────────────────────────────────────────────

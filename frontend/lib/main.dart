@@ -10,6 +10,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefsService = PreferencesService();
   await prefsService.init();
+  // Apply persisted theme to ThemeManager at startup
+  final savedTheme = prefsService.themeModeName;
+  ThemeManager().setThemeMode(
+    savedTheme == 'light'  ? ThemeMode.light
+    : savedTheme == 'system' ? ThemeMode.system
+    : ThemeMode.dark,
+  );
   runApp(
     MultiProvider(
       providers: [
