@@ -1,0 +1,4 @@
+{
+    "cmake.ignoreCMakeListsMissing": true,
+    "github.copilot.llm-gateway.parallelToolCalling": false
+}

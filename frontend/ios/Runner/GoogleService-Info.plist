@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>462600381570-9nbhs9me2carmtr825n3ah5c6agnh34p.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.462600381570-9nbhs9me2carmtr825n3ah5c6agnh34p</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>462600381570-htci1n2k563s5si2gemaa1fgrph7tqoj.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyCzoIX4HPzxT4xJlmn9tlqqWmzDkJpOYok</string>
+	<key>GCM_SENDER_ID</key>
+	<string>462600381570</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.resonancegroup.rgsmartcontrol</string>
+	<key>PROJECT_ID</key>
+	<string>rg-smart-control-system</string>
+	<key>STORAGE_BUCKET</key>
+	<string>rg-smart-control-system.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:462600381570:ios:b166e8493738503238809b</string>
+	<key>DATABASE_URL</key>
+	<string>https://rg-smart-control-system-default-rtdb.firebaseio.com</string>
+</dict>
+</plist>

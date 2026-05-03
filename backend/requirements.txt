@@ -1,0 +1,17 @@
+# RG Smart Control AI Backend
+
+# LiveKit Agents and plugins (1.4.5)
+# Note: livekit-rtc is included as a dependency of livekit-agents
+livekit-agents==1.4.5
+livekit-plugins-openai==1.4.5
+livekit-plugins-silero==1.4.5
+livekit-plugins-turn-detector==1.4.5
+
+# Logging and utilities (built-in, listed for clarity)
+# - asyncio, logging, json, dataclasses, difflib (Python stdlib)
+
+# Optional: for development/testing
+# - pytest for unit tests
+# - python-dotenv for .env file loading (recommended)
+
+python-dotenv>=1.0.0

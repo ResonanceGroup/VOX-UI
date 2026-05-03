@@ -41,3 +41,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# VoxUI flutter-webui
+backend/.env
+frontend/build/
+frontend/.dart_tool/
+frontend/**/*.g.dart
+frontend/android/.gradle/
+frontend/ios/Pods/
+
