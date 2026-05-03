@@ -51,3 +51,4 @@ frontend/android/.gradle/
 frontend/ios/Pods/
 
 backend/config_override.json
+backend/.env
