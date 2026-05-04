@@ -497,6 +497,7 @@ class _AIViewContentState extends State<_AIViewContent> {
       livekitService: controller.livekitService,
       onToggleMute: () => controller.toggleMute(),
       onToggleSpeakerMute: () => controller.toggleSpeakerMute(),
+      onOpenTray: () => setState(() => _isHistoryTrayOpen = true),
       isMuted: controller.isMuted,
       isSpeakerMuted: controller.isSpeakerMuted,
       debugOrbState: _debugOrbState,

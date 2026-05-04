@@ -755,6 +755,34 @@
       border-color: rgba(160, 160, 160, 0.35) !important;
       cursor: not-allowed; opacity: 0.7;
     }
+
+    /* Tray grab handle — mobile tap target for opening chat history tray */
+    .tray-handle {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 50;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tray-handle-bar {
+      width: 72px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.35);
+      border-radius: 2px;
+      transition: background 0.2s;
+    }
+    .tray-handle:active .tray-handle-bar {
+      background: rgba(255, 255, 255, 0.65);
+    }
+    .overlay-dark .tray-handle-bar {
+      background: rgba(255, 255, 255, 0.3);
+    }
   </style>
 </head>
 <body>
@@ -1082,6 +1110,13 @@
         });
       }
       
+      // Add click handler for tray grab handle (open-tray for mobile)
+      if (document.getElementById('tray-handle')) {
+        document.getElementById('tray-handle').addEventListener('click', function() {
+          window.parent.postMessage(JSON.stringify({type: 'open-tray'}), '*');
+        });
+      }
+
       // Initial state
       updateUIState('idle');
     })();
@@ -1148,5 +1183,11 @@
       }
     };
   </script>
+
+  <!-- Tray grab handle: sends open-tray postMessage so mobile touches
+       reach Flutter despite the iframe capturing all pointer events. -->
+  <div id="tray-handle" class="tray-handle">
+    <div class="tray-handle-bar"></div>
+  </div>
 </body>
 </html>

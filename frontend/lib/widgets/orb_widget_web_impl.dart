@@ -33,6 +33,7 @@ class OrbWebViewWidget extends StatefulWidget {
   final LiveKitService? livekitService;
   final VoidCallback? onToggleMute;
   final VoidCallback? onToggleSpeakerMute;
+  final VoidCallback? onOpenTray;
   final bool isMuted;
   final bool isSpeakerMuted;
   final String? debugOrbState;
@@ -49,6 +50,7 @@ class OrbWebViewWidget extends StatefulWidget {
     this.livekitService,
     this.onToggleMute,
     this.onToggleSpeakerMute,
+    this.onOpenTray,
     this.isMuted = false,
     this.isSpeakerMuted = false,
     this.debugOrbState,
@@ -111,6 +113,8 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
           widget.onToggleMute?.call();
         } else if (type == 'toggle-speaker-mute') {
           widget.onToggleSpeakerMute?.call();
+        } else if (type == 'open-tray') {
+          widget.onOpenTray?.call();
         }
       } catch (_) {}
     });
