@@ -15,7 +15,9 @@ class OrbWebViewWidget extends StatefulWidget {
   final double size;
   final LiveKitService? livekitService;
   final VoidCallback? onToggleMute;
+  final VoidCallback? onToggleSpeakerMute;
   final bool isMuted;
+  final bool isSpeakerMuted;
   final String? debugOrbState; // Override orb state for testing (kDebugMode only)
   final double orbScale;
   final double orbContainerGap;
@@ -29,7 +31,9 @@ class OrbWebViewWidget extends StatefulWidget {
     this.size = 300.0,
     this.livekitService,
     this.onToggleMute,
+    this.onToggleSpeakerMute,
     this.isMuted = false,
+    this.isSpeakerMuted = false,
     this.debugOrbState,
     this.orbScale = 1.0,
     this.orbContainerGap = 15.0,
@@ -79,6 +83,10 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     } else if (widget.isMuted) {
       // Theme or other prop changed while still muted — re-assert muted visuals
       _currentState = 'muted';
+    }
+    // Handle speaker mute changes (only needs re-send, no orb state change)
+    if (widget.isSpeakerMuted != oldWidget.isSpeakerMuted) {
+      // speakerMuted is in the payload — _sendOrbUpdate below picks it up
     }
     _sendOrbUpdate();
   }
@@ -214,6 +222,14 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
                   orbChannel.postMessage(JSON.stringify({type: 'toggle-mute'}));
                 });
               }
+              var speakerBtn = document.getElementById('speaker-button');
+              if (speakerBtn) {
+                var newSpeaker = speakerBtn.cloneNode(true);
+                speakerBtn.parentNode.replaceChild(newSpeaker, speakerBtn);
+                newSpeaker.addEventListener('click', function() {
+                  orbChannel.postMessage(JSON.stringify({type: 'toggle-speaker-mute'}));
+                });
+              }
             })();
           ''');
           _sendOrbUpdate();
@@ -320,6 +336,7 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
         'level': _currentLevel,
         'theme': _currentTheme,
         'status': widget.debugOrbState != null ? widget.debugOrbState : _currentStatus,
+        'speakerMuted': widget.isSpeakerMuted,
         'uiTuning': {
           'orbScale': widget.orbScale,
           'orbContainerGap': widget.orbContainerGap,

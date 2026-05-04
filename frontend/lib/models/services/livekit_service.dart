@@ -76,6 +76,7 @@ class LiveKitService {
   Room? _room;
   LocalAudioTrack? _localAudioTrack;
   RemoteAudioTrack? _remoteAudioTrack;
+  bool _isSpeakerMuted = false;
 
   // Connection state streams
   final StreamController<AIConnectionState> _connectionStateController =
@@ -403,6 +404,14 @@ class LiveKitService {
         debugPrint('LiveKitService: Failed to send message: $e');
       }
     }
+  }
+
+  bool get isSpeakerMuted => _isSpeakerMuted;
+
+  // Note: actual audio muting on web is handled in orb_widget_web_impl.dart
+  // via dart:html AudioElement.muted (livekit_client 2.5.4 has no setVolume API)
+  void toggleSpeakerMute() {
+    _isSpeakerMuted = !_isSpeakerMuted;
   }
 
   Future<void> toggleMute() async {

@@ -31,7 +31,9 @@ class OrbWebViewWidget extends StatefulWidget {
   final double size;
   final LiveKitService? livekitService;
   final VoidCallback? onToggleMute;
+  final VoidCallback? onToggleSpeakerMute;
   final bool isMuted;
+  final bool isSpeakerMuted;
   final String? debugOrbState;
   final double orbScale;
   final double orbContainerGap;
@@ -45,7 +47,9 @@ class OrbWebViewWidget extends StatefulWidget {
     this.size = 300.0,
     this.livekitService,
     this.onToggleMute,
+    this.onToggleSpeakerMute,
     this.isMuted = false,
+    this.isSpeakerMuted = false,
     this.debugOrbState,
     this.orbScale = 1.0,
     this.orbContainerGap = 15.0,
@@ -78,12 +82,32 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   AIAgentState? _previousAgentState;
   Timer? _notifyRevertTimer;
 
+  // ── iframe message listener (web postMessage bridge)
+  StreamSubscription? _windowMessageSub;
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
     _ensureFactory();
+    // Listen for postMessage from orb iframe (mic + speaker toggle)
+    _windowMessageSub = html.window.onMessage.listen((event) {
+      try {
+        final raw = event.data;
+        String? type;
+        if (raw is js.JsObject) {
+          type = raw['type'] as String?;
+        } else if (raw is Map) {
+          type = (raw as Map)['type'] as String?;
+        }
+        if (type == 'toggle-mute') {
+          widget.onToggleMute?.call();
+        } else if (type == 'toggle-speaker-mute') {
+          widget.onToggleSpeakerMute?.call();
+        }
+      } catch (_) {}
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) => _startPolling());
   }
 
@@ -110,12 +134,23 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     } else if (widget.isMuted) {
       _currentState = 'muted';
     }
+    // speakerMuted change — mute/unmute all HTML audio elements (LiveKit renders
+    // remote audio as <audio> elements) + re-send payload for orb.html CSS class
+    if (widget.isSpeakerMuted != oldWidget.isSpeakerMuted) {
+      try {
+        final audios = html.document.querySelectorAll('audio');
+        for (final el in audios) {
+          (el as html.AudioElement).muted = widget.isSpeakerMuted;
+        }
+      } catch (_) {}
+    }
     _send();
   }
 
   @override
   void dispose() {
     _poll?.cancel();
+    _windowMessageSub?.cancel();
     _connectionStateSubscription?.cancel();
     _agentStateSubscription?.cancel();
     _audioLevelSubscription?.cancel();
@@ -268,6 +303,7 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
             'status': widget.debugOrbState != null
                 ? widget.debugOrbState
                 : _currentStatus,
+            'speakerMuted': widget.isSpeakerMuted,
           },
         }),
         '*',

@@ -53,6 +53,7 @@ class AIController extends ChangeNotifier {
   bool get isRecording => _isRecording;
   String? get errorMessage => _errorMessage;
   bool get isMuted => _livekitService.isMuted;
+  bool get isSpeakerMuted => _livekitService.isSpeakerMuted;
   double get currentAudioLevel => _currentAudioLevel;
 
   /// Check if AI is available
@@ -313,6 +314,11 @@ class AIController extends ChangeNotifier {
 
   Future<void> toggleMute() async {
     await _livekitService.toggleMute();
+    notifyListeners();
+  }
+
+  void toggleSpeakerMute() {
+    _livekitService.toggleSpeakerMute();
     notifyListeners();
   }
 

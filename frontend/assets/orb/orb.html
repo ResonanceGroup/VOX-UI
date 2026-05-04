@@ -500,7 +500,6 @@
       justify-content: center;
       transition: all 0.3s ease;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-      margin-top: var(--mic-margin-top, 6px);
     }
 
     .mic-button:hover {
@@ -653,6 +652,109 @@
       width: 100%;
       box-sizing: border-box;
     }
+
+    /* Controls row: mic + speaker buttons side by side */
+    .controls-row {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-top: var(--mic-margin-top, 6px);
+    }
+
+    /* Speaker Button — same sizing/shape as mic-button */
+    .speaker-button {
+      width: var(--mic-button-size, 62px);
+      height: var(--mic-button-size, 62px);
+      border-radius: 50%;
+      border: 1px solid #f44336;
+      background: rgba(244, 67, 54, 0.15);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .speaker-button:hover {
+      background: rgba(244, 67, 54, 0.25);
+      box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+      transform: scale(1.05);
+    }
+
+    .speaker-button:active {
+      transform: scale(0.95);
+    }
+
+    .speaker-button svg {
+      color: #f44336;
+      transition: color 0.3s ease;
+    }
+
+    .speaker-button:hover svg { color: #ff6b6b; }
+
+    /* Speaker muted — gray button (mirrors state-muted mic styling) */
+    .state-speaker-muted .speaker-button {
+      background: rgba(242, 242, 242, 0.9);
+      border-color: #cccccc;
+    }
+    .state-speaker-muted .speaker-button svg { color: #cccccc; }
+    .state-speaker-muted .speaker-button:hover { background: rgba(242, 242, 242, 1); }
+    .state-speaker-muted .speaker-button:hover svg { color: #bbbbbb; }
+
+    /* Dark theme speaker button */
+    .overlay-dark .speaker-button {
+      background: rgba(244, 67, 54, 0.2);
+      border-color: #f44336;
+    }
+    .overlay-dark .speaker-button:hover { background: rgba(244, 67, 54, 0.3); }
+    .overlay-dark .speaker-button svg { color: #f44336; }
+    .overlay-dark .speaker-button:hover svg { color: #ff6b6b; }
+    body.overlay-dark.state-speaker-muted .speaker-button {
+      background: rgba(80, 80, 80, 0.9) !important;
+      border-color: rgba(160, 160, 160, 0.35) !important;
+    }
+    body.overlay-dark.state-speaker-muted .speaker-button svg { color: #a0a0a0 !important; }
+
+    /* Speaker muted orb visual: gray out + overlay icon */
+    .state-speaker-muted .orb {
+      filter: grayscale(0.92) brightness(0.7);
+      transition: filter 0.4s ease;
+    }
+
+    /* Overlay div sits over orb sphere when speaker muted */
+    .orb-wrapper { position: relative; }
+    .speaker-mute-overlay {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      z-index: 20;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+    .state-speaker-muted .speaker-mute-overlay { opacity: 1; }
+
+    /* Disconnected state — gray speaker button too */
+    .state-disconnected .speaker-button {
+      background: rgba(242, 242, 242, 0.9);
+      border-color: #cccccc;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    .state-disconnected .speaker-button:hover {
+      background: rgba(242, 242, 242, 0.9);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      transform: none;
+    }
+    .state-disconnected .speaker-button svg { color: #cccccc; }
+    body.overlay-dark.state-disconnected .speaker-button {
+      background: rgba(80, 80, 80, 0.9) !important;
+      border-color: rgba(160, 160, 160, 0.35) !important;
+      cursor: not-allowed; opacity: 0.7;
+    }
   </style>
 </head>
 <body>
@@ -669,15 +771,31 @@
         <div class="c"></div>
       </div>
     </div>
+      <div class="speaker-mute-overlay">
+        <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(220,220,220,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <line x1="23" y1="9" x2="17" y2="15"></line>
+          <line x1="17" y1="9" x2="23" y2="15"></line>
+        </svg>
+      </div>
     </div>
-    <button id="mic-button" class="mic-button" title="Toggle Microphone">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-        <line x1="12" y1="19" x2="12" y2="23"></line>
-        <line x1="8" y1="23" x2="16" y2="23"></line>
-      </svg>
-    </button>
+    <div class="controls-row">
+      <button id="mic-button" class="mic-button" title="Toggle Microphone">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+      </button>
+      <button id="speaker-button" class="speaker-button" title="Toggle Speaker">
+        <svg id="speaker-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        </svg>
+      </button>
+    </div>
     <div id="status-display" class="status-display">
       <span class="status-icon"></span>
       <span class="status-text">Ready to assist...</span>
@@ -872,6 +990,19 @@
             document.body.classList.remove('overlay-dark');
           }
         }
+
+        // Handle speaker muted state
+        if (payload.speakerMuted !== undefined) {
+          if (payload.speakerMuted) {
+            document.body.classList.add('state-speaker-muted');
+            var spkIcon = document.getElementById('speaker-icon');
+            if (spkIcon) spkIcon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>';
+          } else {
+            document.body.classList.remove('state-speaker-muted');
+            var spkIcon = document.getElementById('speaker-icon');
+            if (spkIcon) spkIcon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>';
+          }
+        }
         
         // Handle state changes - only update if state actually changed
         if (payload.state && payload.state !== currentAIState) {
@@ -936,6 +1067,15 @@
           // Send message to Flutter to toggle mute
           window.parent.postMessage({
             type: 'toggle-mute'
+          }, '*');
+        });
+      }
+
+      // Add click handler for speaker button
+      if (document.getElementById('speaker-button')) {
+        document.getElementById('speaker-button').addEventListener('click', function() {
+          window.parent.postMessage({
+            type: 'toggle-speaker-mute'
           }, '*');
         });
       }

@@ -496,7 +496,9 @@ class _AIViewContentState extends State<_AIViewContent> {
       size: UiTuningValues.orbSize * scale,
       livekitService: controller.livekitService,
       onToggleMute: () => controller.toggleMute(),
+      onToggleSpeakerMute: () => controller.toggleSpeakerMute(),
       isMuted: controller.isMuted,
+      isSpeakerMuted: controller.isSpeakerMuted,
       debugOrbState: _debugOrbState,
       orbScale: UiTuningValues.orbScale,
       orbContainerGap: UiTuningValues.orbContainerGap,
@@ -639,7 +641,34 @@ class _AIViewContentState extends State<_AIViewContent> {
                     ),
                     child: Row(
                       children: [
-                        Expanded(
+                        // Mic + speaker toggles in tray
+                  IconButton(
+                    icon: Icon(
+                      controller.isMuted ? Icons.mic_off : Icons.mic,
+                      color: controller.isMuted
+                          ? Colors.red[400]
+                          : (isDark ? Colors.white54 : Colors.black45),
+                      size: 22.0 * scale,
+                    ),
+                    onPressed: () => controller.toggleMute(),
+                    padding: EdgeInsets.symmetric(horizontal: 4 * scale),
+                    constraints: const BoxConstraints(),
+                    tooltip: controller.isMuted ? 'Unmute mic' : 'Mute mic',
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      controller.isSpeakerMuted ? Icons.volume_off : Icons.volume_up,
+                      color: controller.isSpeakerMuted
+                          ? Colors.red[400]
+                          : (isDark ? Colors.white54 : Colors.black45),
+                      size: 22.0 * scale,
+                    ),
+                    onPressed: () { controller.toggleSpeakerMute(); },
+                    padding: EdgeInsets.symmetric(horizontal: 4 * scale),
+                    constraints: const BoxConstraints(),
+                    tooltip: controller.isSpeakerMuted ? 'Unmute speaker' : 'Mute speaker',
+                  ),
+                  Expanded(
                           child: TextField(
                             controller: _textController,
                             onSubmitted: (_) => _handleSendMessage(controller),
