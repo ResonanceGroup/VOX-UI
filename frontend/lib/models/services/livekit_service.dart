@@ -366,14 +366,9 @@ class LiveKitService {
   void _handleDataMessage(Map<String, dynamic> json) {
     final type = json['type'] as String?;
     switch (type) {
-      case 'transcript':
-        final text = json['text'] as String?;
-        if (text != null) _transcriptController.add(text);
-        break;
-      case 'response':
-        final text = json['text'] as String?;
-        if (text != null) _responseController.add(text);
-        break;
+      // NOTE: 'transcript' and 'response' intentionally removed — LiveKit
+      // TranscriptionEvent already handles these natively. Keeping both
+      // caused every message to appear twice in the chat history.
       case 'state':
         final stateName = json['state'] as String?;
         if (stateName != null) _updateAgentState(_parseAgentState(stateName));

@@ -1065,18 +1065,14 @@
       if (document.getElementById('mic-button')) {
         document.getElementById('mic-button').addEventListener('click', function() {
           // Send message to Flutter to toggle mute
-          window.parent.postMessage({
-            type: 'toggle-mute'
-          }, '*');
+          window.parent.postMessage(JSON.stringify({type: 'toggle-mute'}), '*');
         });
       }
 
       // Add click handler for speaker button
       if (document.getElementById('speaker-button')) {
         document.getElementById('speaker-button').addEventListener('click', function() {
-          window.parent.postMessage({
-            type: 'toggle-speaker-mute'
-          }, '*');
+          window.parent.postMessage(JSON.stringify({type: 'toggle-speaker-mute'}), '*');
         });
       }
       

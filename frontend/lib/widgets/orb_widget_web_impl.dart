@@ -2,6 +2,7 @@
 // Full LiveKit subscription support — mirrors orb_webview_widget.dart logic.
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 
+import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:js' as js;
 import 'dart:math' as math;
@@ -96,10 +97,15 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
       try {
         final raw = event.data;
         String? type;
-        if (raw is js.JsObject) {
+        // orb.html sends JSON.stringify({type: '...'}), so raw is a String.
+        // Fall back to JsObject property access for any non-stringified senders.
+        if (raw is String) {
+          try {
+            final decoded = jsonDecode(raw) as Map?;
+            type = decoded?['type'] as String?;
+          } catch (_) {}
+        } else if (raw is js.JsObject) {
           type = raw['type'] as String?;
-        } else if (raw is Map) {
-          type = (raw as Map)['type'] as String?;
         }
         if (type == 'toggle-mute') {
           widget.onToggleMute?.call();
