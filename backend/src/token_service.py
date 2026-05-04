@@ -91,6 +91,58 @@ KOKORO_DEFAULT_VOICES = [
     {"id": "bm_lewis",    "name": "Lewis (BM)"},
 ]
 
+
+# ---------------------------------------------------------------------------
+# Cloudflare TURN credentials (auto-refreshed, 23-hour cache)
+# ---------------------------------------------------------------------------
+
+_CF_TURN_KEY_ID    = 'f987a58e93164e3195a10116fbcdc30e'
+_CF_TURN_KEY_TOKEN = '4b266c1563392917ce9756451df8d966b2d750c8a49d421eae788436061635f1'
+_TURN_CACHE: dict = {'ice_servers': None, 'expires': 0.0}
+_TURN_LOCK = threading.Lock()
+
+
+def _fetch_ice_servers() -> list:
+    with _TURN_LOCK:
+        if time.time() < _TURN_CACHE['expires'] and _TURN_CACHE['ice_servers'] is not None:
+            return _TURN_CACHE['ice_servers']
+        try:
+            url = (
+                'https://rtc.live.cloudflare.com/v1/turn/keys/'
+                f'{_CF_TURN_KEY_ID}/credentials/generate-ice-servers'
+            )
+            body = json.dumps({'ttl': 86400}).encode()
+            req = urllib.request.Request(
+                url, data=body,
+                headers={
+                    'Authorization': f'Bearer {_CF_TURN_KEY_TOKEN}',
+                    'Content-Type':  'application/json',
+                    'User-Agent':    'VoxUI-TokenService/1.0',
+                },
+                method='POST',
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read())
+            filtered = []
+            for server in data.get('iceServers', []):
+                urls = [u for u in server.get('urls', []) if ':53' not in u]
+                if not urls:
+                    continue
+                entry: dict = {'urls': urls}
+                if 'username' in server:
+                    entry['username'] = server['username']
+                if 'credential' in server:
+                    entry['credential'] = server['credential']
+                filtered.append(entry)
+            _TURN_CACHE['ice_servers'] = filtered
+            _TURN_CACHE['expires']     = time.time() + 82800
+            logger.info('Cloudflare TURN credentials refreshed (%d servers)', len(filtered))
+            return filtered
+        except Exception as exc:
+            logger.warning('TURN credential refresh failed: %s', exc)
+            return _TURN_CACHE.get('ice_servers') or []
+
+
 # Keys that are allowed to be overridden via PUT /config
 CONFIGURABLE_KEYS = {
     "stt_url", "stt_model",
@@ -98,6 +150,7 @@ CONFIGURABLE_KEYS = {
     "llm_base_url", "llm_model", "llm_api_key",
     "llm_temperature", "llm_max_completion_tokens", "llm_disable_thinking",
     "livekit_url",
+    "livekit_public_url",
 }
 
 # ---------------------------------------------------------------------------
@@ -162,6 +215,7 @@ def get_effective_config() -> dict:
         "llm_max_completion_tokens":   ov("llm_max_completion_tokens",   config.llm_max_completion_tokens),
         "llm_disable_thinking":        ov("llm_disable_thinking",        config.llm_disable_thinking),
         "livekit_url":                 ov("livekit_url",                 config.livekit_url),
+        "livekit_public_url":          ov("livekit_public_url",          config.livekit_public_url),
     }
 
 
@@ -385,11 +439,13 @@ class TokenHandler(BaseHTTPRequestHandler):
         room     = params.get("room",     [DEFAULT_ROOM])[0]
         try:
             jwt = create_token(identity, room)
+            ice_svrs = _fetch_ice_servers()
             self._send_json(200, {
-                "token":    jwt,
-                "url":      get_effective_config()["livekit_url"],
-                "room":     room,
-                "identity": identity,
+                "token":      jwt,
+                "url":        (get_effective_config().get("livekit_public_url") or get_effective_config()["livekit_url"]),
+                "room":       room,
+                "identity":   identity,
+                "iceServers": ice_svrs,
             })
             logger.info(f"Token issued — identity={identity!r} room={room!r}")
         except Exception as e:

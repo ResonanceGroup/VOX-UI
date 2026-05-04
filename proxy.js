@@ -29,7 +29,8 @@ function proxyHttp(req, res, targetPort, stripPrefix) {
     res.writeHead(pr2.statusCode, pr2.headers);
     pr2.pipe(res);
   });
-  pr.on('error', (e) => { console.error('proxy error', e.message); res.writeHead(502).end(); });
+  console.log('[HTTP] ' + req.method + ' ' + req.url);
+  pr.on('error', (e) => { console.error('[HTTP] error ' + req.url + ': ' + e.message); res.writeHead(502).end(); });
   req.pipe(pr);
 }
 
@@ -54,7 +55,7 @@ const server = http.createServer((req, res) => {
 // WebSocket proxy for /rtc* → LiveKit
 const wss = new WebSocketServer({ noServer: true });
 server.on('upgrade', (req, socket, head) => {
-  if (!req.url.startsWith('/rtc')) { socket.destroy(); return; }
+  console.log('[WS] upgrade: ' + req.url);
   wss.handleUpgrade(req, socket, head, (ws) => {
     const upstream = new WebSocket(`ws://127.0.0.1:${LK_PORT}${req.url}`);
     upstream.on('open', () => {

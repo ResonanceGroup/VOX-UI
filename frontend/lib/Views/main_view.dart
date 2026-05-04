@@ -22,7 +22,7 @@ class NavDestination {
   });
 }
 
-/// Main view with responsive navigation (rail/drawer)
+/// Main view with hamburger drawer navigation
 class MainView extends StatelessWidget {
   const MainView({super.key});
 
@@ -51,7 +51,7 @@ class _MainViewContentState extends State<_MainViewContent> {
 
   final List<NavDestination> _destinations = [
     NavDestination(
-      label: 'Voice',
+      label: 'AI Assistant',
       icon: Icons.mic_outlined,
       selectedIcon: Icons.mic,
       view: const AIView(),
@@ -75,89 +75,76 @@ class _MainViewContentState extends State<_MainViewContent> {
     final settings = context.watch<AppPreferencesNotifier>();
     final scale = settings.uiScale;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isLargeScreen = constraints.maxWidth > 600;
-
-        if (isLargeScreen) {
-          return _buildLargeScreenLayout(scale);
-        } else {
-          return _buildSmallScreenLayout(scale);
-        }
-      },
-    );
-  }
-
-  /// Large screen layout with persistent navigation rail
-  Widget _buildLargeScreenLayout(double scale) {
-    return Scaffold(
-      body: Row(
-        children: [
-          NavigationRail(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (index) {
-              setState(() => _selectedIndex = index);
-            },
-            extended: true,
-            minExtendedWidth: 220 * scale,
-            destinations: _destinations.asMap().entries.map((entry) {
-              final dest = entry.value;
-              return NavigationRailDestination(
-                icon: Icon(dest.icon),
-                selectedIcon: Icon(dest.selectedIcon),
-                label: Text(dest.label),
-                padding: EdgeInsets.symmetric(vertical: 8 * scale),
-              );
-            }).toList(),
-          ),
-          VerticalDivider(
-            width: 1 * scale,
-            thickness: 1 * scale,
-            color: Theme.of(context).dividerTheme.color,
-          ),
-          Expanded(
-            child: Column(
-              children: [
-                _buildAppBar(scale),
-                Expanded(
-                child: IndexedStack(
-                  index: _selectedIndex,
-                  children: _destinations.map((d) => d.view).toList(),
-                ),
-              ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Small screen layout with bottom navigation
-  Widget _buildSmallScreenLayout(double scale) {
     return Scaffold(
       appBar: _buildAppBar(scale),
+      drawer: _buildDrawer(context, scale),
       body: IndexedStack(
         index: _selectedIndex,
         children: _destinations.map((d) => d.view).toList(),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() => _selectedIndex = index);
-        },
-        destinations: _destinations.map((dest) {
-          return NavigationDestination(
-            icon: Icon(dest.icon),
-            selectedIcon: Icon(dest.selectedIcon),
-            label: dest.label,
-          );
-        }).toList(),
+    );
+  }
+
+  /// Side drawer with navigation items + blur/dark overlay (provided by Flutter)
+  Widget _buildDrawer(BuildContext context, double scale) {
+    final theme = Theme.of(context);
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(20 * scale, 24 * scale, 20 * scale, 16 * scale),
+              child: Text(
+                'VoxUI',
+                style: TextStyle(
+                  fontSize: 22 * scale,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ),
+            Divider(height: 1),
+            SizedBox(height: 8 * scale),
+            for (int i = 0; i < _destinations.length; i++)
+              ListTile(
+                leading: Icon(
+                  _selectedIndex == i
+                      ? _destinations[i].selectedIcon
+                      : _destinations[i].icon,
+                  color: _selectedIndex == i
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+                title: Text(
+                  _destinations[i].label,
+                  style: TextStyle(
+                    fontSize: 16 * scale,
+                    fontWeight: _selectedIndex == i
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                    color: _selectedIndex == i
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface,
+                  ),
+                ),
+                selected: _selectedIndex == i,
+                selectedTileColor: theme.colorScheme.primary.withOpacity(0.08),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12 * scale),
+                ),
+                onTap: () {
+                  setState(() => _selectedIndex = i);
+                  Navigator.pop(context);
+                },
+              ),
+          ],
+        ),
       ),
     );
   }
 
-  /// Build the app bar
+  /// Build the app bar — hamburger auto-added by Scaffold when drawer is set
   PreferredSizeWidget _buildAppBar(double scale) {
     return AppBar(
       title: Text(

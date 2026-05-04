@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/services/livekit_service.dart';
+import 'package:livekit_client/livekit_client.dart' show RTCIceServer;
 import '../models/services/preferences_service.dart';
 import '../models/constants.dart';
 
@@ -221,9 +222,17 @@ class AIController extends ChangeNotifier {
         tokenServiceUrl: _tokenServiceUrl,
       );
 
+      // Extract ICE servers from token response (Cloudflare TURN credentials)
+      final iceServers = tokenData['iceServers'] as List<RTCIceServer>?;
+
       final success = await _livekitService.connect(
-        url: tokenData['url']!,
-        token: tokenData['token']!,
+        url: tokenData['url']! as String,
+        token: tokenData['token']! as String,
+        iceServers: (iceServers != null && iceServers.isNotEmpty) ? iceServers : null,
+        onError: (msg) {
+          _errorMessage = msg;
+          notifyListeners();
+        },
       );
 
       if (success) {

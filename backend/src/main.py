@@ -246,6 +246,23 @@ async def entrypoint(ctx: JobContext) -> None:
         ),
     )
 
+    # Log participant and track events for debugging
+    @ctx.room.on("participant_connected")
+    def on_participant_connected(participant):
+        logger.info("Participant connected: %s", participant.identity)
+
+    @ctx.room.on("track_subscribed")
+    def on_track_subscribed(track, publication, participant):
+        logger.info("Track subscribed: kind=%s from=%s", track.kind, participant.identity)
+
+    @ctx.room.on("track_published")
+    def on_track_published(publication, participant):
+        logger.info("Track published: kind=%s source=%s from=%s", publication.kind, publication.source, participant.identity)
+
+    # Log already-connected participants at session start
+    for identity, participant in ctx.room.remote_participants.items():
+        logger.info("Already in room: %s (tracks: %d)", identity, len(participant.track_publications))
+
     # LiveKit event emitter expects sync callbacks; schedule async work inside.
     @ctx.room.on("data_received")
     def on_data_received(packet):

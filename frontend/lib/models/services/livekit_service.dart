@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -18,7 +18,7 @@ class LiveKitService {
   /// Fetch a LiveKit access token from the token service.
   /// [tokenServiceUrl] overrides the default URL from AppConstants.
   /// Returns a map with 'token' and 'url' keys.
-  Future<Map<String, String>> fetchToken({
+  Future<Map<String, dynamic>> fetchToken({
     String identity = 'dashboard-tablet',
     String? tokenServiceUrl,
   }) async {
@@ -29,28 +29,46 @@ class LiveKitService {
       debugPrint('LiveKitService: Fetching token from $uri');
     }
 
-    final client = HttpClient();
     try {
-      final request = await client.getUrl(uri);
-      final response = await request.close();
+      final response = await http.get(uri);
 
       if (response.statusCode != 200) {
         throw Exception('Token service returned ${response.statusCode}');
       }
 
-      final body = await response.transform(utf8.decoder).join();
-      final json = jsonDecode(body) as Map<String, dynamic>;
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
 
       if (AppConstants.aiEnableDebugLogs) {
         debugPrint('LiveKitService: Token received for ${json['identity']} in room ${json['room']}');
       }
 
+      // Extract ICE servers if provided by token service (Cloudflare TURN)
+      final List<RTCIceServer> iceServers = [];
+      final rawIce = json['iceServers'] as List<dynamic>?;
+      if (rawIce != null) {
+        for (final e in rawIce) {
+          final m = e as Map<String, dynamic>;
+          final urls = (m['urls'] as List<dynamic>?)?.cast<String>() ?? [];
+          if (urls.isNotEmpty) {
+            iceServers.add(RTCIceServer(
+              urls: urls,
+              username:   m['username']   as String?,
+              credential: m['credential'] as String?,
+            ));
+          }
+        }
+        if (AppConstants.aiEnableDebugLogs) {
+          debugPrint('LiveKitService: Got ${iceServers.length} ICE server(s) from token service');
+        }
+      }
+
       return {
         'token': json['token'] as String,
         'url': json['url'] as String,
+        'iceServers': iceServers,
       };
-    } finally {
-      client.close();
+    } catch (e) {
+      rethrow;
     }
   }
 
@@ -133,7 +151,7 @@ class LiveKitService {
   }
 
   /// Connect to LiveKit room
-  Future<bool> connect({required String url, required String token}) async {
+  Future<bool> connect({required String url, required String token, List<RTCIceServer>? iceServers, Function(String)? onError}) async {
     if (!_isInitialized) await initialize();
 
     if (_currentConnectionState == AIConnectionState.connected ||
@@ -148,9 +166,16 @@ class LiveKitService {
         debugPrint('LiveKitService: Connecting to $url...');
       }
 
+      final connectOpts = (iceServers != null && iceServers.isNotEmpty)
+          ? ConnectOptions(
+              rtcConfiguration: RTCConfiguration(iceServers: iceServers),
+            )
+          : null;
+
       await _room!.connect(
         url,
         token,
+        connectOptions: connectOpts,
         roomOptions: const RoomOptions(
           defaultAudioCaptureOptions: AudioCaptureOptions(
             echoCancellation: true,
@@ -163,7 +188,12 @@ class LiveKitService {
       );
 
       _setupEventListeners();
-      await _createLocalAudioTrack();
+      try {
+        await _createLocalAudioTrack();
+      } catch (audioErr) {
+        debugPrint('LiveKitService: Audio track failed: $audioErr');
+        onError?.call('Mic error: $audioErr');
+      }
 
       _reconnectAttempts = 0;
       _updateConnectionState(AIConnectionState.connected);
@@ -365,10 +395,9 @@ class LiveKitService {
   Future<void> sendTextMessage(String message) async {
     if (_currentConnectionState != AIConnectionState.connected) return;
     try {
-      await _room!.localParticipant?.sendText(
-        message,
-        options: SendTextOptions(topic: 'lk.chat'),
-      );
+      // Agent expects: {"type": "text_input", "text": "..."}
+      final payload = utf8.encode(jsonEncode({'type': 'text_input', 'text': message}));
+      await _room!.localParticipant?.publishData(payload, reliable: true);
     } catch (e) {
       if (AppConstants.aiEnableDebugLogs) {
         debugPrint('LiveKitService: Failed to send message: $e');
@@ -459,6 +488,16 @@ class LiveKitService {
 
   void _updateActiveSpeakers(List<Participant> speakers) {
     _activeSpeakers = speakers;
+
+    // Infer agent speaking state from active speakers (reliable fallback)
+    final localId = _room?.localParticipant?.identity;
+    final agentSpeaking = speakers.any((p) => p.identity != localId);
+    if (agentSpeaking && _currentAgentState != AIAgentState.speaking) {
+      _updateAgentState(AIAgentState.speaking);
+    } else if (!agentSpeaking && _currentAgentState == AIAgentState.speaking) {
+      _updateAgentState(AIAgentState.idle);
+    }
+
     if (speakers.isNotEmpty && _remoteAudioLevelTimer == null) {
       _remoteAudioLevelTimer = Timer.periodic(
         const Duration(milliseconds: 33),

@@ -52,6 +52,7 @@ class AgentConfig:
     # LiveKit server
     # ----------------------------------------------------------------
     livekit_url:        str   = field(default_factory=lambda: _env('LIVEKIT_URL',        'ws://localhost:7880'))
+    livekit_public_url: str   = field(default_factory=lambda: _env('LIVEKIT_PUBLIC_URL',  ''))
     livekit_api_key:    str   = field(default_factory=lambda: _env('LIVEKIT_API_KEY',    'devkey'))
     livekit_api_secret: str   = field(default_factory=lambda: _env('LIVEKIT_API_SECRET', 'devsecret'))
     livekit_room:       str   = field(default_factory=lambda: _env('LIVEKIT_ROOM',       'vox-ui-room'))

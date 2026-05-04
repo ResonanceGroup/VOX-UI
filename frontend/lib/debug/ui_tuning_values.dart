@@ -6,7 +6,7 @@ class UiTuningValues {
   // Orb frame/layout
   static double orbSize = 500.0;
   static double orbAlignY = -0.55;
-  static double orbScale = 1.25; // Added for true HTML scaling
+  static double orbScale = 1.0; // Scale via orbSize, not Transform — avoids HtmlElementView overlap
 
   // Tray layout
   static double trayMessageSpacing = 28.0;

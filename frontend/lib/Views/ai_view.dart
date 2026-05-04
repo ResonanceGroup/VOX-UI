@@ -219,6 +219,94 @@ class _AIViewContentState extends State<_AIViewContent> {
   }
 
   /// Build status bar
+  Widget _buildAlwaysVisibleInput(AIController controller, bool isDark, double scale) {
+    final isConnected = controller.isAIEnabled;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111111) : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD),
+            width: 1.0,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(12 * scale, 4 * scale, 12 * scale, 0),
+              child: Row(
+                children: [
+                  Container(
+                    width: 7 * scale, height: 7 * scale,
+                    decoration: BoxDecoration(
+                      color: isConnected ? Colors.green[400]! : Colors.orange[400]!,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  SizedBox(width: 5 * scale),
+                  Flexible(child: Text(
+                    isConnected ? 'Connected' : (controller.errorMessage ?? controller.statusMessage),
+                    style: TextStyle(
+                      fontSize: 11 * scale,
+                      color: isDark ? Colors.white38 : Colors.black38,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  )),
+                ],
+              ),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                controller: _textController,
+                onSubmitted: (_) => _handleSendMessage(controller),
+                textInputAction: TextInputAction.send,
+                decoration: InputDecoration(
+                  hintText: 'Type a message...',
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16.0 * scale,
+                    vertical: 14.0 * scale,
+                  ),
+                  hintStyle: TextStyle(
+                    fontSize: 16.0 * scale,
+                    color: isDark ? const Color(0xFF555555) : const Color(0xFF999999),
+                  ),
+                ),
+                style: TextStyle(
+                  fontSize: 16.0 * scale,
+                  color: isDark ? const Color(0xFFEEEEEE) : Colors.black87,
+                ),
+              ),
+            ),
+            Listener(
+              onPointerUp: (_) => _handleSendMessage(controller),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Icon(
+                  Icons.send,
+                  color: isDark ? Colors.blue[300] : Colors.blue,
+                  size: 24.0 * scale,
+                ),
+              ),
+            ),
+          ],  // end Row children
+            ),  // end Row
+          ],  // end Column children
+        ),  // end Column
+      ),
+    );
+  }
+
   Widget _buildStatusBar(AIController controller, bool isDark, double scale) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 12 * scale),
@@ -392,7 +480,7 @@ class _AIViewContentState extends State<_AIViewContent> {
           Positioned(
             left: 0,
             right: 0,
-            bottom: 18 * scale,
+            bottom: 20 * scale,
             child: Center(
               child: _buildHistoryGrabHandle(isDark, scale),
             ),
@@ -420,11 +508,11 @@ class _AIViewContentState extends State<_AIViewContent> {
   }
 
   Widget _buildHistoryGrabHandle(bool isDark, double scale) {
-    return GestureDetector(
-      onTap: () => setState(() => _isHistoryTrayOpen = !_isHistoryTrayOpen),
+    return Listener(
+      onPointerUp: (_) => setState(() => _isHistoryTrayOpen = !_isHistoryTrayOpen),
       child: Container(
         width: 84 * scale,
-        height: 28 * scale,
+        height: 48 * scale,
         decoration: BoxDecoration(
           color: (isDark ? Colors.black : Colors.white).withOpacity(0.55),
           borderRadius: BorderRadius.circular(999),
