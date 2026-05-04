@@ -498,6 +498,7 @@ class _AIViewContentState extends State<_AIViewContent> {
       onToggleMute: () => controller.toggleMute(),
       onToggleSpeakerMute: () => controller.toggleSpeakerMute(),
       onOpenTray: () => setState(() => _isHistoryTrayOpen = true),
+      isTrayOpen: _isHistoryTrayOpen,
       isMuted: controller.isMuted,
       isSpeakerMuted: controller.isSpeakerMuted,
       debugOrbState: _debugOrbState,

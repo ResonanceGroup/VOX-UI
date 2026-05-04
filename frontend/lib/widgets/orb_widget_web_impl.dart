@@ -34,6 +34,7 @@ class OrbWebViewWidget extends StatefulWidget {
   final VoidCallback? onToggleMute;
   final VoidCallback? onToggleSpeakerMute;
   final VoidCallback? onOpenTray;
+  final bool isTrayOpen;
   final bool isMuted;
   final bool isSpeakerMuted;
   final String? debugOrbState;
@@ -51,6 +52,7 @@ class OrbWebViewWidget extends StatefulWidget {
     this.onToggleMute,
     this.onToggleSpeakerMute,
     this.onOpenTray,
+    this.isTrayOpen = false,
     this.isMuted = false,
     this.isSpeakerMuted = false,
     this.debugOrbState,
@@ -84,6 +86,9 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   // ── Notifying-flash state ─────────────────────────────────────────────────
   AIAgentState? _previousAgentState;
   Timer? _notifyRevertTimer;
+
+  // ── iframe element (for pointer-events toggling when tray opens)
+  html.IFrameElement? _iframeElement;
 
   // ── iframe message listener (web postMessage bridge)
   StreamSubscription? _windowMessageSub;
@@ -130,6 +135,12 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   @override
   void didUpdateWidget(OrbWebViewWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Toggle iframe pointer-events so Flutter tray overlay can receive touches
+    // when open. Without this the iframe captures all browser touch events
+    // regardless of Flutter's z-ordering.
+    if (widget.isTrayOpen != oldWidget.isTrayOpen) {
+      _iframeElement?.style.pointerEvents = widget.isTrayOpen ? 'none' : 'auto';
+    }
     if (widget.isMuted != oldWidget.isMuted) {
       if (widget.isMuted) {
         _updateState('muted');
@@ -184,6 +195,9 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
               final cw = jsEl['contentWindow'];
               if (cw != null) {
                 _orbContentWindow = cw as js.JsObject;
+                _iframeElement = iframe;  // store for pointer-events toggling
+                // Apply current tray state immediately
+                iframe.style.pointerEvents = widget.isTrayOpen ? 'none' : 'auto';
               }
               break;
             }

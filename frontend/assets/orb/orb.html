@@ -1044,7 +1044,10 @@
         
         // Handle audio level - support both 'level' and 'audioLevel' property names
         var audioLevel = payload.level !== undefined ? payload.level : payload.audioLevel;
-        if (audioLevel !== undefined && orbElement) {
+        if (audioLevel !== undefined && orbElement && currentAIState !== 'muted') {
+          // Don't update intensity when muted — prevents the orb from animating
+          // to the agent's voice levels while the grayscale muted CSS is applied,
+          // which caused the confusing "switching animation but still grayed" look.
           var level = parseFloat(audioLevel) || 0;
           
           orbElement.style.setProperty('--intensity', level.toFixed(3));
