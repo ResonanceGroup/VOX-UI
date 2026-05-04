@@ -246,6 +246,45 @@ async def entrypoint(ctx: JobContext) -> None:
         ),
     )
 
+    # ── Forward agent state + responses back to Flutter client ──────────────
+    @session.on("agent_state_changed")
+    def on_agent_state_changed(ev) -> None:
+        """Publish agent state as data message so Flutter orb can update."""
+        async def _pub():
+            try:
+                await ctx.room.local_participant.publish_data(
+                    json.dumps({"type": "state", "state": ev.new_state}).encode(),
+                    reliable=True,
+                )
+            except Exception as e:
+                logger.debug("Failed to publish agent state: %s", e)
+        asyncio.create_task(_pub())
+
+    @session.on("conversation_item_added")
+    def on_conversation_item_added(ev) -> None:
+        """Publish assistant messages so Flutter chat history is populated."""
+        item = ev.item
+        if not hasattr(item, "role") or item.role != "assistant":
+            return
+        content = item.content
+        if isinstance(content, list):
+            text = " ".join(
+                c.text if hasattr(c, "text") else str(c) for c in content
+            ).strip()
+        else:
+            text = (str(content) if content else "").strip()
+        if not text:
+            return
+        async def _pub():
+            try:
+                await ctx.room.local_participant.publish_data(
+                    json.dumps({"type": "response", "text": text}).encode(),
+                    reliable=True,
+                )
+            except Exception as e:
+                logger.debug("Failed to publish agent response: %s", e)
+        asyncio.create_task(_pub())
+
     # Log participant and track events for debugging
     @ctx.room.on("participant_connected")
     def on_participant_connected(participant):
