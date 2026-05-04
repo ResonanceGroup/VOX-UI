@@ -1,4 +1,5 @@
-// Flutter Web minimal orb implementation using HtmlElementView.
+// Flutter Web orb implementation using HtmlElementView (dart:html iframe).
+// Full LiveKit subscription support — mirrors orb_webview_widget.dart logic.
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 
 import 'dart:html' as html;
@@ -25,7 +26,7 @@ void _ensureFactory() {
   });
 }
 
-/// Minimal web drop-in for OrbWebViewWidget.
+/// Web drop-in for OrbWebViewWidget — full LiveKit state subscriptions.
 class OrbWebViewWidget extends StatefulWidget {
   final double size;
   final LiveKitService? livekitService;
@@ -59,13 +60,25 @@ class OrbWebViewWidget extends StatefulWidget {
 }
 
 class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
-  // Minimal state — no LiveKit subscriptions for now
-  String _st = 'disconnected';
-  double _lvl = 0.0;
-  String _theme = 'light';
-  String _status = 'Disconnected';
+  // ── Orb visual state ─────────────────────────────────────────────────────
+  String _currentState = 'disconnected';
+  double _currentLevel = 0.0;
+  String _currentTheme = 'light';
+  String _currentStatus = 'Disconnected';
   bool _loaded = false;
   Timer? _poll;
+
+  // ── LiveKit subscriptions ─────────────────────────────────────────────────
+  StreamSubscription<AIConnectionState>? _connectionStateSubscription;
+  StreamSubscription<AIAgentState>? _agentStateSubscription;
+  StreamSubscription<double>? _audioLevelSubscription;
+  LiveKitService? _livekitService;
+
+  // ── Notifying-flash state ─────────────────────────────────────────────────
+  AIAgentState? _previousAgentState;
+  Timer? _notifyRevertTimer;
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   @override
   void initState() {
@@ -74,12 +87,49 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _startPolling());
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _setupLiveKitListeners();
+  }
+
+  @override
+  void didUpdateWidget(OrbWebViewWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isMuted != oldWidget.isMuted) {
+      if (widget.isMuted) {
+        _updateState('muted');
+      } else {
+        final connState = _livekitService?.currentConnectionState;
+        if (connState == AIConnectionState.connected) {
+          _updateState(_mapAgentStateToOrb(_previousAgentState ?? AIAgentState.idle));
+        } else {
+          _updateState('disconnected');
+        }
+      }
+    } else if (widget.isMuted) {
+      _currentState = 'muted';
+    }
+    _send();
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    _connectionStateSubscription?.cancel();
+    _agentStateSubscription?.cancel();
+    _audioLevelSubscription?.cancel();
+    _notifyRevertTimer?.cancel();
+    super.dispose();
+  }
+
+  // ── Polling for iframe contentWindow ─────────────────────────────────────
+
   void _startPolling() {
     if (!mounted) return;
     _poll = Timer.periodic(const Duration(milliseconds: 300), (t) {
       if (!mounted) { t.cancel(); return; }
       if (_orbContentWindow == null) {
-        // Query DOM for the orb iframe and grab its contentWindow
         try {
           final els = html.document.querySelectorAll('iframe');
           for (final el in els) {
@@ -103,6 +153,107 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     });
   }
 
+  // ── LiveKit listeners ─────────────────────────────────────────────────────
+
+  void _setupLiveKitListeners() {
+    _livekitService = widget.livekitService;
+    if (_livekitService == null) return;
+
+    _connectionStateSubscription?.cancel();
+    _agentStateSubscription?.cancel();
+    _audioLevelSubscription?.cancel();
+
+    _connectionStateSubscription = _livekitService!.connectionState.listen((state) {
+      if (state == AIConnectionState.connected) {
+        if (!widget.isMuted) _updateState('idle');
+      } else if (state == AIConnectionState.disconnected) {
+        _updateState('disconnected');
+      }
+    });
+
+    _agentStateSubscription = _livekitService!.agentState.listen((state) {
+      _handleAgentStateTransition(state);
+    });
+
+    // Sync to current state immediately (streams only fire on change)
+    final currentConn = _livekitService!.currentConnectionState;
+    if (currentConn == AIConnectionState.connected) {
+      _updateState(_mapAgentStateToOrb(_livekitService!.currentAgentState));
+    } else if (currentConn == AIConnectionState.connecting) {
+      _updateState('idle');
+    } else {
+      _updateState('disconnected');
+    }
+
+    _audioLevelSubscription = _livekitService!.audioLevel.listen((level) {
+      _updateAudioLevel(level);
+    });
+  }
+
+  // ── State helpers ─────────────────────────────────────────────────────────
+
+  String _mapAgentStateToOrb(AIAgentState state) {
+    switch (state) {
+      case AIAgentState.idle:      return 'idle';
+      case AIAgentState.listening: return 'idle';
+      case AIAgentState.processing: return 'executing';
+      case AIAgentState.speaking:  return 'processing';
+      case AIAgentState.error:     return 'disconnected';
+    }
+  }
+
+  void _handleAgentStateTransition(AIAgentState newState) {
+    final prev = _previousAgentState;
+    _previousAgentState = newState;
+    if (widget.isMuted) return;
+
+    _notifyRevertTimer?.cancel();
+    _notifyRevertTimer = null;
+
+    final shouldNotify =
+        (prev == AIAgentState.speaking && newState == AIAgentState.idle);
+
+    if (shouldNotify) {
+      _updateState('notifying');
+      _notifyRevertTimer = Timer(const Duration(milliseconds: 600), () {
+        _updateState(_mapAgentStateToOrb(newState));
+      });
+    } else {
+      _updateState(_mapAgentStateToOrb(newState));
+    }
+  }
+
+  void _updateState(String state) {
+    _currentState = state;
+    _currentStatus = _getStatusForState(state);
+    _send();
+  }
+
+  void _updateAudioLevel(double level) {
+    final amplified = (level * 1.75).clamp(0.0, 1.0);
+    _currentLevel = amplified > 0 ? math.sqrt(amplified) : 0.0;
+    _send();
+  }
+
+  void _updateTheme(String theme) {
+    _currentTheme = theme;
+    _send();
+  }
+
+  String _getStatusForState(String state) {
+    switch (state) {
+      case 'idle':         return 'Ready to assist...';
+      case 'notifying':    return '';
+      case 'executing':    return 'Thinking...';
+      case 'processing':   return 'Speaking...';
+      case 'muted':        return 'Microphone muted';
+      case 'disconnected': return 'Disconnected';
+      default:             return 'Ready to assist...';
+    }
+  }
+
+  // ── postMessage bridge ────────────────────────────────────────────────────
+
   void _send() {
     final cw = _orbContentWindow;
     if (!_loaded || cw == null) return;
@@ -111,10 +262,12 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
         js.JsObject.jsify({
           'type': 'livekit-update',
           'payload': {
-            'state': widget.debugOrbState ?? _st,
-            'level': _lvl,
-            'theme': _theme,
-            'status': widget.debugOrbState ?? _status,
+            'state':  widget.debugOrbState ?? _currentState,
+            'level':  _currentLevel,
+            'theme':  _currentTheme,
+            'status': widget.debugOrbState != null
+                ? widget.debugOrbState
+                : _currentStatus,
           },
         }),
         '*',
@@ -122,14 +275,13 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     } catch (_) {}
   }
 
-  @override
-  void dispose() {
-    _poll?.cancel();
-    super.dispose();
-  }
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    _updateTheme(isDark ? 'dark' : 'light');
+
     return SizedBox(
       width: widget.size,
       height: widget.size,
