@@ -508,20 +508,26 @@ class _AIViewContentState extends State<_AIViewContent> {
   }
 
   Widget _buildHistoryGrabHandle(bool isDark, double scale) {
-    // Tappable area is larger than the visual pill for easier touch targeting
     return GestureDetector(
       onTap: () => setState(() => _isHistoryTrayOpen = !_isHistoryTrayOpen),
       child: Container(
-        width: 64 * scale,
+        width: 84 * scale,
         height: 28 * scale,
-        color: Colors.transparent, // transparent hit area
-        alignment: Alignment.center,
-        child: Container(
-          width: 36 * scale,
-          height: 4 * scale,
-          decoration: BoxDecoration(
-            color: (isDark ? Colors.white : Colors.black).withOpacity(0.35),
-            borderRadius: BorderRadius.circular(999),
+        decoration: BoxDecoration(
+          color: (isDark ? Colors.black : Colors.white).withOpacity(0.55),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: (isDark ? Colors.white : Colors.black).withOpacity(0.2),
+          ),
+        ),
+        child: Center(
+          child: Container(
+            width: 34 * scale,
+            height: 4 * scale,
+            decoration: BoxDecoration(
+              color: (isDark ? Colors.white : Colors.black).withOpacity(0.85),
+              borderRadius: BorderRadius.circular(999),
+            ),
           ),
         ),
       ),
