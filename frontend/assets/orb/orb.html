@@ -1064,7 +1064,13 @@
       // Add click handler for microphone button
       if (document.getElementById('mic-button')) {
         document.getElementById('mic-button').addEventListener('click', function() {
-          // Send message to Flutter to toggle mute
+          // Optimistic local visual toggle — respond immediately without
+          // waiting for the Flutter round-trip confirmation.
+          if (document.body.classList.contains('state-muted')) {
+            updateUIState(underlyingAIState || 'idle');
+          } else {
+            updateUIState('muted');
+          }
           window.parent.postMessage(JSON.stringify({type: 'toggle-mute'}), '*');
         });
       }

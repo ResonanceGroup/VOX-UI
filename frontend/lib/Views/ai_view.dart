@@ -647,7 +647,7 @@ class _AIViewContentState extends State<_AIViewContent> {
                       controller.isMuted ? Icons.mic_off : Icons.mic,
                       color: controller.isMuted
                           ? Colors.red[400]
-                          : (isDark ? Colors.white54 : Colors.black45),
+                          : (isDark ? Colors.white70 : Colors.black87),
                       size: 22.0 * scale,
                     ),
                     onPressed: () => controller.toggleMute(),
@@ -660,7 +660,7 @@ class _AIViewContentState extends State<_AIViewContent> {
                       controller.isSpeakerMuted ? Icons.volume_off : Icons.volume_up,
                       color: controller.isSpeakerMuted
                           ? Colors.red[400]
-                          : (isDark ? Colors.white54 : Colors.black45),
+                          : (isDark ? Colors.white70 : Colors.black87),
                       size: 22.0 * scale,
                     ),
                     onPressed: () { controller.toggleSpeakerMute(); },
