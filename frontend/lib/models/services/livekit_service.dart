@@ -118,6 +118,9 @@ class LiveKitService {
 
   // Remote audio level polling
   Timer? _remoteAudioLevelTimer;
+  // Debounce for speaking->idle transition: natural TTS pauses between sentences
+  // can briefly drop audio level, causing spurious idle/notifying state flashes.
+  Timer? _speakingIdleDebounceTimer;
   List<Participant> _activeSpeakers = [];
 
   /// Initialize LiveKit service
@@ -463,6 +466,8 @@ class LiveKitService {
         _reconnectAttempts = 0;
       }
 
+      _speakingIdleDebounceTimer?.cancel();
+      _speakingIdleDebounceTimer = null;
       _disconnectDebounceTimer?.cancel();
       _disconnectDebounceTimer = null;
 
@@ -496,10 +501,24 @@ class LiveKitService {
     // Infer agent speaking state from active speakers (reliable fallback)
     final localId = _room?.localParticipant?.identity;
     final agentSpeaking = speakers.any((p) => p.identity != localId);
-    if (agentSpeaking && _currentAgentState != AIAgentState.speaking) {
-      _updateAgentState(AIAgentState.speaking);
-    } else if (!agentSpeaking && _currentAgentState == AIAgentState.speaking) {
-      _updateAgentState(AIAgentState.idle);
+    if (agentSpeaking) {
+      // Agent started/continued speaking — cancel any pending idle debounce
+      _speakingIdleDebounceTimer?.cancel();
+      _speakingIdleDebounceTimer = null;
+      if (_currentAgentState != AIAgentState.speaking) {
+        _updateAgentState(AIAgentState.speaking);
+      }
+    } else if (_currentAgentState == AIAgentState.speaking) {
+      // Agent audio dropped — debounce before declaring idle.
+      // TTS speech has natural pauses between sentences (~200-500ms) that
+      // would otherwise fire spurious speaking->idle->notifying flashes.
+      _speakingIdleDebounceTimer?.cancel();
+      _speakingIdleDebounceTimer = Timer(const Duration(milliseconds: 800), () {
+        _speakingIdleDebounceTimer = null;
+        if (_currentAgentState == AIAgentState.speaking) {
+          _updateAgentState(AIAgentState.idle);
+        }
+      });
     }
 
     if (speakers.isNotEmpty && _remoteAudioLevelTimer == null) {
@@ -541,6 +560,8 @@ class LiveKitService {
     _audioLevelTimer = null;
     _remoteAudioLevelTimer?.cancel();
     _remoteAudioLevelTimer = null;
+    _speakingIdleDebounceTimer?.cancel();
+    _speakingIdleDebounceTimer = null;
     _audioStreamer = null;
 
     _currentConnectionState = AIConnectionState.disconnected;
