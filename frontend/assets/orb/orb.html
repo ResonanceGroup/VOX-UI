@@ -718,9 +718,9 @@
     }
     body.overlay-dark.state-speaker-muted .speaker-button svg { color: #a0a0a0 !important; }
 
-    /* Speaker muted orb visual: gray out + overlay icon */
+    /* Speaker muted orb visual: silhouette icon overlay only — no grayscale.
+       The orb stays colorful; the speaker-mute-overlay icon appears on top. */
     .state-speaker-muted .orb {
-      filter: grayscale(0.92) brightness(0.7);
       transition: filter 0.4s ease;
     }
 
@@ -1158,7 +1158,8 @@
         state: isOrbState ? data.state : window.mapLiveKitToOrbState(data.state),
         level: data.level !== undefined ? data.level : 0,
         theme: data.theme || 'light',
-        status: data.status || ''
+        status: data.status || '',
+        speakerMuted: data.speakerMuted  // pass through so updateOrbOverlay can toggle state-speaker-muted
       };
       
       if (window.updateOrbOverlay) {

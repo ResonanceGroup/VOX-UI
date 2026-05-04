@@ -264,7 +264,12 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   void _handleAgentStateTransition(AIAgentState newState) {
     final prev = _previousAgentState;
     _previousAgentState = newState;
-    if (widget.isMuted) return;
+    // Guard against both the widget state (after rebuild) and the LiveKit
+    // service state (which updates _isMuted before notifyListeners fires).
+    // Without the service check, a fast LiveKit state event between the
+    // toggleMute() call and the rebuild can sneak through and override the
+    // optimistic muted visual.
+    if (widget.isMuted || (_livekitService?.isMuted ?? false)) return;
 
     _notifyRevertTimer?.cancel();
     _notifyRevertTimer = null;
