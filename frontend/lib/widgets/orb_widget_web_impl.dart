@@ -155,15 +155,9 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     } else if (widget.isMuted) {
       _currentState = 'muted';
     }
-    // speakerMuted change — mute/unmute all HTML audio elements (LiveKit renders
-    // remote audio as <audio> elements) + re-send payload for orb.html CSS class
+    // speakerMuted change — mute/unmute all HTML audio elements
     if (widget.isSpeakerMuted != oldWidget.isSpeakerMuted) {
-      try {
-        final audios = html.document.querySelectorAll('audio');
-        for (final el in audios) {
-          (el as html.AudioElement).muted = widget.isSpeakerMuted;
-        }
-      } catch (_) {}
+      _applyAudioMuteState(widget.isSpeakerMuted);
     }
     _send();
   }
@@ -176,6 +170,9 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     _agentStateSubscription?.cancel();
     _audioLevelSubscription?.cancel();
     _notifyRevertTimer?.cancel();
+    // Reset module-level iframe reference so the next widget instance polls
+    // for the new iframe instead of reusing the stale dead window pointer.
+    _orbContentWindow = null;
     super.dispose();
   }
 
@@ -208,6 +205,13 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
         t.cancel();
         setState(() => _loaded = true);
         _send();
+        // Resync after a short delay: the iframe's JS may not have registered
+        // its message listener by the time the first postMessage fires
+        // (especially on slower connections where the orb.html parse lags
+        // behind the Dart widget setup). A second send ensures the state lands.
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) _send();
+        });
       }
     });
   }
@@ -271,6 +275,15 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     // optimistic muted visual.
     if (widget.isMuted || (_livekitService?.isMuted ?? false)) return;
 
+    // Re-apply speaker mute state when agent starts speaking.
+    // LiveKit creates <audio> elements lazily on first remote track receive,
+    // so the querySelectorAll in didUpdateWidget may have found nothing if
+    // the user toggled speaker mute before the agent spoke. Re-querying here
+    // ensures every new audio element gets the correct muted state.
+    if (newState == AIAgentState.speaking && widget.isSpeakerMuted) {
+      _applyAudioMuteState(widget.isSpeakerMuted);
+    }
+
     _notifyRevertTimer?.cancel();
     _notifyRevertTimer = null;
 
@@ -285,6 +298,28 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     } else {
       _updateState(_mapAgentStateToOrb(newState));
     }
+  }
+
+  /// Mute or unmute all LiveKit remote audio elements.
+  /// LiveKit appends <audio> elements to a hidden div with id
+  /// 'livekit_audio_container'. We target that first, then fall back to a
+  /// global query so we don't miss anything.
+  void _applyAudioMuteState(bool muted) {
+    try {
+      // Target the LiveKit audio container directly (most reliable)
+      final container = html.document.getElementById('livekit_audio_container');
+      if (container != null) {
+        final audios = container.querySelectorAll('audio');
+        for (final el in audios) {
+          (el as html.AudioElement).muted = muted;
+        }
+      }
+      // Fallback: global query catches elements outside the container
+      final allAudios = html.document.querySelectorAll('audio');
+      for (final el in allAudios) {
+        (el as html.AudioElement).muted = muted;
+      }
+    } catch (_) {}
   }
 
   void _updateState(String state) {
