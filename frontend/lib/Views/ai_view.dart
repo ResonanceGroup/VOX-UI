@@ -11,7 +11,8 @@ import 'theme_manager.dart';
 
 /// AI Voice Assistant View with animated orb visualization
 class AIView extends StatefulWidget {
-  const AIView({super.key});
+  final bool isDrawerOpen;
+  const AIView({super.key, this.isDrawerOpen = false});
 
   @override
   State<AIView> createState() => _AIViewState();
@@ -91,12 +92,13 @@ class _AIViewState extends State<AIView> with TickerProviderStateMixin {
     // Just keep device type in sync since screen size is only known at build time.
     final isTablet = MediaQuery.of(context).size.width > 600;
     context.read<AIController>().updateDeviceType(isTablet);
-    return const _AIViewContent();
+    return _AIViewContent(isDrawerOpen: widget.isDrawerOpen);
   }
 }
 
 class _AIViewContent extends StatefulWidget {
-  const _AIViewContent();
+  final bool isDrawerOpen;
+  const _AIViewContent({this.isDrawerOpen = false});
 
   @override
   State<_AIViewContent> createState() => _AIViewContentState();
@@ -508,6 +510,7 @@ class _AIViewContentState extends State<_AIViewContent> {
       statusMarginTop: UiTuningValues.statusMarginTop,
       statusFontSize: UiTuningValues.statusFontSize,
       micButtonSize: UiTuningValues.micButtonSize,
+      isDrawerOpen: widget.isDrawerOpen,
     );
   }
 

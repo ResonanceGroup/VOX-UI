@@ -48,13 +48,14 @@ class _MainViewContent extends StatefulWidget {
 
 class _MainViewContentState extends State<_MainViewContent> {
   int _selectedIndex = 0; // Default to Voice
+  bool _isDrawerOpen = false;
 
-  final List<NavDestination> _destinations = [
+  List<NavDestination> _buildDestinations() => [
     NavDestination(
       label: 'AI Assistant',
       icon: Icons.mic_outlined,
       selectedIcon: Icons.mic,
-      view: const AIView(),
+      view: AIView(isDrawerOpen: _isDrawerOpen),
     ),
     NavDestination(
       label: 'Settings',
@@ -72,21 +73,23 @@ class _MainViewContentState extends State<_MainViewContent> {
 
   @override
   Widget build(BuildContext context) {
+    final destinations = _buildDestinations();
     final settings = context.watch<AppPreferencesNotifier>();
     final scale = settings.uiScale;
 
     return Scaffold(
-      appBar: _buildAppBar(scale),
-      drawer: _buildDrawer(context, scale),
+      appBar: _buildAppBar(scale, destinations),
+      onDrawerChanged: (isOpen) => setState(() => _isDrawerOpen = isOpen),
+      drawer: _buildDrawer(context, scale, destinations),
       body: IndexedStack(
         index: _selectedIndex,
-        children: _destinations.map((d) => d.view).toList(),
+        children: destinations.map((d) => d.view).toList(),
       ),
     );
   }
 
   /// Side drawer with navigation items + blur/dark overlay (provided by Flutter)
-  Widget _buildDrawer(BuildContext context, double scale) {
+  Widget _buildDrawer(BuildContext context, double scale, List<NavDestination> destinations) {
     final theme = Theme.of(context);
     return Drawer(
       child: SafeArea(
@@ -106,18 +109,18 @@ class _MainViewContentState extends State<_MainViewContent> {
             ),
             Divider(height: 1),
             SizedBox(height: 8 * scale),
-            for (int i = 0; i < _destinations.length; i++)
+            for (int i = 0; i < destinations.length; i++)
               ListTile(
                 leading: Icon(
                   _selectedIndex == i
-                      ? _destinations[i].selectedIcon
-                      : _destinations[i].icon,
+                      ? destinations[i].selectedIcon
+                      : destinations[i].icon,
                   color: _selectedIndex == i
                       ? theme.colorScheme.primary
                       : theme.colorScheme.onSurfaceVariant,
                 ),
                 title: Text(
-                  _destinations[i].label,
+                  destinations[i].label,
                   style: TextStyle(
                     fontSize: 16 * scale,
                     fontWeight: _selectedIndex == i
@@ -145,10 +148,10 @@ class _MainViewContentState extends State<_MainViewContent> {
   }
 
   /// Build the app bar — hamburger auto-added by Scaffold when drawer is set
-  PreferredSizeWidget _buildAppBar(double scale) {
+  PreferredSizeWidget _buildAppBar(double scale, List<NavDestination> destinations) {
     return AppBar(
       title: Text(
-        _destinations[_selectedIndex].label,
+        destinations[_selectedIndex].label,
         style: TextStyle(fontSize: 20 * scale),
       ),
       actions: [

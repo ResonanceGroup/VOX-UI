@@ -37,6 +37,9 @@ class OrbWebViewWidget extends StatefulWidget {
   final bool isTrayOpen;
   final bool isMuted;
   final bool isSpeakerMuted;
+  /// When true, pointer-events on the iframe are disabled so Flutter overlays
+  /// (drawers, dialogs) can receive taps above the iframe.
+  final bool isDrawerOpen;
   final String? debugOrbState;
   final double orbScale;
   final double orbContainerGap;
@@ -55,6 +58,7 @@ class OrbWebViewWidget extends StatefulWidget {
     this.isTrayOpen = false,
     this.isMuted = false,
     this.isSpeakerMuted = false,
+    this.isDrawerOpen = false,
     this.debugOrbState,
     this.orbScale = 1.0,
     this.orbContainerGap = 15.0,
@@ -138,8 +142,10 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     // Toggle iframe pointer-events so Flutter tray overlay can receive touches
     // when open. Without this the iframe captures all browser touch events
     // regardless of Flutter's z-ordering.
-    if (widget.isTrayOpen != oldWidget.isTrayOpen) {
-      _iframeElement?.style.pointerEvents = widget.isTrayOpen ? 'none' : 'auto';
+    if (widget.isTrayOpen != oldWidget.isTrayOpen ||
+        widget.isDrawerOpen != oldWidget.isDrawerOpen) {
+      final block = widget.isTrayOpen || widget.isDrawerOpen;
+      _iframeElement?.style.pointerEvents = block ? 'none' : 'auto';
     }
     if (widget.isMuted != oldWidget.isMuted) {
       if (widget.isMuted) {
@@ -193,8 +199,8 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
               if (cw != null) {
                 _orbContentWindow = cw as js.JsObject;
                 _iframeElement = iframe;  // store for pointer-events toggling
-                // Apply current tray state immediately
-                iframe.style.pointerEvents = widget.isTrayOpen ? 'none' : 'auto';
+                // Apply current tray/drawer block state immediately
+                iframe.style.pointerEvents = (widget.isTrayOpen || widget.isDrawerOpen) ? 'none' : 'auto';
               }
               break;
             }
