@@ -661,6 +661,10 @@
       justify-content: center;
       gap: 16px;
       margin-top: var(--mic-margin-top, 6px);
+      /* Create own stacking context above orb-wrapper so buttons always
+         receive pointer events regardless of orb animation overflow. */
+      position: relative;
+      z-index: 500;
     }
 
     /* Speaker Button — same sizing/shape as mic-button */
@@ -725,7 +729,13 @@
     }
 
     /* Overlay div sits over orb sphere when speaker muted */
-    .orb-wrapper { position: relative; }
+    .orb-wrapper {
+      position: relative;
+      /* Prevent overflow animation elements from intercepting clicks on the
+         controls-row buttons below. The orb itself is not directly interactive
+         (tray is opened by Flutter's grab handle, not by tapping the orb). */
+      pointer-events: none;
+    }
     .speaker-mute-overlay {
       position: absolute;
       top: 50%; left: 50%;
@@ -1093,15 +1103,12 @@
       initializeElements();
       
       // Add click handler for microphone button
+      // NOTE: No optimistic UI update here. The audio-level _send() loop fires
+      // every ~33ms and would immediately overwrite any local state change with
+      // the still-stale Flutter widget state, causing a visible bounce-back.
+      // Flutter owns mute state authoritatively; the round-trip is < 50ms.
       if (document.getElementById('mic-button')) {
         document.getElementById('mic-button').addEventListener('click', function() {
-          // Optimistic local visual toggle — respond immediately without
-          // waiting for the Flutter round-trip confirmation.
-          if (document.body.classList.contains('state-muted')) {
-            updateUIState(underlyingAIState || 'idle');
-          } else {
-            updateUIState('muted');
-          }
           window.parent.postMessage(JSON.stringify({type: 'toggle-mute'}), '*');
         });
       }
