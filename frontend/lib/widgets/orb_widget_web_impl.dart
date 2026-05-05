@@ -356,18 +356,32 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   void _send() {
     final cw = _orbContentWindow;
     if (!_loaded || cw == null) return;
+    // Read mute states directly from the LiveKit service (not just widget props
+    // or _currentState). The service flips _isMuted/_isSpeakerMuted synchronously
+    // inside toggleMute()/toggleSpeakerMute(), BEFORE notifyListeners() triggers
+    // a rebuild. The audio-level timer fires every ~33ms; if we only used
+    // _currentState / widget.isMuted we would send the stale pre-toggle value
+    // during that window, reverting any optimistic visual update in orb.html.
+    final svcMuted = _livekitService?.isMuted ?? false;
+    final svcSpeakerMuted = _livekitService?.isSpeakerMuted ?? false;
+    final effectiveState = (svcMuted || widget.isMuted)
+        ? 'muted'
+        : (widget.debugOrbState ?? _currentState);
+    final effectiveSpeakerMuted = svcSpeakerMuted || widget.isSpeakerMuted;
     try {
       cw.callMethod('postMessage', [
         js.JsObject.jsify({
           'type': 'livekit-update',
           'payload': {
-            'state':  widget.debugOrbState ?? _currentState,
+            'state':  effectiveState,
             'level':  _currentLevel,
             'theme':  _currentTheme,
             'status': widget.debugOrbState != null
                 ? widget.debugOrbState
-                : _currentStatus,
-            'speakerMuted': widget.isSpeakerMuted,
+                : (effectiveState == 'muted'
+                    ? 'Microphone muted'
+                    : _currentStatus),
+            'speakerMuted': effectiveSpeakerMuted,
           },
         }),
         '*',

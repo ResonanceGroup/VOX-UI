@@ -1103,12 +1103,18 @@
       initializeElements();
       
       // Add click handler for microphone button
-      // NOTE: No optimistic UI update here. The audio-level _send() loop fires
-      // every ~33ms and would immediately overwrite any local state change with
-      // the still-stale Flutter widget state, causing a visible bounce-back.
-      // Flutter owns mute state authoritatively; the round-trip is < 50ms.
+      // Optimistic visual toggle: update the orb immediately on click, then
+      // let Flutter confirm via round-trip. _send() in orb_widget_web_impl.dart
+      // reads _livekitService.isMuted directly (not _currentState), so the
+      // 33ms audio-level loop will reinforce — not revert — the visual once
+      // Flutter processes the toggle.
       if (document.getElementById('mic-button')) {
         document.getElementById('mic-button').addEventListener('click', function() {
+          if (currentAIState === 'muted') {
+            updateUIState(underlyingAIState || 'idle');
+          } else {
+            updateUIState('muted');
+          }
           window.parent.postMessage(JSON.stringify({type: 'toggle-mute'}), '*');
         });
       }
@@ -1116,6 +1122,18 @@
       // Add click handler for speaker button
       if (document.getElementById('speaker-button')) {
         document.getElementById('speaker-button').addEventListener('click', function() {
+          // Optimistic visual toggle — _send() reads _livekitService.isSpeakerMuted
+          // directly so the audio-level loop won't revert this before the rebuild.
+          var willBeMuted = !document.body.classList.contains('state-speaker-muted');
+          if (willBeMuted) {
+            document.body.classList.add('state-speaker-muted');
+            var spkEl = document.getElementById('speaker-icon');
+            if (spkEl) spkEl.innerHTML = '<polygon points=11 5 6 9 2 9 2 15 6 15 11 19 11 5></polygon><line x1=23 y1=9 x2=17 y2=15></line><line x1=17 y1=9 x2=23 y2=15></line>';
+          } else {
+            document.body.classList.remove('state-speaker-muted');
+            var spkEl = document.getElementById('speaker-icon');
+            if (spkEl) spkEl.innerHTML = '<polygon points=11 5 6 9 2 9 2 15 6 15 11 19 11 5></polygon><path d=M15.54 8.46a5 5 0 0 1 0 7.07></path><path d=M19.07 4.93a10 10 0 0 1 0 14.14></path>';
+          }
           window.parent.postMessage(JSON.stringify({type: 'toggle-speaker-mute'}), '*');
         });
       }
