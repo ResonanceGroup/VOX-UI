@@ -144,21 +144,55 @@ test.describe('Settings Persistence', () => {
 });
 
 // ═══ 3. Orb State Machine (isolated) ═══
+// NOTE: The orb uses its own internal state names, NOT Flutter AI state names.
+// ALL_STATES in orb.html = ['idle', 'executing', 'notifying', 'processing', 'muted', 'disconnected']
+// Flutter 'listening' → orb 'idle', Flutter 'thinking' → orb 'processing'
+// Flutter 'speaking' → orb 'speaking' BUT 'speaking' is NOT in ALL_STATES (orb bug: silent fail)
+// Message format: { type: 'manual-state', payload: { state, level, theme, status } }
 test.describe('Orb State Machine', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(BASE + '/assets/assets/orb/orb.html');
     await page.waitForTimeout(1500);
   });
 
-  for (const state of ['idle', 'listening', 'thinking', 'speaking', 'muted', 'error']) {
+  // Test valid orb states — assert CSS class applied, not just screenshot
+  for (const state of ['idle', 'executing', 'processing', 'muted', 'disconnected']) {
     test('state: ' + state, async ({ page }) => {
+      // Set initial state to something different so the change fires
+      if (state !== 'idle') {
+        await page.evaluate(() => {
+          window.postMessage({ type: 'manual-state', payload: { state: 'idle', theme: 'light', status: 'idle' } }, '*');
+        });
+        await page.waitForTimeout(200);
+      }
+
       await page.evaluate((s) => {
-        window.postMessage(JSON.stringify({ type: 'updateState', state: s, level: 0.5, theme: 'dark', status: s }), '*');
+        window.postMessage({ type: 'manual-state', payload: { state: s, level: 0.5, theme: 'dark', status: s } }, '*');
       }, state);
       await page.waitForTimeout(400);
+
+      // Assert body has the correct state class
+      const bodyClass = await page.evaluate(() => document.body.className);
+      console.log('body classes:', bodyClass);
+      expect(bodyClass).toContain('state-' + state);
+
       await page.screenshot({ path: 'screenshots/orb-' + state + '.png' });
     });
   }
+
+  // Regression test: 'speaking' silently fails (not in ALL_STATES) — orb stays in previous state
+  test('state: speaking — bug: silent fail (stays in idle)', async ({ page }) => {
+    await page.evaluate(() => {
+      window.postMessage({ type: 'manual-state', payload: { state: 'speaking', level: 0.8, theme: 'dark', status: 'speaking' } }, '*');
+    });
+    await page.waitForTimeout(400);
+    const bodyClass = await page.evaluate(() => document.body.className);
+    console.log('speaking → body classes:', bodyClass);
+    // This SHOULD be state-speaking but orb has speaking bug — it stays idle
+    // When the bug is fixed, change this to: expect(bodyClass).toContain('state-speaking')
+    expect(bodyClass).not.toContain('state-speaking'); // confirms the bug
+    await page.screenshot({ path: 'screenshots/orb-speaking-bug.png' });
+  });
 
   test('mic click fires toggle-mute', async ({ page }) => {
     await page.evaluate(() => {
