@@ -1,1 +1,6 @@
-node_modules/\nreport/\ntest-results/\nscreenshots/\n.playwright-cache/
+node_modules/
+test-results/
+report/
+screenshots/
+playwright-report/
+*.wav
