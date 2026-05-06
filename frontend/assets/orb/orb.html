@@ -287,23 +287,17 @@
     }
 
 
-    /* iOS: transform animations GPU-promote each blob inside iframe compositing context,
-       making them invisible. Use border-radius-only morph (no GPU promo) + parent rotation. */
-    @keyframes morph-ios {
-      0%, 100% { border-radius: 60% 40% 55% 45% / 45% 55% 45% 55%; }
-      33%       { border-radius: 45% 55% 40% 60% / 55% 45% 55% 45%; }
-      66%       { border-radius: 55% 45% 60% 40% / 40% 60% 40% 60%; }
-    }
-    .ios-no-blend .wrap {
-      mix-blend-mode: normal !important;
+    /* iOS: appear-from-center fails silently; glass sphere z-ordering unreliable.
+       mix-blend-mode: overlay on gear blends it with the orb blobs behind it,
+       producing the same embedded/colorful appearance as the glass-sphere-on-top
+       effect seen on desktop — without requiring correct z-index stacking. */
+    .ios-device .state-executing .orb::after {
+      opacity: 0.75 !important;
       filter: none !important;
+      animation: rotate-gear 5s infinite linear !important;
+      mix-blend-mode: overlay !important;
     }
-    .ios-no-blend .c {
-      mix-blend-mode: normal !important;
-      filter: none !important;
-      opacity: 0.9 !important;
-      animation: morph-ios 20s infinite ease-in-out !important;
-    }
+
 
     /* State classes */
     .state-executing .orb {
@@ -356,7 +350,7 @@
       height: 60%;
       transform: translate(-50%, -50%) scale(0.1);
       transform-origin: center center;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='gearGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23EEEEEE' /%3E%3Cstop offset='45%25' stop-color='%23AAAAAA' /%3E%3Cstop offset='100%25' stop-color='%23666666' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z' fill='url(%23gearGradient)' stroke='%23444444' stroke-width='0.4'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='gearGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23E8D5FF' stop-opacity='0.95' /%3E%3Cstop offset='45%25' stop-color='%239B72E0' stop-opacity='0.82' /%3E%3Cstop offset='100%25' stop-color='%235B35B5' stop-opacity='0.65' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z' fill='url(%23gearGradient)' stroke='%237B50CC' stroke-width='0.5'/%3E%3C/svg%3E");
       background-size: 80% 80%;
       background-repeat: no-repeat;
       background-position: center center;
@@ -972,11 +966,24 @@
         // Manage State Classes on Body — atomically clear ALL state + modifier classes,
         // then re-apply. This prevents orb-mic-muted / state-speaker-muted getting stuck
         // when they're managed outside of updateUIState.
+        var prevState = currentAIState;
         ALL_STATES.forEach(state => document.body.classList.remove('state-' + state));
         document.body.classList.remove('orb-mic-muted', 'state-speaker-muted');
         document.body.classList.add('state-' + newState);
         if (_micMuted)     document.body.classList.add('orb-mic-muted');
         if (_speakerMuted) document.body.classList.add('state-speaker-muted');
+        // iOS Safari caches GPU compositing layer with grayscale filter.
+        // Nudging opacity forces the layer to be re-created on the next frame.
+        if (prevState === 'disconnected' && newState !== 'disconnected') {
+          var orbEl = document.querySelector('.orb');
+          if (orbEl) {
+            orbEl.style.opacity = '0.9999';
+            requestAnimationFrame(function() {
+              requestAnimationFrame(function() { orbEl.style.opacity = ''; });
+            });
+          }
+        }
+
         
         // Track pre-notifying state for the revert timer
         if (currentAIState !== 'notifying') {
@@ -1261,6 +1268,13 @@
       }
     });
     
+    // iOS detection
+    (function() {
+      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (isIOS) document.documentElement.classList.add('ios-device');
+    })();
+
     // Manual initialization function for testing
     window.testOrbState = function(state) {
       if (window.updateOrbOverlay) {
@@ -1268,15 +1282,7 @@
       }
     };
 
-    // iOS detection: blend modes on animated elements break inside iframes on iOS.
-    // All iOS browsers (Safari, Chrome, Firefox) use WebKit — same limitation.
-    (function() {
-      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      if (isIOS) {
-        document.documentElement.classList.add('ios-no-blend');
-      }
-    })();
+
   </script>
 
   <!-- Tray grab handle: sends open-tray postMessage so mobile touches
@@ -1287,7 +1293,7 @@
 
   <!-- DEBUG: state indicator — remove when bug is identified -->
   <div id="dbg-state" style="
-    position:fixed; bottom:4px; left:4px;
+    position:fixed; top:4px; left:4px;
     background:rgba(0,0,0,0.65); color:#0ff;
     font:10px monospace; padding:2px 6px;
     border-radius:4px; z-index:9999;
