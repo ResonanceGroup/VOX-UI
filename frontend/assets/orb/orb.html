@@ -292,7 +292,7 @@
        producing the same embedded/colorful appearance as the glass-sphere-on-top
        effect seen on desktop — without requiring correct z-index stacking. */
     .ios-device .state-executing .orb::after {
-      opacity: 0.75 !important;
+      opacity: 0.95 !important;
       filter: none !important;
       animation: rotate-gear 5s infinite linear !important;
       mix-blend-mode: overlay !important;
@@ -350,7 +350,7 @@
       height: 60%;
       transform: translate(-50%, -50%) scale(0.1);
       transform-origin: center center;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='gearGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23E8D5FF' stop-opacity='0.95' /%3E%3Cstop offset='45%25' stop-color='%239B72E0' stop-opacity='0.82' /%3E%3Cstop offset='100%25' stop-color='%235B35B5' stop-opacity='0.65' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z' fill='url(%23gearGradient)' stroke='%237B50CC' stroke-width='0.5'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='gearGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23E8D5FF' stop-opacity='1.0' /%3E%3Cstop offset='45%25' stop-color='%239B72E0' stop-opacity='0.95' /%3E%3Cstop offset='100%25' stop-color='%235B35B5' stop-opacity='0.82' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z' fill='url(%23gearGradient)' stroke='none'/%3E%3C/svg%3E");
       background-size: 80% 80%;
       background-repeat: no-repeat;
       background-position: center center;
@@ -1071,6 +1071,14 @@
             document.body.classList.remove('state-speaker-muted');
             var spkIcon = document.getElementById('speaker-icon');
             if (spkIcon) spkIcon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>';
+            // iOS: GPU layer caches grayscale filter — nudge opacity to force layer rebuild
+            var orbElSpk = document.querySelector('.orb');
+            if (orbElSpk) {
+              orbElSpk.style.opacity = '0.9999';
+              requestAnimationFrame(function() {
+                requestAnimationFrame(function() { orbElSpk.style.opacity = ''; });
+              });
+            }
           }
         }
 
@@ -1084,6 +1092,14 @@
           } else {
             document.body.classList.remove('orb-mic-muted');
             if (micBtn) micBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+            // iOS: GPU layer caches grayscale filter — nudge opacity to force layer rebuild
+            var orbElMute = document.querySelector('.orb');
+            if (orbElMute) {
+              orbElMute.style.opacity = '0.9999';
+              requestAnimationFrame(function() {
+                requestAnimationFrame(function() { orbElMute.style.opacity = ''; });
+              });
+            }
           }
         }
         
@@ -1168,6 +1184,14 @@
           } else {
             document.body.classList.remove('orb-mic-muted');
             if (micBtn) micBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+            // iOS: GPU layer caches grayscale filter — nudge opacity to force layer rebuild
+            var orbElClick = document.querySelector('.orb');
+            if (orbElClick) {
+              orbElClick.style.opacity = '0.9999';
+              requestAnimationFrame(function() {
+                requestAnimationFrame(function() { orbElClick.style.opacity = ''; });
+              });
+            }
           }
           window.parent.postMessage(JSON.stringify({type: 'toggle-mute'}), '*');
         });
@@ -1188,6 +1212,14 @@
             document.body.classList.remove('state-speaker-muted');
             var spkEl = document.getElementById('speaker-icon');
             if (spkEl) spkEl.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>';
+            // iOS: GPU layer caches grayscale filter — nudge opacity to force layer rebuild
+            var orbElSpk = document.querySelector('.orb');
+            if (orbElSpk) {
+              orbElSpk.style.opacity = '0.9999';
+              requestAnimationFrame(function() {
+                requestAnimationFrame(function() { orbElSpk.style.opacity = ''; });
+              });
+            }
           }
           window.parent.postMessage(JSON.stringify({type: 'toggle-speaker-mute'}), '*');
         });
