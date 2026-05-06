@@ -15,7 +15,7 @@
       justify-content: center;
       align-items: center;
       filter: drop-shadow(0 0 20px rgba(64, 206, 224, 0.3));
-      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);  /* filter excluded — always instant */
       overflow: visible;
       border-radius: 50%;
       --intensity: 0;
@@ -46,7 +46,6 @@
         inset 0 0 60px rgba(64, 206, 224, 0.3),
         inset 0 0 100px rgba(95, 89, 255, 0.2);
       z-index: 3;
-      backdrop-filter: blur(2px);
       transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -62,8 +61,6 @@
       z-index: 1;
       mix-blend-mode: screen;
       filter: contrast(1.2) saturate(1.2);
-      transform-style: preserve-3d;
-      perspective: 1000px;
     }
 
     @keyframes rotate {
@@ -279,6 +276,35 @@
       100% { transform: translate(-50%, -50%) rotate(360deg); }
     }
 
+    /* Dark background so screen/plus-lighter blend modes look vivid */
+    body.overlay-dark {
+      background: #080814;
+    }
+
+    /* Idle state: slight enhanced glow */
+    .state-idle .orb {
+      filter: drop-shadow(0 0 20px rgba(64, 206, 224, 0.3));
+    }
+
+
+    /* iOS: transform animations GPU-promote each blob inside iframe compositing context,
+       making them invisible. Use border-radius-only morph (no GPU promo) + parent rotation. */
+    @keyframes morph-ios {
+      0%, 100% { border-radius: 60% 40% 55% 45% / 45% 55% 45% 55%; }
+      33%       { border-radius: 45% 55% 40% 60% / 55% 45% 55% 45%; }
+      66%       { border-radius: 55% 45% 60% 40% / 40% 60% 40% 60%; }
+    }
+    .ios-no-blend .wrap {
+      mix-blend-mode: normal !important;
+      filter: none !important;
+    }
+    .ios-no-blend .c {
+      mix-blend-mode: normal !important;
+      filter: none !important;
+      opacity: 0.9 !important;
+      animation: morph-ios 20s infinite ease-in-out !important;
+    }
+
     /* State classes */
     .state-executing .orb {
       position: relative;
@@ -337,7 +363,7 @@
       opacity: 0;
       filter: drop-shadow(0 0 8px rgba(126, 87, 194, 0.5));
       pointer-events: none;
-      z-index: 3;
+      /* z-index removed — glass sphere (::before) now stacks behind blobs */
       animation:
         appear-from-center 0.8s forwards ease-out,
         rotate-gear 5s infinite linear 0.8s;
@@ -356,9 +382,16 @@
       filter: blur(6px) brightness(1.5) contrast(1.5) !important;
     }
 
-    .state-muted .orb {
+    /* Mic mute — overlay modifier. Grays orb but keeps animations running. */
+    .orb-mic-muted .orb {
       filter: grayscale(1) !important;
-      transition: filter 0.3s ease-in-out !important;
+      transition: filter 0.15s ease-out !important;  /* fast gray-on, instant-feel gray-off */
+    }
+
+    /* Speaker mute — same gray + overlay icon */
+    .state-speaker-muted .orb {
+      filter: grayscale(1) !important;
+      transition: filter 0.15s ease-out !important;  /* fast gray-on, instant-feel gray-off */
     }
 
     .state-disconnected .orb {
@@ -521,21 +554,21 @@
       color: #ff6b6b;
     }
 
-    /* Muted state styling */
-    .state-muted .mic-button {
+    /* Mic-muted modifier styling (replaces .state-muted for mic button) */
+    .orb-mic-muted .mic-button {
       background: rgba(242, 242, 242, 0.9);
       border-color: #cccccc;
     }
 
-    .state-muted .mic-button svg {
+    .orb-mic-muted .mic-button svg {
       color: #cccccc;
     }
 
-    .state-muted .mic-button:hover {
+    .orb-mic-muted .mic-button:hover {
       background: rgba(242, 242, 242, 1);
     }
 
-    .state-muted .mic-button:hover svg {
+    .orb-mic-muted .mic-button:hover svg {
       color: #bbbbbb;
     }
 
@@ -602,23 +635,22 @@
       color: #ff6b6b;
     }
 
-    /* Dark theme - muted state (normal colors) */
-    /* Both classes are on body, so use body.overlay-dark.state-muted */
-    body.overlay-dark.state-muted .mic-button {
+    /* Dark theme - mic muted modifier */
+    body.overlay-dark.orb-mic-muted .mic-button {
       background: rgba(80, 80, 80, 0.9) !important;
       border-color: rgba(160, 160, 160, 0.35) !important;
     }
 
-    body.overlay-dark.state-muted .mic-button:hover {
+    body.overlay-dark.orb-mic-muted .mic-button:hover {
       background: rgba(96, 96, 96, 1) !important;
       border-color: rgba(160, 160, 160, 0.45) !important;
     }
 
-    body.overlay-dark.state-muted .mic-button svg {
+    body.overlay-dark.orb-mic-muted .mic-button svg {
       color: #a0a0a0 !important;
     }
 
-    body.overlay-dark.state-muted .mic-button:hover svg {
+    body.overlay-dark.orb-mic-muted .mic-button:hover svg {
       color: #b8b8b8 !important;
     }
 
@@ -627,7 +659,7 @@
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: transparent;
+      background: #080814;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -722,11 +754,8 @@
     }
     body.overlay-dark.state-speaker-muted .speaker-button svg { color: #a0a0a0 !important; }
 
-    /* Speaker muted orb visual: silhouette icon overlay only — no grayscale.
-       The orb stays colorful; the speaker-mute-overlay icon appears on top. */
-    .state-speaker-muted .orb {
-      transition: filter 0.4s ease;
-    }
+    /* Speaker muted orb: grayscale handled above (.state-speaker-muted .orb)
+       Overlay icon appears on top via speaker-mute-overlay div. */
 
     /* Overlay div sits over orb sphere when speaker muted */
     .orb-wrapper {
@@ -810,7 +839,7 @@
       </div>
     </div>
       <div class="speaker-mute-overlay">
-        <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(220,220,220,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
           <line x1="23" y1="9" x2="17" y2="15"></line>
           <line x1="17" y1="9" x2="23" y2="15"></line>
@@ -842,9 +871,12 @@
 
   <script>
     (function() {
-      let currentAIState = 'idle';
-      let underlyingAIState = 'idle';
-      const ALL_STATES = ['idle', 'executing', 'notifying', 'processing', 'muted', 'disconnected'];
+      let currentAIState = '';   // '' so any first state always fires updateUIState
+      let underlyingAIState = 'disconnected';
+      const ALL_STATES = ['idle', 'executing', 'notifying', 'processing', 'disconnected'];
+      // Track modifier overlay state — synced atomically with updateUIState
+      let _micMuted = false;
+      let _speakerMuted = false;
       
       let statusIcon = null;
       let statusText = null;
@@ -937,13 +969,18 @@
           return;
         }
 
-        // Manage State Classes on Body
+        // Manage State Classes on Body — atomically clear ALL state + modifier classes,
+        // then re-apply. This prevents orb-mic-muted / state-speaker-muted getting stuck
+        // when they're managed outside of updateUIState.
         ALL_STATES.forEach(state => document.body.classList.remove('state-' + state));
+        document.body.classList.remove('orb-mic-muted', 'state-speaker-muted');
         document.body.classList.add('state-' + newState);
+        if (_micMuted)     document.body.classList.add('orb-mic-muted');
+        if (_speakerMuted) document.body.classList.add('state-speaker-muted');
         
-        // Store the state before mute if not already muted
-        if (newState === 'muted' && currentAIState !== 'muted') {
-          underlyingAIState = currentAIState === 'muted' ? 'idle' : currentAIState;
+        // Track pre-notifying state for the revert timer
+        if (currentAIState !== 'notifying') {
+          underlyingAIState = currentAIState;
         }
         
         currentAIState = newState;
@@ -983,10 +1020,6 @@
               }
             }, 2500);
             break;
-          case 'muted':
-            textContent = 'Microphone Muted';
-            iconContent = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/></svg>';
-            break;
           case 'disconnected':
             textContent = 'Disconnected';
             iconContent = '❌';
@@ -997,15 +1030,6 @@
         statusIcon.innerHTML = iconContent;
         statusText.textContent = textContent;
 
-        // Swap mic button icon between mic-on and mic-off
-        var micBtn = document.getElementById('mic-button');
-        if (micBtn) {
-          if (newState === 'muted') {
-            micBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
-          } else {
-            micBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
-          }
-        }
       }
       
       // Global update function
@@ -1031,6 +1055,7 @@
 
         // Handle speaker muted state
         if (payload.speakerMuted !== undefined) {
+          _speakerMuted = !!payload.speakerMuted; // sync tracking var
           if (payload.speakerMuted) {
             document.body.classList.add('state-speaker-muted');
             var spkIcon = document.getElementById('speaker-icon');
@@ -1041,8 +1066,24 @@
             if (spkIcon) spkIcon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>';
           }
         }
+
+        // Handle mic muted modifier (overlay, not state replacement)
+        if (payload.micMuted !== undefined) {
+          _micMuted = !!payload.micMuted; // sync tracking var
+          var micBtn = document.getElementById('mic-button');
+          if (payload.micMuted) {
+            document.body.classList.add('orb-mic-muted');
+            if (micBtn) micBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+          } else {
+            document.body.classList.remove('orb-mic-muted');
+            if (micBtn) micBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+          }
+        }
         
         // Handle state changes - only update if state actually changed
+        if (payload.state) { _lastState = payload.state; }
+        if (payload.micMuted !== undefined) { _lastMicMuted = String(payload.micMuted); }
+        if (payload.speakerMuted !== undefined) { _lastSpeakerMuted = String(payload.speakerMuted); }
         if (payload.state && payload.state !== currentAIState) {
           updateUIState(payload.state, payload.status || '');
         }
@@ -1054,10 +1095,9 @@
         
         // Handle audio level - support both 'level' and 'audioLevel' property names
         var audioLevel = payload.level !== undefined ? payload.level : payload.audioLevel;
-        if (audioLevel !== undefined && orbElement && currentAIState !== 'muted') {
-          // Don't update intensity when muted — prevents the orb from animating
-          // to the agent's voice levels while the grayscale muted CSS is applied,
-          // which caused the confusing "switching animation but still grayed" look.
+        if (audioLevel !== undefined && orbElement) {
+          // Always update intensity — mute is an overlay modifier, not a state.
+          // Orb animates to audio levels while grayed (this is correct behavior).
           var level = parseFloat(audioLevel) || 0;
           
           orbElement.style.setProperty('--intensity', level.toFixed(3));
@@ -1110,10 +1150,17 @@
       // Flutter processes the toggle.
       if (document.getElementById('mic-button')) {
         document.getElementById('mic-button').addEventListener('click', function() {
-          if (currentAIState === 'muted') {
-            updateUIState(underlyingAIState || 'idle');
+          // Optimistic toggle: flip orb-mic-muted class immediately.
+          // Flutter confirms via rebuild → _send() → micMuted payload.
+          var willBeMuted = !document.body.classList.contains('orb-mic-muted');
+          _micMuted = willBeMuted; // keep tracking var in sync so updateUIState won't revert
+          var micBtn = document.getElementById('mic-button');
+          if (willBeMuted) {
+            document.body.classList.add('orb-mic-muted');
+            if (micBtn) micBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
           } else {
-            updateUIState('muted');
+            document.body.classList.remove('orb-mic-muted');
+            if (micBtn) micBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
           }
           window.parent.postMessage(JSON.stringify({type: 'toggle-mute'}), '*');
         });
@@ -1125,14 +1172,15 @@
           // Optimistic visual toggle — _send() reads _livekitService.isSpeakerMuted
           // directly so the audio-level loop won't revert this before the rebuild.
           var willBeMuted = !document.body.classList.contains('state-speaker-muted');
+          _speakerMuted = willBeMuted; // keep tracking var in sync so updateUIState won't revert
           if (willBeMuted) {
             document.body.classList.add('state-speaker-muted');
             var spkEl = document.getElementById('speaker-icon');
-            if (spkEl) spkEl.innerHTML = '<polygon points=11 5 6 9 2 9 2 15 6 15 11 19 11 5></polygon><line x1=23 y1=9 x2=17 y2=15></line><line x1=17 y1=9 x2=23 y2=15></line>';
+            if (spkEl) spkEl.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>';
           } else {
             document.body.classList.remove('state-speaker-muted');
             var spkEl = document.getElementById('speaker-icon');
-            if (spkEl) spkEl.innerHTML = '<polygon points=11 5 6 9 2 9 2 15 6 15 11 19 11 5></polygon><path d=M15.54 8.46a5 5 0 0 1 0 7.07></path><path d=M19.07 4.93a10 10 0 0 1 0 14.14></path>';
+            if (spkEl) spkEl.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>';
           }
           window.parent.postMessage(JSON.stringify({type: 'toggle-speaker-mute'}), '*');
         });
@@ -1145,8 +1193,8 @@
         });
       }
 
-      // Initial state
-      updateUIState('idle');
+      // Initial state — disconnected until Flutter LiveKit connects
+      updateUIState('disconnected');
     })();
   </script>
 
@@ -1155,9 +1203,9 @@
     window.mapLiveKitToOrbState = function(liveKitState) {
       const mapping = {
         'initializing': 'idle',
-        'listening': 'idle', 
-        'thinking': 'processing',
-        'speaking': 'speaking'  // Changed from 'executing' to 'speaking'
+        'listening': 'idle',
+        'thinking': 'executing',   // backend thinking → gear icon
+        'speaking': 'processing'   // backend speaking → fast swirl
       };
       return mapping[liveKitState] || 'idle';
     };
@@ -1176,7 +1224,7 @@
     // Flutter-WebView bridge - handles both LiveKit states and direct orb states
     window.updateOrbFromFlutter = function(data) {
       // Check if this is already an orb state or needs mapping
-      const orbStates = ['idle', 'executing', 'processing', 'speaking', 'muted', 'notifying', 'disconnected'];
+      const orbStates = ['idle', 'executing', 'processing', 'notifying', 'disconnected'];
       const isOrbState = orbStates.includes(data.state);
       
       const orbData = {
@@ -1184,7 +1232,8 @@
         level: data.level !== undefined ? data.level : 0,
         theme: data.theme || 'light',
         status: data.status || '',
-        speakerMuted: data.speakerMuted  // pass through so updateOrbOverlay can toggle state-speaker-muted
+        speakerMuted: data.speakerMuted,  // pass through → state-speaker-muted class
+        micMuted: data.micMuted           // pass through → orb-mic-muted modifier class
       };
       
       if (window.updateOrbOverlay) {
@@ -1193,12 +1242,19 @@
     };
     
     // Listen for Flutter messages
+    // Track message receipt for debugging
+    var _msgCount = 0;
+    var _lastMsgTime = 0;
+    var _lastState = '?';
+    var _lastMicMuted = '?';
+    var _lastSpeakerMuted = '?';
     window.addEventListener('message', function(event) {
-      if (event.data.type === 'livekit-update') {
-        // All messages from Flutter come through here
+      _msgCount++;
+      _lastMsgTime = Date.now();
+      var dtype = event.data && event.data.type;
+      if (dtype === 'livekit-update') {
         window.updateOrbFromFlutter(event.data.payload);
-      } else if (event.data.type === 'manual-state') {
-        // Legacy support for manual state changes
+      } else if (dtype === 'manual-state') {
         if (window.updateOrbOverlay) {
           window.updateOrbOverlay(event.data.payload);
         }
@@ -1211,6 +1267,16 @@
         window.updateOrbOverlay({ state: state, status: 'Manual test state' });
       }
     };
+
+    // iOS detection: blend modes on animated elements break inside iframes on iOS.
+    // All iOS browsers (Safari, Chrome, Firefox) use WebKit — same limitation.
+    (function() {
+      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (isIOS) {
+        document.documentElement.classList.add('ios-no-blend');
+      }
+    })();
   </script>
 
   <!-- Tray grab handle: sends open-tray postMessage so mobile touches
@@ -1218,5 +1284,33 @@
   <div id="tray-handle" class="tray-handle">
     <div class="tray-handle-bar"></div>
   </div>
+
+  <!-- DEBUG: state indicator — remove when bug is identified -->
+  <div id="dbg-state" style="
+    position:fixed; bottom:4px; left:4px;
+    background:rgba(0,0,0,0.65); color:#0ff;
+    font:10px monospace; padding:2px 6px;
+    border-radius:4px; z-index:9999;
+    pointer-events:none; max-width:95vw;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  "></div>
+  <script>
+    (function() {
+      var dbg = document.getElementById('dbg-state');
+      var WATCH = ['state-disconnected','state-idle','state-executing','state-processing','state-notifying',
+                   'orb-mic-muted','state-speaker-muted','overlay-dark'];
+      function updateDbg() {
+        var active = WATCH.filter(function(c){ return document.body.classList.contains(c); });
+        var cls = active.length ? active.join(' | ') : '(no tracked classes)';
+        var msgInfo = ' msgs:' + _msgCount;
+        var orbEl = document.querySelector('.orb');
+        var orbFilter = orbEl ? getComputedStyle(orbEl).filter.substring(0,40) : '?';
+        var bodyBg = getComputedStyle(document.body).backgroundColor;
+        var iosMode = document.documentElement.classList.contains("ios-no-blend") ? "iOS" : "std";
+        dbg.textContent = cls + " bg:" + bodyBg + " S:" + _lastState + " msgs:" + _msgCount + " " + iosMode;
+      }
+      setInterval(updateDbg, 200);
+    })();
+  </script>
 </body>
 </html>
