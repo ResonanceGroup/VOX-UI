@@ -967,6 +967,7 @@
         // then re-apply. This prevents orb-mic-muted / state-speaker-muted getting stuck
         // when they're managed outside of updateUIState.
         var prevState = currentAIState;
+
         ALL_STATES.forEach(state => document.body.classList.remove('state-' + state));
         document.body.classList.remove('orb-mic-muted', 'state-speaker-muted');
         document.body.classList.add('state-' + newState);
@@ -1264,16 +1265,24 @@
     window.updateOrbFromFlutter = function(data) {
       // Check if this is already an orb state or needs mapping
       const orbStates = ['idle', 'executing', 'processing', 'notifying', 'disconnected'];
-      const isOrbState = orbStates.includes(data.state);
+      
+      // Only map state when explicitly provided — audio-level-only ticks have no
+      // state field and must NOT trigger a state change (mapLiveKitToOrbState
+      // returns 'idle' for undefined, which caused every ~33ms audio tick to
+      // reset the orb to idle while the agent was speaking).
+      var mappedState;
+      if (data.state !== undefined) {
+        mappedState = orbStates.includes(data.state) ? data.state : window.mapLiveKitToOrbState(data.state);
+      }
       
       const orbData = {
-        state: isOrbState ? data.state : window.mapLiveKitToOrbState(data.state),
         level: data.level !== undefined ? data.level : 0,
         theme: data.theme || 'light',
         status: data.status || '',
         speakerMuted: data.speakerMuted,  // pass through → state-speaker-muted class
         micMuted: data.micMuted           // pass through → orb-mic-muted modifier class
       };
+      if (mappedState !== undefined) { orbData.state = mappedState; }
       
       if (window.updateOrbOverlay) {
         window.updateOrbOverlay(orbData);
