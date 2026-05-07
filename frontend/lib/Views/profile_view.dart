@@ -225,85 +225,142 @@ class _ProfileViewContent extends StatelessWidget {
   }
 
   void _showAddProfileDialog(BuildContext context, LlmProfile? existing) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final settings = context.read<AppPreferencesNotifier>();
-    final nameCtrl = TextEditingController(text: existing?.name ?? '');
-    final urlCtrl = TextEditingController(text: existing?.baseUrl ?? 'http://localhost:8642/v1');
+    final nameCtrl  = TextEditingController(text: existing?.name ?? '');
+    final urlCtrl   = TextEditingController(text: existing?.baseUrl ?? 'http://localhost:8642/v1');
     final modelCtrl = TextEditingController(text: existing?.modelName ?? '');
 
-    showDialog(
+    // Use a bottom sheet instead of a dialog so it naturally pushes above
+    // the keyboard on mobile (isScrollControlled + viewInsets padding).
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true, // allows sheet to resize when keyboard appears
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (ctx) {
-        return AlertDialog(
-          title: Text(existing != null ? 'Edit Profile' : 'Add LLM Profile'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Profile Name',
-                    hintText: 'e.g. Hermes, Local Ollama',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: urlCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Base URL',
-                    hintText: 'e.g. http://localhost:8642/v1',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: modelCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Model Name',
-                    hintText: 'e.g. qwen3-30b-a3b-instruct',
-                  ),
-                ),
-              ],
-            ),
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return Padding(
+          // viewInsets.bottom = keyboard height; sheet content floats above it
+          padding: EdgeInsets.only(
+            left: 24, right: 24, top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final name = nameCtrl.text.trim();
-                final url = urlCtrl.text.trim();
-                final model = modelCtrl.text.trim();
-                if (name.isEmpty || url.isEmpty || model.isEmpty) return;
-
-                if (existing != null) {
-                  settings.updateLlmProfile(existing.copyWith(
-                    name: name,
-                    baseUrl: url,
-                    modelName: model,
-                  ));
-                } else {
-                  final profile = LlmProfile(
-                    id: const Uuid().v4(),
-                    name: name,
-                    baseUrl: url,
-                    modelName: model,
-                  );
-                  settings.addLlmProfile(profile);
-                  // If this is the first profile, make it active
-                  if (settings.llmProfiles.length == 1) {
-                    settings.setActiveProfileId(profile.id);
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Drag handle pill
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black26,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                existing != null ? 'Edit Profile' : 'Add LLM Profile',
+                style: TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: nameCtrl,
+                autofocus: true,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Profile Name',
+                  hintText: 'e.g. Hermes, Local Ollama',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: urlCtrl,
+                textInputAction: TextInputAction.next,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(
+                  labelText: 'Base URL',
+                  hintText: 'e.g. http://localhost:8642/v1',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: modelCtrl,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'Model Name',
+                  hintText: 'e.g. qwen3-30b-a3b-instruct',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) {
+                  final name  = nameCtrl.text.trim();
+                  final url   = urlCtrl.text.trim();
+                  final model = modelCtrl.text.trim();
+                  if (name.isNotEmpty && url.isNotEmpty && model.isNotEmpty) {
+                    _saveProfile(ctx, settings, existing, name, url, model);
                   }
-                }
-                Navigator.pop(ctx);
-              },
-              child: Text(existing != null ? 'Save' : 'Add'),
-            ),
-          ],
+                },
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () {
+                      final name  = nameCtrl.text.trim();
+                      final url   = urlCtrl.text.trim();
+                      final model = modelCtrl.text.trim();
+                      if (name.isEmpty || url.isEmpty || model.isEmpty) return;
+                      _saveProfile(ctx, settings, existing, name, url, model);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryBlue,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: Text(existing != null ? 'Save' : 'Add'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       },
     );
+  }
+
+  void _saveProfile(
+    BuildContext ctx,
+    AppPreferencesNotifier settings,
+    LlmProfile? existing,
+    String name, String url, String model,
+  ) {
+    if (existing != null) {
+      settings.updateLlmProfile(existing.copyWith(
+        name: name, baseUrl: url, modelName: model,
+      ));
+    } else {
+      final profile = LlmProfile(
+        id: const Uuid().v4(),
+        name: name, baseUrl: url, modelName: model,
+      );
+      settings.addLlmProfile(profile);
+      if (settings.llmProfiles.length == 1) {
+        settings.setActiveProfileId(profile.id);
+      }
+    }
+    Navigator.pop(ctx);
   }
 }
