@@ -276,7 +276,7 @@ async def ensure_room_and_agent() -> None:
     async with LiveKitAPI(api_url, config.livekit_api_key, config.livekit_api_secret) as lk:
         try:
             await lk.room.create_room(CreateRoomRequest(
-                name=DEFAULT_ROOM, empty_timeout=0, max_participants=20,
+                name=DEFAULT_ROOM, empty_timeout=86400, max_participants=20,
             ))
             logger.info(f"Room '{DEFAULT_ROOM}' created/confirmed")
         except Exception as e:
@@ -313,6 +313,14 @@ async def watchdog_check() -> None:
             agents = [p for p in resp.participants if p.identity.startswith("agent-")]
             if not agents:
                 logger.warning(f"No agent in '{DEFAULT_ROOM}' — re-dispatching")
+                # Recreate room with 24h timeout. LiveKit deletes empty rooms
+                # after ~300s even with agent-kind participants present.
+                try:
+                    await lk.room.create_room(CreateRoomRequest(
+                        name=DEFAULT_ROOM, empty_timeout=86400, max_participants=20,
+                    ))
+                except Exception:
+                    pass  # room already exists, that's fine
                 await lk.agent_dispatch.create_dispatch(
                     CreateAgentDispatchRequest(agent_name=AGENT_NAME, room=DEFAULT_ROOM)
                 )
