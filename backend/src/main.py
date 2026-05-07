@@ -115,35 +115,10 @@ class RVAgent(Agent):
 
     def __init__(self) -> None:
         super().__init__(
-            instructions="",
-            tools=[],
+            instructions="",  # Letta manages its own system prompt via memory blocks
+            tools=[],         # Empty - MCP handles tool calling
         )
-        self._room = None
         logger.info("RVAgent ready (tools via MCP)")
-
-    async def llm_node(self, chat_ctx, tools, model_settings):
-        """Publish assistant text early (after LLM, before TTS finishes)."""
-        from livekit.agents.voice.agent import Agent as _Agent
-        collected = []
-        async for chunk in _Agent.default.llm_node(self, chat_ctx, tools, model_settings):
-            if isinstance(chunk, str):
-                collected.append(chunk)
-            elif hasattr(chunk, 'delta') and chunk.delta:
-                c = getattr(chunk.delta, 'content', None)
-                if c:
-                    collected.append(c)
-            yield chunk
-        full_text = ''.join(collected).strip()
-        if full_text and self._room is not None:
-            try:
-                import json as _json
-                await self._room.local_participant.publish_data(
-                    _json.dumps({"type": "response", "text": full_text}).encode(),
-                    reliable=True,
-                )
-                logger.debug("early response published: %d chars", len(full_text))
-            except Exception as exc:
-                logger.debug("early response publish failed: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -262,16 +237,13 @@ async def entrypoint(ctx: JobContext) -> None:
 
     # Start session with persistent room IO.
     # Keep the agent session alive when text clients connect/disconnect between probes.
-    rv_agent = RVAgent()
     await session.start(
-        agent=rv_agent,
+        agent=RVAgent(),
         room=ctx.room,
         room_options=room_io.RoomOptions(
             close_on_disconnect=False,
         ),
     )
-    rv_agent._room = ctx.room  # inject room for early response publishing in llm_node
-
     # ── Forward agent state + responses back to Flutter client ──────────────
     @session.on("agent_state_changed")
     def on_agent_state_changed(ev) -> None:

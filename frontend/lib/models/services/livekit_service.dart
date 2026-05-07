@@ -87,6 +87,9 @@ class LiveKitService {
       StreamController<AIConnectionState>.broadcast();
   final StreamController<String> _transcriptController =
       StreamController<String>.broadcast();
+  // Partial (non-final) user STT updates — for status display only, not history.
+  final StreamController<String> _userPartialTranscriptController =
+      StreamController<String>.broadcast();
   final StreamController<String> _responseController =
       StreamController<String>.broadcast();
   final StreamController<String> _streamingResponseController =
@@ -99,6 +102,7 @@ class LiveKitService {
   Stream<AIConnectionState> get connectionState =>
       _connectionStateController.stream;
   Stream<String> get transcript => _transcriptController.stream;
+  Stream<String> get userPartialTranscript => _userPartialTranscriptController.stream;
   Stream<String> get response => _responseController.stream;
   Stream<String> get streamingResponse => _streamingResponseController.stream;
   Stream<AIAgentState> get agentState => _agentStateController.stream;
@@ -354,15 +358,19 @@ class LiveKitService {
               }
               _agentResponseAddedByDataChannel = false;  // reset for next turn
             } else {
-              // Stream non-final segments only when the data channel response hasn't
-              // already populated history (avoids a double-preview after early response).
-              if (!_agentResponseAddedByDataChannel) {
-                _streamingResponseController.add(text);
-              }
+              // Always stream non-final segments as the LLM generates / TTS speaks.
+              // TranscriptionEvent non-final segments are the standard LiveKit streaming
+              // mechanism; they arrive word-by-word as text is produced.
+              _streamingResponseController.add(text);
             }
           } else {
-            if (!segment.isFinal) continue;
-            _transcriptController.add(text);
+            if (segment.isFinal) {
+              // Final user segment -> adds to conversation history + status
+              _transcriptController.add(text);
+            } else {
+              // Partial user segment -> status display only (no history entry)
+              _userPartialTranscriptController.add(text);
+            }
           }
         }
       })
@@ -633,6 +641,7 @@ class LiveKitService {
 
     if (!_connectionStateController.isClosed) _connectionStateController.close();
     if (!_transcriptController.isClosed) _transcriptController.close();
+    if (!_userPartialTranscriptController.isClosed) _userPartialTranscriptController.close();
     if (!_responseController.isClosed) _responseController.close();
     if (!_streamingResponseController.isClosed) _streamingResponseController.close();
     if (!_agentStateController.isClosed) _agentStateController.close();

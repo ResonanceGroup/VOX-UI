@@ -14,6 +14,7 @@ class AIController extends ChangeNotifier {
   StreamSubscription<AIConnectionState>? _connectionStateSubscription;
   StreamSubscription<AIAgentState>? _agentStateSubscription;
   StreamSubscription<String>? _transcriptSubscription;
+  StreamSubscription<String>? _partialTranscriptSubscription;
   StreamSubscription<String>? _responseSubscription;
   StreamSubscription<String>? _streamingResponseSubscription;
   StreamSubscription<double>? _audioLevelSubscription;
@@ -130,6 +131,12 @@ class AIController extends ChangeNotifier {
 
     _agentStateSubscription = _livekitService.agentState.listen((state) {
       _agentState = state;
+      notifyListeners();
+    });
+
+    _partialTranscriptSubscription = _livekitService.userPartialTranscript.listen((text) {
+      // Partial user STT -- show in status bar as user speaks, no history entry
+      _currentTranscript = text;
       notifyListeners();
     });
 
@@ -330,6 +337,21 @@ class AIController extends ChangeNotifier {
   }
 
   void _addToHistory(ConversationMessage message) {
+    // Dedup: the LiveKit agent framework echoes user text input back as a
+    // TranscriptionEvent (UserInputTranscribed → _forward_user_transcript →
+    // capture_text), so text messages sent via sendMessage() would appear twice
+    // — once from sendMessage()'s optimistic add and once from the transcript
+    // subscription. If the incoming message has the same text, same sender, and
+    // arrived within 3 seconds of the last entry, skip it.
+    if (_conversationHistory.isNotEmpty) {
+      final last = _conversationHistory.last;
+      final gap = message.timestamp.difference(last.timestamp).abs();
+      if (last.text == message.text &&
+          last.isUser == message.isUser &&
+          gap < const Duration(seconds: 3)) {
+        return;
+      }
+    }
     _conversationHistory.add(message);
     if (_conversationHistory.length > 50) {
       _conversationHistory.removeAt(0);
@@ -351,6 +373,8 @@ class AIController extends ChangeNotifier {
     _connectionStateSubscription = null;
     _agentStateSubscription?.cancel();
     _agentStateSubscription = null;
+    _partialTranscriptSubscription?.cancel();
+    _partialTranscriptSubscription = null;
     _transcriptSubscription?.cancel();
     _transcriptSubscription = null;
     _responseSubscription?.cancel();
