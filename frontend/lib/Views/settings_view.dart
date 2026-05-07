@@ -708,7 +708,7 @@ class _Section extends StatelessWidget {
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(8 * scale),
-        border: Border.all(color: borderColor, width: 1),
+        border: Border.all(color: borderColor, width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,
       child: Theme(

@@ -318,7 +318,7 @@ class _AIViewContentState extends State<_AIViewContent> {
                 padding: const EdgeInsets.all(8.0),
                 child: Icon(
                   Icons.send,
-                  color: isDark ? Colors.blue[300] : Colors.blue,
+                  color: AppColors.primaryBlue,
                   size: 24.0 * scale,
                 ),
               ),
@@ -425,6 +425,8 @@ class _AIViewContentState extends State<_AIViewContent> {
       ),
       label: Text(isConnected ? 'Disconnect' : 'Connect'),
       style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primaryBlue,
+        foregroundColor: Colors.white,
         padding: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 8 * scale),
         minimumSize: Size.zero,
       ),
@@ -629,11 +631,11 @@ class _AIViewContentState extends State<_AIViewContent> {
                             decoration: BoxDecoration(
                               color: message.isUser
                                   ? (isDark
-                                      ? Colors.blue.withOpacity(0.32)
-                                      : Colors.blue.withOpacity(0.16))
+                                      ? AppColors.primaryBlue.withOpacity(0.30)
+                                      : AppColors.primaryBlue.withOpacity(0.12))
                                   : (isDark
                                       ? Colors.white.withOpacity(0.12)
-                                      : Colors.black.withOpacity(0.08)),
+                                      : Colors.black.withOpacity(0.07)),
                               borderRadius: BorderRadius.circular(16 * scale),
                               border: Border.all(
                                 color: (isDark ? Colors.white : Colors.black)
@@ -753,7 +755,7 @@ class _AIViewContentState extends State<_AIViewContent> {
                         IconButton(
                           icon: Icon(
                             Icons.send,
-                            color: isDark ? Colors.blue[300] : Colors.blue,
+                            color: AppColors.primaryBlue,
                             size: 32.0 * scale,
                           ),
                           onPressed: (_textController.text.trim().isEmpty || !controller.isAIEnabled)
@@ -817,8 +819,8 @@ class _AIViewContentState extends State<_AIViewContent> {
               padding: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 12 * scale),
               decoration: BoxDecoration(
                 color: isUser
-                    ? (isDark ? Colors.blue[700] : Colors.blue[500])
-                    : (isDark ? Colors.grey[800] : Colors.grey[300]),
+                    ? AppColors.primaryBlue
+                    : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE8E8E8)),
                 borderRadius: BorderRadius.circular(18 * scale),
               ),
               child: Text(
@@ -893,8 +895,8 @@ class _AIViewContentState extends State<_AIViewContent> {
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 24 * scale, vertical: 16 * scale),
               backgroundColor: controller.isMuted
-                  ? Colors.red.withOpacity(0.2)
-                  : (isDark ? Colors.blue[700] : Colors.blue[500]),
+                  ? Colors.red.withOpacity(0.15)
+                  : AppColors.primaryBlue,
               foregroundColor: controller.isMuted ? Colors.red : Colors.white,
             ),
           ),
