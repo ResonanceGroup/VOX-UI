@@ -411,32 +411,8 @@ class _AIViewContentState extends State<_AIViewContent> {
 
   /// Build content when AI is available
   Widget _buildAvailableContent(AIController controller, bool isDark, double scale) {
-    final messages = controller.conversationHistory.isNotEmpty
-        ? controller.conversationHistory
-        : const <ConversationMessage>[];
-
-    // Streaming preview bubble (non-final agent segments)
-    final streamingMsg = controller.streamingAgentMessage;
-
-    // Scroll to bottom on new message or streaming bubble growth
-    if (messages.length != _lastMessageCount) {
-      _lastMessageCount = messages.length;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
-    } else if (streamingMsg != _lastStreamingMessage) {
-      _lastStreamingMessage = streamingMsg;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
-    }
-
-    final displayMessages = (streamingMsg != null && streamingMsg.isNotEmpty)
-        ? [
-            ...messages,
-            ConversationMessage(
-              text: streamingMsg,
-              isUser: false,
-              timestamp: DateTime.now(),
-            ),
-          ]
-        : messages;
+    // displayMessages and scroll-to-bottom are computed INSIDE the Consumer builder
+    // (see below) so the tray always has fresh data from its own ctrl subscription.
 
     return Stack(
       children: [
@@ -467,12 +443,35 @@ class _AIViewContentState extends State<_AIViewContent> {
                 // Consumer ensures tray buttons (mic/speaker icons) rebuild when
                 // notifyListeners fires even when AnimatedOpacity opacity is static.
                 child: Consumer<AIController>(
-                  builder: (_, ctrl, __) => _buildHistoryTrayOverlay(
-                    displayMessages,
-                    isDark,
-                    scale,
-                    ctrl,
-                  ),
+                  builder: (_, ctrl, __) {
+                    // Compute displayMessages HERE so Consumer always uses
+                    // fresh data from its own notifyListeners subscription,
+                    // regardless of whether the parent's build() has run yet.
+                    final msgs = ctrl.conversationHistory;
+                    final streaming = ctrl.streamingAgentMessage;
+
+                    // Scroll to bottom whenever messages or streaming preview changes.
+                    if (msgs.length != _lastMessageCount ||
+                        streaming != _lastStreamingMessage) {
+                      _lastMessageCount = msgs.length;
+                      _lastStreamingMessage = streaming;
+                      WidgetsBinding.instance
+                          .addPostFrameCallback((_) => _scrollToBottom());
+                    }
+
+                    final displayMessages = (streaming != null && streaming.isNotEmpty)
+                        ? [
+                            ...msgs,
+                            ConversationMessage(
+                              text: streaming,
+                              isUser: false,
+                              timestamp: DateTime.now(),
+                            ),
+                          ]
+                        : msgs;
+
+                    return _buildHistoryTrayOverlay(displayMessages, isDark, scale, ctrl);
+                  },
                 ),
               ),
             ),
