@@ -47,11 +47,13 @@ class ThemeManager extends ChangeNotifier {
         onBackground: Colors.white,
       ),
 
-      // AppBar theme
+      // AppBar theme — #252526 matches original VoxUI dark header
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.backgroundDark,
+        backgroundColor: const Color(0xFF252526),
         foregroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         centerTitle: false,
         titleTextStyle: const TextStyle(
           color: Colors.white,
@@ -206,11 +208,13 @@ class ThemeManager extends ChangeNotifier {
         onBackground: Colors.black87,
       ),
 
-      // AppBar theme
+      // AppBar theme — white matches original VoxUI light header
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         centerTitle: false,
         titleTextStyle: const TextStyle(
           color: Colors.black87,
@@ -348,15 +352,15 @@ class ThemeManager extends ChangeNotifier {
 
 /// App Color Palette
 class AppColors {
-  // Dark mode colors
-  static const Color backgroundDark = Color(0xFF000000);
+  // Dark mode colors — #1e1e1e matches original VoxUI dark body background
+  static const Color backgroundDark = Color(0xFF1E1E1E);
   static const Color cardDark = Color(0xFF1A1A1A);
   static const Color cardAccentDark = Color(0xFF1F1F1F);
   static const Color divider = Color(0xFF333333);
   static const Color selectedNavBackground = Color(0xFF2A2A2A);
 
-  // Light mode colors
-  static const Color backgroundLight = Color(0xFFF5F5F5);
+  // Light mode colors — pure white matches original VoxUI light body background
+  static const Color backgroundLight = Color(0xFFFFFFFF);
   static const Color cardLight = Color(0xFFFFFFFF);
 
   // Accent colors (used in both themes)

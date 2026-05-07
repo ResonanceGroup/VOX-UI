@@ -225,10 +225,11 @@ class _ProfileViewContent extends StatelessWidget {
   }
 
   void _showAddProfileDialog(BuildContext context, LlmProfile? existing) {
-    final settings = context.read<AppPreferencesNotifier>();
+    final settings  = context.read<AppPreferencesNotifier>();
     final nameCtrl  = TextEditingController(text: existing?.name ?? '');
     final urlCtrl   = TextEditingController(text: existing?.baseUrl ?? 'http://localhost:8642/v1');
     final modelCtrl = TextEditingController(text: existing?.modelName ?? '');
+    final apiKeyCtrl = TextEditingController(text: existing?.apiKey ?? '');
 
     // Use a bottom sheet instead of a dialog so it naturally pushes above
     // the keyboard on mobile (isScrollControlled + viewInsets padding).
@@ -294,10 +295,21 @@ class _ProfileViewContent extends StatelessWidget {
               const SizedBox(height: 16),
               TextField(
                 controller: modelCtrl,
-                textInputAction: TextInputAction.done,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'Model Name',
-                  hintText: 'e.g. qwen3-30b-a3b-instruct',
+                  hintText: 'e.g. Qwen3.6-35B-A3B-AWQ',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: apiKeyCtrl,
+                textInputAction: TextInputAction.done,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'API Key',
+                  hintText: 'Leave blank if not required',
                   border: OutlineInputBorder(),
                 ),
                 onSubmitted: (_) {
@@ -305,7 +317,8 @@ class _ProfileViewContent extends StatelessWidget {
                   final url   = urlCtrl.text.trim();
                   final model = modelCtrl.text.trim();
                   if (name.isNotEmpty && url.isNotEmpty && model.isNotEmpty) {
-                    _saveProfile(ctx, settings, existing, name, url, model);
+                    _saveProfile(ctx, settings, existing, name, url, model,
+                        apiKey: apiKeyCtrl.text.trim());
                   }
                 },
               ),
@@ -324,7 +337,8 @@ class _ProfileViewContent extends StatelessWidget {
                       final url   = urlCtrl.text.trim();
                       final model = modelCtrl.text.trim();
                       if (name.isEmpty || url.isEmpty || model.isEmpty) return;
-                      _saveProfile(ctx, settings, existing, name, url, model);
+                      _saveProfile(ctx, settings, existing, name, url, model,
+                          apiKey: apiKeyCtrl.text.trim());
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryBlue,
@@ -345,16 +359,17 @@ class _ProfileViewContent extends StatelessWidget {
     BuildContext ctx,
     AppPreferencesNotifier settings,
     LlmProfile? existing,
-    String name, String url, String model,
-  ) {
+    String name, String url, String model, {
+    String apiKey = '',
+  }) {
     if (existing != null) {
       settings.updateLlmProfile(existing.copyWith(
-        name: name, baseUrl: url, modelName: model,
+        name: name, baseUrl: url, modelName: model, apiKey: apiKey,
       ));
     } else {
       final profile = LlmProfile(
         id: const Uuid().v4(),
-        name: name, baseUrl: url, modelName: model,
+        name: name, baseUrl: url, modelName: model, apiKey: apiKey,
       );
       settings.addLlmProfile(profile);
       if (settings.llmProfiles.length == 1) {

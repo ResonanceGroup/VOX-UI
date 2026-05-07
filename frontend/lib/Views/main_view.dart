@@ -149,6 +149,7 @@ class _MainViewContentState extends State<_MainViewContent> {
 
   /// Build the app bar — hamburger auto-added by Scaffold when drawer is set
   PreferredSizeWidget _buildAppBar(double scale, List<NavDestination> destinations) {
+    final isDark = ThemeManager().isDarkMode;
     return AppBar(
       title: Text(
         destinations[_selectedIndex].label,
@@ -157,15 +158,21 @@ class _MainViewContentState extends State<_MainViewContent> {
       actions: [
         IconButton(
           icon: Icon(
-            ThemeManager().isDarkMode
-                ? Icons.dark_mode_outlined
-                : Icons.light_mode_outlined,
+            isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
           ),
           onPressed: () => ThemeManager().toggleTheme(),
           tooltip: 'Toggle theme',
         ),
         SizedBox(width: 8 * scale),
       ],
+      // 1px separator matching original VoxUI header border-bottom
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(
+          height: 1,
+          color: isDark ? const Color(0xFF333333) : const Color(0xFFEEEEEE),
+        ),
+      ),
     );
   }
 }

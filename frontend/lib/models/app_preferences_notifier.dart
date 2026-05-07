@@ -61,11 +61,34 @@ class AppPreferencesNotifier extends ChangeNotifier {
     }
   }
 
-  /// Load LLM profiles from persistence
+  /// Load LLM profiles from persistence; seed defaults on first run.
   void _loadLlmProfiles() {
     _llmProfiles = _preferencesService.loadLlmProfiles();
     _activeProfileId = _preferencesService.getActiveProfileId();
+    if (_llmProfiles.isEmpty) {
+      _llmProfiles = _defaultProfiles;
+      _preferencesService.saveLlmProfiles(_llmProfiles);
+      if (_llmProfiles.isNotEmpty) {
+        _activeProfileId = _llmProfiles.first.id;
+        _preferencesService.setActiveProfileId(_activeProfileId!);
+      }
+    }
   }
+
+  static final List<LlmProfile> _defaultProfiles = [
+    const LlmProfile(
+      id: 'default-qwen-local',
+      name: 'Qwen (Local)',
+      baseUrl: 'http://localhost:8001/v1',
+      modelName: 'Qwen3.6-35B-A3B-AWQ',
+    ),
+    const LlmProfile(
+      id: 'default-hermes',
+      name: 'Hermes',
+      baseUrl: 'https://laptop-hermes.resonancegroupusa.com/v1',
+      modelName: 'Qwen3.6-35B-A3B-AWQ',
+    ),
+  ];
 
   /// Add a new LLM profile
   Future<void> addLlmProfile(LlmProfile profile) async {
