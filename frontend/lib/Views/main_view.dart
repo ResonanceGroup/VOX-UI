@@ -61,7 +61,7 @@ class _MainViewContentState extends State<_MainViewContent> {
       label: 'Settings',
       icon: Icons.settings_outlined,
       selectedIcon: Icons.settings,
-      view: const SettingsView(),
+      view: SettingsView(onSaved: () => setState(() => _selectedIndex = 0)),
     ),
     NavDestination(
       label: 'Profiles',

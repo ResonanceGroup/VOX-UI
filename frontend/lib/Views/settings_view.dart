@@ -9,11 +9,14 @@ import 'theme_manager.dart';
 
 /// Settings View — Connection, LLM Profiles, Voice Endpoints (with live preview).
 class SettingsView extends StatelessWidget {
-  const SettingsView({super.key});
+  /// Called after a successful save so the parent can navigate back to home.
+  final VoidCallback? onSaved;
+
+  const SettingsView({super.key, this.onSaved});
 
   @override
   Widget build(BuildContext context) {
-    return const _SettingsBody();
+    return _SettingsBody(onSaved: onSaved);
   }
 }
 
@@ -22,7 +25,8 @@ class SettingsView extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _SettingsBody extends StatefulWidget {
-  const _SettingsBody();
+  final VoidCallback? onSaved;
+  const _SettingsBody({this.onSaved});
 
   @override
   State<_SettingsBody> createState() => _SettingsBodyState();
@@ -192,6 +196,13 @@ class _SettingsBodyState extends State<_SettingsBody> {
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted) setState(() => _saveStatus = null);
     });
+
+    // Navigate back to home screen after successful save
+    if (ok) {
+      Future.delayed(const Duration(milliseconds: 1200), () {
+        if (mounted) widget.onSaved?.call();
+      });
+    }
   }
 
   Future<void> _playPreview() async {
@@ -570,6 +581,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
   // ── Reset ─────────────────────────────────────────────────────────────────
 
   Widget _buildResetButton(BuildContext context, AppPreferencesNotifier settings, double scale) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16 * scale),
       child: ElevatedButton.icon(
@@ -578,10 +590,15 @@ class _SettingsBodyState extends State<_SettingsBody> {
         label: Text('Reset All Settings', style: TextStyle(
             fontSize: 16 * scale, fontWeight: FontWeight.bold)),
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.error,
-          foregroundColor: Colors.white,
+          // Secondary style — matches original VoxUI .button.secondary
+          backgroundColor: isDark ? const Color(0xFF444444) : const Color(0xFFF0F0F0),
+          foregroundColor: isDark ? const Color(0xFFCCCCCC) : const Color(0xFF555555),
           padding: EdgeInsets.symmetric(horizontal: 24 * scale, vertical: 16 * scale),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12 * scale)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12 * scale),
+            side: BorderSide(color: isDark ? const Color(0xFF555555) : const Color(0xFFCCCCCC)),
+          ),
+          elevation: 0,
         ),
       ),
     );
@@ -601,7 +618,12 @@ class _SettingsBodyState extends State<_SettingsBody> {
                 const SnackBar(content: Text('Settings reset.')));
           },
           style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error, foregroundColor: Colors.white),
+            backgroundColor: Theme.of(ctx).brightness == Brightness.dark
+                ? const Color(0xFF444444) : const Color(0xFFF0F0F0),
+            foregroundColor: Theme.of(ctx).brightness == Brightness.dark
+                ? const Color(0xFFCCCCCC) : const Color(0xFF555555),
+            elevation: 0,
+          ),
           child: const Text('Reset'),
         ),
       ],
