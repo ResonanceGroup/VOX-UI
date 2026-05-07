@@ -49,7 +49,9 @@ const server = http.createServer((req, res) => {
     'CDN-Cache-Control': 'no-store',
     'Cloudflare-CDN-Cache-Control': 'no-store',
   });
-  fs.createReadStream(filePath).pipe(res);
+  const stream = fs.createReadStream(filePath);
+  stream.on('error', (e) => { console.error('[STATIC] read error', filePath, e.message); try { res.end(); } catch(_) {} });
+  stream.pipe(res);
 });
 
 // WebSocket proxy for /rtc* → LiveKit

@@ -113,6 +113,7 @@ class LiveKitService {
 
   bool _isInitialized = false;
   bool _isMuted = false;
+  bool _isConnecting = false;
   int _reconnectAttempts = 0;
 
   // Audio monitoring
@@ -169,10 +170,12 @@ class LiveKitService {
     if (!_isInitialized) await initialize();
 
     if (_currentConnectionState == AIConnectionState.connected ||
-        _currentConnectionState == AIConnectionState.connecting) {
+        _currentConnectionState == AIConnectionState.connecting ||
+        _isConnecting) {
       return true;
     }
 
+    _isConnecting = true;
     try {
       _updateConnectionState(AIConnectionState.connecting);
 
@@ -209,6 +212,7 @@ class LiveKitService {
       }
 
       _reconnectAttempts = 0;
+      _isConnecting = false;
       _updateConnectionState(AIConnectionState.connected);
 
       if (AppConstants.aiEnableDebugLogs) {
@@ -224,13 +228,19 @@ class LiveKitService {
 
       if (_reconnectAttempts < AppConstants.aiMaxReconnectAttempts) {
         _reconnectAttempts++;
+        _isConnecting = false;  // allow recursive retry call to enter
         if (AppConstants.aiEnableDebugLogs) {
           debugPrint('LiveKitService: Reconnect attempt $_reconnectAttempts/${AppConstants.aiMaxReconnectAttempts}');
         }
         await Future.delayed(AppConstants.aiReconnectDelay);
-        return connect(url: url, token: token);
+        return connect(url: url, token: token, iceServers: iceServers, onError: onError);
       }
 
+      // All retries exhausted — reset counter and transition to disconnected
+      // so ai_controller's reconnect timer can trigger a fresh attempt.
+      _reconnectAttempts = 0;
+      _isConnecting = false;
+      _updateConnectionState(AIConnectionState.disconnected);
       return false;
     }
   }
@@ -303,6 +313,7 @@ class LiveKitService {
   void _setupEventListeners() {
     ConnectionState? _lastRoomState;
     _room!.addListener(() {
+      if (_room == null) return;  // guard: room disposed between event and callback
       final state = _room!.connectionState;
       if (state == _lastRoomState) return;
       _lastRoomState = state;
@@ -529,6 +540,8 @@ class LiveKitService {
       _remoteAudioTrack = null;
 
       if (_room != null) {
+        _eventListener?.dispose();
+        _eventListener = null;
         try {
           await _room!.disconnect();
           await _room!.dispose();
@@ -540,6 +553,11 @@ class LiveKitService {
 
       _disconnectDebounceTimer?.cancel();
       _disconnectDebounceTimer = null;
+      _speakingIdleDebounceTimer?.cancel();
+      _speakingIdleDebounceTimer = null;
+      _remoteAudioLevelTimer?.cancel();
+      _remoteAudioLevelTimer = null;
+      _activeSpeakers = [];
 
       _updateConnectionState(AIConnectionState.disconnected);
       _updateAgentState(AIAgentState.idle);

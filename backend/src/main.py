@@ -289,10 +289,6 @@ async def entrypoint(ctx: JobContext) -> None:
         asyncio.create_task(_pub())
 
     # Log participant and track events for debugging
-    @ctx.room.on("participant_connected")
-    def on_participant_connected(participant):
-        logger.info("Participant connected: %s", participant.identity)
-
     @ctx.room.on("track_subscribed")
     def on_track_subscribed(track, publication, participant):
         logger.info("Track subscribed: kind=%s from=%s", track.kind, participant.identity)
@@ -353,16 +349,27 @@ async def entrypoint(ctx: JobContext) -> None:
         except Exception as e:
             logger.warning("%s failed (non-fatal): %s", reason, e)
 
-    # Greet participants when they connect (persistent agent — always in room)
+    # Greet participants when they connect (persistent agent â always in room).
+    # Cooldown: only greet once per 30s to avoid cascade during reconnect storms.
+    _last_greeting_time = [0.0]  # mutable container for closure
+
     @ctx.room.on("participant_connected")
     def on_participant_connected(participant) -> None:
+        logger.info("Participant connected: %s", participant.identity)
         async def _greet() -> None:
-            await asyncio.sleep(0.5)  # Brief pause for audio pipeline to settle
-            if not config.skip_greeting:
-                _try_generate_reply(
-                    instructions="A participant just joined. Greet them warmly.",
-                    reason="Greeting",
-                )
+            await asyncio.sleep(0.5)
+            if config.skip_greeting:
+                return
+            now = time.time()
+            elapsed = now - _last_greeting_time[0]
+            if elapsed < 30.0:
+                logger.info("Greeting suppressed (cooldown %.0fs)", elapsed)
+                return
+            _last_greeting_time[0] = now
+            _try_generate_reply(
+                instructions="A participant just joined. Greet them warmly.",
+                reason="Greeting",
+            )
         asyncio.create_task(_greet())
 
     @ctx.room.on("participant_disconnected")
