@@ -229,22 +229,13 @@ class _SettingsBodyState extends State<_SettingsBody> {
     return Stack(
       children: [
         Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: isDark
-                  ? [const Color(0xFF1A1A2E), const Color(0xFF16213E)]
-                  : [const Color(0xFFF0F4F8), const Color(0xFFE1E8ED)],
-            ),
-          ),
+          // Flat background matching original VoxUI: #1e1e1e dark / #f9f9f9 light
+          color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9F9F9),
           child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(24 * scale, 32 * scale, 24 * scale, 100 * scale),
+            padding: EdgeInsets.fromLTRB(16 * scale, 16 * scale, 16 * scale, 100 * scale),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildHeader(isDark, scale),
-                SizedBox(height: 32 * scale),
                 _buildConnectionSection(isDark, scale),
                 SizedBox(height: 24 * scale),
                 _buildLlmSection(settings, isDark, scale),
@@ -297,7 +288,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
 
   Widget _buildConnectionSection(bool isDark, double scale) {
     return _Section(title: 'Connection', icon: Icons.cloud_outlined,
-        scale: scale, isDark: isDark,
+        scale: scale, isDark: isDark, initiallyExpanded: true,
         child: Padding(
           padding: EdgeInsets.all(16 * scale),
           child: Column(children: [
@@ -691,7 +682,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
   }
 }
 
-// ── Section container ───────────────────────────────────────────────────────
+// ── Collapsible section container (accordion) ─────────────────────────────
 
 class _Section extends StatelessWidget {
   final String title;
@@ -699,55 +690,49 @@ class _Section extends StatelessWidget {
   final Widget child;
   final double scale;
   final bool isDark;
+  final bool initiallyExpanded;
 
   const _Section({
     required this.title, required this.icon, required this.child,
-    required this.scale, required this.isDark,
+    required this.scale, required this.isDark, this.initiallyExpanded = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final borderColor  = isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC);
+    final cardBg       = isDark ? const Color(0xFF2C2C2C) : Colors.white;
+    final headerText   = isDark ? const Color(0xFFEEEEEE) : const Color(0xFF333333);
+    final chevronColor = isDark ? const Color(0xFFAAAAAA) : const Color(0xFF666666);
+
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : Colors.white,
-        borderRadius: BorderRadius.circular(16 * scale),
-        boxShadow: [BoxShadow(
-          color: Colors.black.withOpacity(0.1), blurRadius: 8 * scale,
-          offset: Offset(0, 4 * scale),
-        )],
-        border: Border.all(
-          color: isDark
-              ? AppColors.primaryBlue.withOpacity(0.3)
-              : const Color(0xFF0066CC).withOpacity(0.2),
-          width: 1.5,
-        ),
+        color: cardBg,
+        borderRadius: BorderRadius.circular(8 * scale),
+        border: Border.all(color: borderColor, width: 1),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: EdgeInsets.all(16 * scale),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? AppColors.primaryBlue.withOpacity(0.15)
-                  : const Color(0xFF0066CC).withOpacity(0.1),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(16 * scale),
-                topRight: Radius.circular(16 * scale),
-              ),
-            ),
-            child: Row(children: [
-              Icon(icon, size: 24 * scale,
-                  color: isDark ? AppColors.primaryBlue : const Color(0xFF0066CC)),
-              SizedBox(width: 12 * scale),
-              Text(title, style: TextStyle(
-                fontSize: 18 * scale, fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.primaryBlue : const Color(0xFF0066CC),
-              )),
-            ]),
-          ),
-          child,
-        ],
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        // Suppress the ExpansionTile's built-in divider line above children
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: initiallyExpanded,
+          tilePadding: EdgeInsets.symmetric(
+              horizontal: 16 * scale, vertical: 4 * scale),
+          backgroundColor: cardBg,
+          collapsedBackgroundColor: cardBg,
+          iconColor: chevronColor,
+          collapsedIconColor: chevronColor,
+          title: Text(title, style: TextStyle(
+            fontSize: 16 * scale,
+            fontWeight: FontWeight.w600,
+            color: headerText,
+          )),
+          childrenPadding: EdgeInsets.zero,
+          children: [
+            Divider(height: 1, thickness: 1, color: borderColor),
+            child,
+          ],
+        ),
       ),
     );
   }

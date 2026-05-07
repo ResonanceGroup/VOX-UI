@@ -320,7 +320,7 @@ class AppColors {
   static const Color cardLight = Color(0xFFFFFFFF);
 
   // Accent colors (used in both themes)
-  static const Color primaryBlue = Color(0xFF00A3FF);
+  static const Color primaryBlue = Color(0xFF347AB8); // original VoxUI primary
   static const Color accentGreen = Color(0xFF00FF00);
   static const Color batteryGreen = Color(0xFF4CAF50);
   static const Color solarBlue = Color(0xFF2196F3);
