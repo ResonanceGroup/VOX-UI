@@ -130,6 +130,7 @@ class LiveKitService {
   // can briefly drop audio level, causing spurious idle/notifying state flashes.
 
   List<Participant> _activeSpeakers = [];
+  EventsListener<RoomEvent>? _eventListener;
 
   /// Initialize LiveKit service
   Future<void> initialize() async {
@@ -147,6 +148,7 @@ class LiveKitService {
     try {
       _room = Room();
       _isInitialized = true;
+      _setupEventListeners();
       _updateConnectionState(AIConnectionState.disconnected);
       _updateAgentState(AIAgentState.idle);
 
@@ -199,7 +201,6 @@ class LiveKitService {
         ),
       );
 
-      _setupEventListeners();
       try {
         await _createLocalAudioTrack();
       } catch (audioErr) {
@@ -320,14 +321,16 @@ class LiveKitService {
           break;
         case ConnectionState.disconnected:
           _disconnectDebounceTimer?.cancel();
-          _disconnectDebounceTimer = Timer(const Duration(milliseconds: 1500), () {
+          _disconnectDebounceTimer = Timer(const Duration(milliseconds: 5000), () {
             _updateConnectionState(AIConnectionState.disconnected);
           });
           break;
       }
     });
 
-    final listener = _room!.createListener();
+    _eventListener?.dispose();
+    _eventListener = _room!.createListener();
+    final listener = _eventListener!;
 
     listener
       ..on<DataReceivedEvent>((event) {
@@ -656,6 +659,8 @@ class LiveKitService {
     _localAudioTrack = null;
     _remoteAudioTrack = null;
 
+    _eventListener?.dispose();
+    _eventListener = null;
     _room?.disconnect();
     _room?.dispose();
     _room = null;
