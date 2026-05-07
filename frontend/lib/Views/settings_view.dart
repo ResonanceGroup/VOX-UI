@@ -668,11 +668,32 @@ class _SettingsBodyState extends State<_SettingsBody> {
         TextField(
           controller: ctrl,
           obscureText: obscure,
-          style: TextStyle(fontSize: 15 * scale),
+          style: TextStyle(
+            fontSize: 15 * scale,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
           decoration: InputDecoration(
             hintText: hint,
+            helperText: helperText,
             suffixIcon: suffix,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8 * scale)),
+            filled: true,
+            fillColor: isDark ? const Color(0xFF3A3A3A) : Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8 * scale),
+              borderSide: BorderSide(
+                color: isDark ? const Color(0xFF555555) : const Color(0xFFCCCCCC),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8 * scale),
+              borderSide: BorderSide(
+                color: isDark ? const Color(0xFF555555) : const Color(0xFFCCCCCC),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8 * scale),
+              borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
+            ),
             contentPadding: EdgeInsets.symmetric(
                 horizontal: 12 * scale, vertical: 12 * scale),
           ),
@@ -704,11 +725,15 @@ class _Section extends StatelessWidget {
     final headerText   = isDark ? const Color(0xFFEEEEEE) : const Color(0xFF333333);
     final chevronColor = isDark ? const Color(0xFFAAAAAA) : const Color(0xFF666666);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cardBg,
+    // Card gives reliable rounded-corner clipping on all platforms (incl. iOS Safari).
+    // Shape border draws the outline as part of the rounded path so corners match exactly.
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      color: cardBg,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8 * scale),
-        border: Border.all(color: borderColor, width: 1.5),
+        side: BorderSide(color: borderColor, width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,
       child: Theme(
@@ -718,8 +743,9 @@ class _Section extends StatelessWidget {
           initiallyExpanded: initiallyExpanded,
           tilePadding: EdgeInsets.symmetric(
               horizontal: 16 * scale, vertical: 4 * scale),
-          backgroundColor: cardBg,
-          collapsedBackgroundColor: cardBg,
+          // Transparent lets Card background show through consistently
+          backgroundColor: Colors.transparent,
+          collapsedBackgroundColor: Colors.transparent,
           iconColor: chevronColor,
           collapsedIconColor: chevronColor,
           title: Text(title, style: TextStyle(

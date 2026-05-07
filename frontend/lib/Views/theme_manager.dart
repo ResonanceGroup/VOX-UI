@@ -163,6 +163,26 @@ class ThemeManager extends ChangeNotifier {
         color: AppColors.primaryBlue,
         linearTrackColor: AppColors.divider,
       ),
+
+      // Input decoration theme (all TextFields)
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF3A3A3A),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: Color(0xFF555555)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: Color(0xFF555555)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
+        ),
+        labelStyle: const TextStyle(color: Color(0xFFAAAAAA)),
+        hintStyle: const TextStyle(color: Color(0xFF666666)),
+      ),
     );
   }
 
@@ -301,6 +321,26 @@ class ThemeManager extends ChangeNotifier {
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: AppColors.primaryBlue,
         linearTrackColor: Colors.black12,
+      ),
+
+      // Input decoration theme (all TextFields)
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: Color(0xFFCCCCCC)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: Color(0xFFCCCCCC)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
+        ),
+        labelStyle: const TextStyle(color: Color(0xFF666666)),
+        hintStyle: const TextStyle(color: Color(0xFF999999)),
       ),
     );
   }
