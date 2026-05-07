@@ -380,11 +380,15 @@ class LiveKitService {
       ..on<ParticipantAttributesChanged>((event) {
         final agentState = event.attributes['lk.agent.state'];
         if (agentState != null) {
+          if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] ATTR: " + agentState);
           final state = _parseAgentState(agentState);
-          _updateAgentState(state);
+          _updateAgentState(state, source: "attr");
         }
       })
       ..on<ActiveSpeakersChangedEvent>((event) {
+        final _li = _room?.localParticipant?.identity;
+        final _ha = event.speakers.any((p) => p.identity != _li);
+        if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] SPKR: " + (_ha ? "audible" : "empty"));
         _updateActiveSpeakers(event.speakers);
       });
   }
@@ -415,7 +419,7 @@ class LiveKitService {
         break;
       case 'state':
         final stateName = json['state'] as String?;
-        if (stateName != null) _updateAgentState(_parseAgentState(stateName));
+        if (stateName != null) { if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] DC: " + stateName); _updateAgentState(_parseAgentState(stateName), source: "dc"); }
         break;
     }
   }
@@ -567,15 +571,17 @@ class LiveKitService {
       // Audio is playing — cancel any pending idle transition and hold speaking.
       _speakingIdleDebounceTimer?.cancel();
       _speakingIdleDebounceTimer = null;
-      _updateAgentState(AIAgentState.speaking);
+      _updateAgentState(AIAgentState.speaking, source: "audio");
     } else if (_currentAgentState == AIAgentState.speaking) {
       // Audio paused — wait before declaring idle.
       // Covers natural inter-sentence pauses without flickering.
       _speakingIdleDebounceTimer?.cancel();
+      if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] DBC: start");
       _speakingIdleDebounceTimer = Timer(const Duration(milliseconds: 1200), () {
         _speakingIdleDebounceTimer = null;
+        if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] DBC: fire");
         if (_currentAgentState == AIAgentState.speaking) {
-          _updateAgentState(AIAgentState.idle);
+          _updateAgentState(AIAgentState.idle, source: "debounce");
         }
       });
     }
@@ -606,7 +612,7 @@ class LiveKitService {
     }
   }
 
-  void _updateAgentState(AIAgentState state) {
+  void _updateAgentState(AIAgentState state, {String source = "?"}) {
     // While audio is playing or debounce is running, don't let backend
     // attribute events override the audio-confirmed speaking state.
     if (_currentAgentState == AIAgentState.speaking &&
@@ -614,9 +620,10 @@ class LiveKitService {
         state != AIAgentState.error) {
       final localId = _room?.localParticipant?.identity;
       final agentAudible = _activeSpeakers.any((p) => p.identity != localId);
-      if (agentAudible || _speakingIdleDebounceTimer != null) return;
+      if (agentAudible || _speakingIdleDebounceTimer != null) { if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] BLOCK [" + source + "]: " + state.name + " aud=" + agentAudible.toString() + " dbc=" + (_speakingIdleDebounceTimer!=null).toString()); return; }
     }
     if (_currentAgentState != state) {
+      if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] EMIT [" + source + "]: " + _currentAgentState.name + " -> " + state.name);
       _currentAgentState = state;
       if (!_agentStateController.isClosed) _agentStateController.add(state);
     }
