@@ -127,8 +127,11 @@ class LiveKitService {
   // Debounce: hold speaking state for a short window after audio drops.
   // Prevents orb flicker during natural inter-sentence pauses in TTS.
   Timer? _speakingIdleDebounceTimer;
-  // Debounce for speaking->idle transition: natural TTS pauses between sentences
-  // can briefly drop audio level, causing spurious idle/notifying state flashes.
+  // Tracks the most recent backend-declared state that was blocked by the
+  // speaking guard. When the debounce fires we apply this instead of hardcoded
+  // idle so the orb lands in the correct state (e.g. listening after TTS done,
+  // or processing if the next sentence is already being generated).
+  AIAgentState? _pendingBackendState;
 
   List<Participant> _activeSpeakers = [];
   EventsListener<RoomEvent>? _eventListener;
@@ -597,12 +600,19 @@ class LiveKitService {
       // Audio paused — wait before declaring idle.
       // Covers natural inter-sentence pauses without flickering.
       _speakingIdleDebounceTimer?.cancel();
+      _pendingBackendState = null;
       if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] DBC: start");
       _speakingIdleDebounceTimer = Timer(const Duration(milliseconds: 1200), () {
         _speakingIdleDebounceTimer = null;
         if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] DBC: fire");
         if (_currentAgentState == AIAgentState.speaking) {
-          _updateAgentState(AIAgentState.idle, source: "debounce");
+          // Use the most recent blocked backend state (e.g. listening/processing)
+          // instead of a hardcoded idle.  This prevents the orb from getting
+          // stuck at idle when the backend already declared listening.
+          final nextState = _pendingBackendState ?? AIAgentState.listening;
+          _pendingBackendState = null;
+          if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] DBC: -> " + nextState.name);
+          _updateAgentState(nextState, source: "debounce");
         }
       });
     }
@@ -641,7 +651,11 @@ class LiveKitService {
         state != AIAgentState.error) {
       final localId = _room?.localParticipant?.identity;
       final agentAudible = _activeSpeakers.any((p) => p.identity != localId);
-      if (agentAudible || _speakingIdleDebounceTimer != null) { if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] BLOCK [" + source + "]: " + state.name + " aud=" + agentAudible.toString() + " dbc=" + (_speakingIdleDebounceTimer!=null).toString()); return; }
+      if (agentAudible || _speakingIdleDebounceTimer != null) {
+        _pendingBackendState = state;  // remember last blocked state
+        if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] BLOCK [" + source + "]: " + state.name + " aud=" + agentAudible.toString() + " dbc=" + (_speakingIdleDebounceTimer!=null).toString());
+        return;
+      }
     }
     if (_currentAgentState != state) {
       if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] EMIT [" + source + "]: " + _currentAgentState.name + " -> " + state.name);

@@ -181,8 +181,12 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     _notifyRevertTimer = null;
 
     // Check if this transition should flash "notifying"
+    // Trigger for speaking→idle OR speaking→listening (both land on 'idle' orb
+    // state, but listening is the semantically-correct post-TTS state when the
+    // backend has already declared it).
     final shouldNotify =
-        (prev == AIAgentState.speaking && newState == AIAgentState.idle);
+        (prev == AIAgentState.speaking &&
+         (newState == AIAgentState.idle || newState == AIAgentState.listening));
 
     if (shouldNotify) {
       // Flash notifying, then transition to the target state
