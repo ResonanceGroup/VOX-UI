@@ -327,8 +327,6 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   }
 
   void _sendOrbUpdate() {
-    if (_isLoading) return;
-
     final message = jsonEncode({
       'type': 'livekit-update',
       'payload': {
@@ -348,13 +346,17 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
       }
     });
 
-    _controller.runJavaScript("""
-      window.postMessage($message, '*');
-      var sd = document.querySelector('.status-display');
-      if (sd) sd.style.setProperty('font-size', '${widget.statusFontSize}px', 'important');
-      var st = document.querySelector('.status-text');
-      if (st) st.style.setProperty('font-size', '${widget.statusFontSize}px', 'important');
-    """);
+    try {
+      _controller.runJavaScript("""
+        window.postMessage($message, '*');
+        var sd = document.querySelector('.status-display');
+        if (sd) sd.style.setProperty('font-size', '${widget.statusFontSize}px', 'important');
+        var st = document.querySelector('.status-text');
+        if (st) st.style.setProperty('font-size', '${widget.statusFontSize}px', 'important');
+      """);
+    } catch (_) {
+      // Page not yet loaded — state will be pushed on onPageFinished
+    }
   }
 
   @override
