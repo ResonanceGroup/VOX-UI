@@ -200,12 +200,16 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
         t.cancel();
         setState(() => _loaded = true);
         _send();
+        _sendTune();
         // Resync after a short delay: the iframe's JS may not have registered
         // its message listener by the time the first postMessage fires
         // (especially on slower connections where the orb.html parse lags
         // behind the Dart widget setup). A second send ensures the state lands.
         Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) _send();
+          if (mounted) {
+            _send();
+            _sendTune(); // re-apply font/margin in case orb.html listener wasn't ready
+          }
         });
       }
     });
@@ -334,10 +338,10 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     // visible range (e.g., 0.1 → sqrt(0.25) ≈ 0.5) while loud audio stays
     // near 1.0. Factor 2.5x is more aggressive than RV2's 1.75x to compensate
     // for web's lower measured audio levels vs native AudioStreamer on mobile.
-    // No pre-amplification — 2.5x was saturating: anything above a whisper
-    // clipped to 1.0, making the orb binary (idle → max → idle).
-    // sqrt(level) alone gives a smooth curve: 0.1→0.32, 0.3→0.55, 0.5→0.71, 1.0→1.0
-    _currentLevel = level > 0 ? math.sqrt(level).clamp(0.0, 1.0) : 0.0;
+    // 0.5x pre-amp keeps normal speech (0.3–0.5 raw) in the mid range.
+    // sqrt then lifts quiet speech: 0.3→0.39, 0.5→0.50, 0.8→0.63, 1.0→0.71
+    final amplified = (level * 0.5).clamp(0.0, 1.0);
+    _currentLevel = amplified > 0 ? math.sqrt(amplified) : 0.0;
     _send(audioOnly: true);  // audio-level ticks must NOT include micMuted/speakerMuted
     // to avoid reverting the optimistic toggle in orb.html during the 16-50ms gap
     // between the user clicking unmute and Flutter processing the toggle.
@@ -361,6 +365,25 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   }
 
   // ── postMessage bridge ────────────────────────────────────────────────────
+
+  /// Send CSS tuning values (font sizes, margins) to the orb iframe.
+  /// Must be called after iframe loads. Safe to call multiple times.
+  void _sendTune() {
+    final cw = _orbContentWindow;
+    if (!_loaded || cw == null) return;
+    try {
+      cw.callMethod('postMessage', [
+        js.JsObject.jsify({
+          'type': 'livekit-tune',
+          'payload': {
+            'statusFontSize':  widget.statusFontSize,
+            'statusMarginTop': widget.statusMarginTop,
+          },
+        }),
+        '*',
+      ]);
+    } catch (_) {}
+  }
 
   void _send({bool audioOnly = false}) {
     final cw = _orbContentWindow;
