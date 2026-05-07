@@ -123,6 +123,9 @@ class LiveKitService {
 
   // Remote audio level polling
   Timer? _remoteAudioLevelTimer;
+  // Debounce: hold speaking state for a short window after audio drops.
+  // Prevents orb flicker during natural inter-sentence pauses in TTS.
+  Timer? _speakingIdleDebounceTimer;
   // Debounce for speaking->idle transition: natural TTS pauses between sentences
   // can briefly drop audio level, causing spurious idle/notifying state flashes.
 
@@ -557,9 +560,27 @@ class LiveKitService {
 
   void _updateActiveSpeakers(List<Participant> speakers) {
     _activeSpeakers = speakers;
+    final localId = _room?.localParticipant?.identity;
+    final agentSpeaking = speakers.any((p) => p.identity != localId);
 
-    // VU meter only — state is driven by ParticipantAttributesChanged and data
-    // channel messages, not by speaker presence. (Matches RV2 implementation.)
+    if (agentSpeaking) {
+      // Audio is playing — cancel any pending idle transition and hold speaking.
+      _speakingIdleDebounceTimer?.cancel();
+      _speakingIdleDebounceTimer = null;
+      _updateAgentState(AIAgentState.speaking);
+    } else if (_currentAgentState == AIAgentState.speaking) {
+      // Audio paused — wait before declaring idle.
+      // Covers natural inter-sentence pauses without flickering.
+      _speakingIdleDebounceTimer?.cancel();
+      _speakingIdleDebounceTimer = Timer(const Duration(milliseconds: 1200), () {
+        _speakingIdleDebounceTimer = null;
+        if (_currentAgentState == AIAgentState.speaking) {
+          _updateAgentState(AIAgentState.idle);
+        }
+      });
+    }
+
+    // VU meter
     if (speakers.isNotEmpty && _remoteAudioLevelTimer == null) {
       _remoteAudioLevelTimer = Timer.periodic(
         const Duration(milliseconds: 33),
@@ -586,7 +607,15 @@ class LiveKitService {
   }
 
   void _updateAgentState(AIAgentState state) {
-    // Simple dedup — only emit when state actually changes. (Matches RV2.)
+    // While audio is playing or debounce is running, don't let backend
+    // attribute events override the audio-confirmed speaking state.
+    if (_currentAgentState == AIAgentState.speaking &&
+        state != AIAgentState.speaking &&
+        state != AIAgentState.error) {
+      final localId = _room?.localParticipant?.identity;
+      final agentAudible = _activeSpeakers.any((p) => p.identity != localId);
+      if (agentAudible || _speakingIdleDebounceTimer != null) return;
+    }
     if (_currentAgentState != state) {
       _currentAgentState = state;
       if (!_agentStateController.isClosed) _agentStateController.add(state);
@@ -600,6 +629,8 @@ class LiveKitService {
     _audioLevelTimer = null;
     _remoteAudioLevelTimer?.cancel();
     _remoteAudioLevelTimer = null;
+    _speakingIdleDebounceTimer?.cancel();
+    _speakingIdleDebounceTimer = null;
     _audioStreamer = null;
 
     _currentConnectionState = AIConnectionState.disconnected;
