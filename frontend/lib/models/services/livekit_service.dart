@@ -618,7 +618,11 @@ class LiveKitService {
         state != AIAgentState.error) {
       final localId = _room?.localParticipant?.identity;
       final agentAudible = _activeSpeakers.any((p) => p.identity != localId);
-      if (agentAudible) return; // hold speaking state; debounce timer handles transition
+      // Also hold during the debounce window: TTS has natural inter-sentence
+      // pauses (~200-500 ms) where _activeSpeakers briefly empties.
+      // Without this guard, ParticipantAttributesChanged 'listening' fires
+      // during the gap and causes speaking→idle→speaking orb flicker.
+      if (agentAudible || _speakingIdleDebounceTimer != null) return;
     }
     if (_currentAgentState != state) {
       _currentAgentState = state;

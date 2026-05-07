@@ -691,7 +691,13 @@ class _AIViewContentState extends State<_AIViewContent> {
                           : (isDark ? Colors.white70 : Colors.black87),
                       size: 22.0 * scale,
                     ),
-                    onPressed: () => controller.toggleMute(),
+                    onPressed: () {
+                      // toggleMute() flips _isMuted synchronously on its first line,
+                      // but notifyListeners() fires only after the async track await.
+                      // Call setState() immediately so the icon updates without waiting.
+                      controller.toggleMute();
+                      setState(() {});
+                    },
                     padding: EdgeInsets.symmetric(horizontal: 4 * scale),
                     constraints: const BoxConstraints(),
                     tooltip: controller.isMuted ? 'Unmute mic' : 'Mute mic',
@@ -704,7 +710,10 @@ class _AIViewContentState extends State<_AIViewContent> {
                           : (isDark ? Colors.white70 : Colors.black87),
                       size: 22.0 * scale,
                     ),
-                    onPressed: () { controller.toggleSpeakerMute(); },
+                    onPressed: () {
+                      controller.toggleSpeakerMute();
+                      setState(() {});
+                    },
                     padding: EdgeInsets.symmetric(horizontal: 4 * scale),
                     constraints: const BoxConstraints(),
                     tooltip: controller.isSpeakerMuted ? 'Unmute speaker' : 'Mute speaker',
