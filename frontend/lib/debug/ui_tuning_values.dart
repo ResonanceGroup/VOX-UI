@@ -15,7 +15,7 @@ class UiTuningValues {
   static double orbContainerGap = 15.0;
   static double micMarginTop = 15.0;
   static double statusMarginTop = 20.0;
-  static double statusFontSize = 17.5;
+  static double statusFontSize = 13.0;
   static double micButtonSize = 85.0;
 
   // Tray overlay treatment

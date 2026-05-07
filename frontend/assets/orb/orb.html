@@ -87,17 +87,17 @@
 
     @keyframes morph {
       0%, 100% { 
-        transform: scale(calc(0.85 + var(--intensity) * 0.15)) translateY(0) rotate(0deg);
+        transform: scale(calc(0.85 + var(--intensity) * 0.28)) translateY(0) rotate(0deg);
         border-radius: 60% 40% 55% 45% / 45% 55% 45% 55%;
         opacity: calc(0.85 + var(--intensity) * 0.15);
       }
       33% { 
-        transform: scale(calc(1.1 + var(--intensity) * 0.15)) translateY(-15px) rotate(120deg);
+        transform: scale(calc(1.1 + var(--intensity) * 0.28)) translateY(-15px) rotate(120deg);
         border-radius: 45% 55% 40% 60% / 55% 45% 55% 45%;
         opacity: calc(0.95 + var(--intensity) * 0.05);
       }
       66% {
-        transform: scale(calc(0.9 + var(--intensity) * 0.15)) translateY(15px) rotate(240deg);
+        transform: scale(calc(0.9 + var(--intensity) * 0.28)) translateY(15px) rotate(240deg);
         border-radius: 55% 45% 60% 40% / 40% 60% 40% 60%;
         opacity: calc(0.75 + var(--intensity) * 0.25);
       }
@@ -200,7 +200,7 @@
         transform: scale(1);
       }
       50% {
-        transform: scale(calc(1 + var(--intensity, 0) * 0.05));
+        transform: scale(calc(1 + var(--intensity, 0) * 0.10));
       }
     }
 
@@ -789,33 +789,7 @@
       cursor: not-allowed; opacity: 0.7;
     }
 
-    /* Tray grab handle — mobile tap target for opening chat history tray */
-    .tray-handle {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 54px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      z-index: 50;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .tray-handle-bar {
-      width: 72px;
-      height: 4px;
-      background: rgba(255, 255, 255, 0.35);
-      border-radius: 2px;
-      transition: background 0.2s;
-    }
-    .tray-handle:active .tray-handle-bar {
-      background: rgba(255, 255, 255, 0.65);
-    }
-    .overlay-dark .tray-handle-bar {
-      background: rgba(255, 255, 255, 0.3);
-    }
+
   </style>
 </head>
 <body>
@@ -1226,13 +1200,6 @@
         });
       }
       
-      // Add click handler for tray grab handle (open-tray for mobile)
-      if (document.getElementById('tray-handle')) {
-        document.getElementById('tray-handle').addEventListener('click', function() {
-          window.parent.postMessage(JSON.stringify({type: 'open-tray'}), '*');
-        });
-      }
-
       // Initial state — disconnected until Flutter LiveKit connects
       updateUIState('disconnected');
     })();
@@ -1326,38 +1293,5 @@
 
   </script>
 
-  <!-- Tray grab handle: sends open-tray postMessage so mobile touches
-       reach Flutter despite the iframe capturing all pointer events. -->
-  <div id="tray-handle" class="tray-handle">
-    <div class="tray-handle-bar"></div>
-  </div>
-
-  <!-- DEBUG: state indicator — remove when bug is identified -->
-  <div id="dbg-state" style="
-    position:fixed; top:4px; left:4px;
-    background:rgba(0,0,0,0.65); color:#0ff;
-    font:10px monospace; padding:2px 6px;
-    border-radius:4px; z-index:9999;
-    pointer-events:none; max-width:95vw;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  "></div>
-  <script>
-    (function() {
-      var dbg = document.getElementById('dbg-state');
-      var WATCH = ['state-disconnected','state-idle','state-executing','state-processing','state-notifying',
-                   'orb-mic-muted','state-speaker-muted','overlay-dark'];
-      function updateDbg() {
-        var active = WATCH.filter(function(c){ return document.body.classList.contains(c); });
-        var cls = active.length ? active.join(' | ') : '(no tracked classes)';
-        var msgInfo = ' msgs:' + _msgCount;
-        var orbEl = document.querySelector('.orb');
-        var orbFilter = orbEl ? getComputedStyle(orbEl).filter.substring(0,40) : '?';
-        var bodyBg = getComputedStyle(document.body).backgroundColor;
-        var iosMode = document.documentElement.classList.contains("ios-no-blend") ? "iOS" : "std";
-        dbg.textContent = cls + " bg:" + bodyBg + " S:" + _lastState + " msgs:" + _msgCount + " " + iosMode;
-      }
-      setInterval(updateDbg, 200);
-    })();
-  </script>
 </body>
 </html>

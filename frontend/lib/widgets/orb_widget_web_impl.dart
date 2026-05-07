@@ -330,8 +330,9 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   }
 
   void _updateAudioLevel(double level) {
-    final amplified = (level * 1.75).clamp(0.0, 1.0);
-    _currentLevel = amplified > 0 ? math.sqrt(amplified) : 0.0;
+    // Linear mapping — sqrt was compressing dynamic range, making the orb
+    // appear sluggish/filtered. Direct amplification gives snappier response.
+    _currentLevel = (level * 1.75).clamp(0.0, 1.0);
     _send(audioOnly: true);  // audio-level ticks must NOT include micMuted/speakerMuted
     // to avoid reverting the optimistic toggle in orb.html during the 16-50ms gap
     // between the user clicking unmute and Flutter processing the toggle.
