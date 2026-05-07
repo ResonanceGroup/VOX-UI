@@ -77,10 +77,7 @@ class LiveKitService {
   LocalAudioTrack? _localAudioTrack;
   RemoteAudioTrack? _remoteAudioTrack;
   bool _isSpeakerMuted = false;
-  // Set to true when the data channel delivers the agent response (fires when
-  // LLM finishes, before TTS ends — text-during-speech behavior).
-  // Prevents the later TranscriptionEvent final from double-adding the same text.
-  bool _agentResponseAddedByDataChannel = false;
+
 
   // Connection state streams
   final StreamController<AIConnectionState> _connectionStateController =
@@ -352,11 +349,7 @@ class LiveKitService {
           if (isAgent) {
             if (segment.isFinal) {
               _streamingResponseController.add('');  // clear streaming preview
-              if (!_agentResponseAddedByDataChannel) {
-                // Fallback: data channel didn't fire — use transcription as source
-                _responseController.add(text);
-              }
-              _agentResponseAddedByDataChannel = false;  // reset for next turn
+              _responseController.add(text);         // TranscriptionEvent is sole source
             } else {
               // Always stream non-final segments as the LLM generates / TTS speaks.
               // TranscriptionEvent non-final segments are the standard LiveKit streaming
@@ -396,8 +389,9 @@ class LiveKitService {
         // TranscriptionEvent final doesn't add the same text again.
         final respText = json['text'] as String?;
         if (respText != null && respText.isNotEmpty) {
-          _agentResponseAddedByDataChannel = true;
-          _streamingResponseController.add('');  // clear any partial preview
+          // 'response' data channel no longer sent by backend.
+          // Kept here as a no-op stub in case old clients send it.
+          _streamingResponseController.add('');
           _responseController.add(respText);
         }
         break;

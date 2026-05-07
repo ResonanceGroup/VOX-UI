@@ -260,12 +260,15 @@ async def entrypoint(ctx: JobContext) -> None:
 
     @session.on("conversation_item_added")
     def on_conversation_item_added(ev) -> None:
-        """Publish assistant and user messages so Flutter chat history is populated."""
+        """Publish user transcripts so Flutter chat history gets user turns.
+        Assistant turns are delivered via TranscriptionEvent (synced to TTS),
+        which already populates chat history — no separate data message needed.
+        Sending both caused a race condition double-text bug."""
         item = ev.item
         if not hasattr(item, "role"):
             return
-        if item.role not in ("assistant", "user"):
-            return  # skip system/tool messages
+        if item.role != "user":
+            return  # assistant text comes via TranscriptionEvent
         content = item.content
         if isinstance(content, list):
             text = " ".join(
@@ -275,16 +278,14 @@ async def entrypoint(ctx: JobContext) -> None:
             text = (str(content) if content else "").strip()
         if not text:
             return
-        # assistant → 'response', user → 'user_transcript'
-        msg_type = "response" if item.role == "assistant" else "user_transcript"
         async def _pub():
             try:
                 await ctx.room.local_participant.publish_data(
-                    json.dumps({"type": msg_type, "text": text}).encode(),
+                    json.dumps({"type": "user_transcript", "text": text}).encode(),
                     reliable=True,
                 )
             except Exception as e:
-                logger.debug("Failed to publish %s: %s", msg_type, e)
+                logger.debug("Failed to publish user_transcript: %s", e)
         asyncio.create_task(_pub())
 
     # Log participant and track events for debugging
