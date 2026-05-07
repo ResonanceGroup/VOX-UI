@@ -353,6 +353,7 @@ class AIController extends ChangeNotifier {
       }
     }
     _conversationHistory.add(message);
+    debugPrint("[CHAT-DEBUG] _addToHistory: history.length=${_conversationHistory.length} user=${message.isUser} text=${message.text.substring(0, message.text.length.clamp(0, 40))}");
     if (_conversationHistory.length > 50) {
       _conversationHistory.removeAt(0);
     }

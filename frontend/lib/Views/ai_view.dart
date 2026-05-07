@@ -112,6 +112,11 @@ class _AIViewContentState extends State<_AIViewContent> {
   int _lastMessageCount = 0;
   String? _lastStreamingMessage;
 
+  // Direct listener reference — bypasses context.watch re-registration bug on Flutter Web.
+  // context.watch<AIController>() fails to re-register after a Provider-triggered rebuild,
+  // causing the view to freeze until a setState fires. addListener is reliable.
+  AIController? _aiController;
+
   final List<ConversationMessage> _mockConversation = [
     ConversationMessage(
       text: 'Hey Milo, what is battery state right now?',
@@ -151,6 +156,17 @@ class _AIViewContentState extends State<_AIViewContent> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Wire up direct listener to AIController — re-entrant safe (noop if same instance)
+    final newController = context.read<AIController>();
+    if (_aiController != newController) {
+      _aiController?.removeListener(_onAIControllerChanged);
+      _aiController = newController;
+      _aiController!.addListener(_onAIControllerChanged);
+    }
+  }
+
+  void _onAIControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   void _ensureConnected() {
@@ -167,6 +183,7 @@ class _AIViewContentState extends State<_AIViewContent> {
 
   @override
   void dispose() {
+    _aiController?.removeListener(_onAIControllerChanged);
     _textController.removeListener(_onInputChanged);
     _textController.dispose();
     _conversationScrollController.dispose();
@@ -195,9 +212,14 @@ class _AIViewContentState extends State<_AIViewContent> {
     _textController.clear();
   }
 
+  int _buildCount = 0;
+
   @override
   Widget build(BuildContext context) {
-    final controller = context.watch<AIController>();
+    _buildCount++;
+    debugPrint('[CHAT-DEBUG] build() #$_buildCount history=${context.read<AIController>().conversationHistory.length}');
+    // Use read (not watch) — AIController changes are handled via _onAIControllerChanged → setState
+    final controller = context.read<AIController>();
     final themeManager = context.watch<ThemeManager>();
     final settings = context.watch<AppPreferencesNotifier>();
     final scale = settings.uiScale;
@@ -439,6 +461,8 @@ class _AIViewContentState extends State<_AIViewContent> {
           ]
         : messages;
 
+    debugPrint('[CHAT-DEBUG] _buildAvailableContent: displayMessages.length=${displayMessages.length} trayOpen=$_isHistoryTrayOpen');
+
     return Stack(
       children: [
         Positioned.fill(
@@ -588,6 +612,7 @@ class _AIViewContentState extends State<_AIViewContent> {
                     separatorBuilder: (_, __) =>
                         SizedBox(height: UiTuningValues.trayMessageSpacing * scale),
                     itemBuilder: (context, index) {
+                        debugPrint('[CHAT-DEBUG] itemBuilder: index=$index of ${messages.length}');
                         final message = messages[index];
                         return Align(
                           alignment: message.isUser

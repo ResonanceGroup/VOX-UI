@@ -22,7 +22,7 @@ void _ensureFactory() {
   _factoryRegistered = true;
   ui_web.platformViewRegistry.registerViewFactory(_kOrbViewType, (int viewId) {
     return html.IFrameElement()
-      ..src = 'assets/assets/orb/orb.html'
+      ..src = 'assets/assets/orb/orb.html?v=' + DateTime.now().millisecondsSinceEpoch.toString()
       ..style.cssText = 'border:none;width:100%;height:100%;display:block;';
   });
 }
@@ -147,20 +147,9 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
       final block = widget.isTrayOpen || widget.isDrawerOpen;
       _iframeElement?.style.pointerEvents = block ? 'none' : 'auto';
     }
-    if (widget.isMuted != oldWidget.isMuted) {
-      if (widget.isMuted) {
-        _updateState('muted');
-      } else {
-        final connState = _livekitService?.currentConnectionState;
-        if (connState == AIConnectionState.connected) {
-          _updateState(_mapAgentStateToOrb(_previousAgentState ?? AIAgentState.idle));
-        } else {
-          _updateState('disconnected');
-        }
-      }
-    } else if (widget.isMuted) {
-      _currentState = 'muted';
-    }
+    // Mic mute is now an overlay modifier — no state change needed here.
+    // _send() below always includes micMuted in payload, which orb.html handles
+    // by toggling orb-mic-muted class without interrupting the state machine.
     // speakerMuted change — mute/unmute all HTML audio elements
     if (widget.isSpeakerMuted != oldWidget.isSpeakerMuted) {
       _applyAudioMuteState(widget.isSpeakerMuted);
@@ -234,7 +223,7 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
 
     _connectionStateSubscription = _livekitService!.connectionState.listen((state) {
       if (state == AIConnectionState.connected) {
-        if (!widget.isMuted) _updateState('idle');
+        _updateState('idle');  // mic mute is overlay-only, never blocks idle
       } else if (state == AIConnectionState.disconnected) {
         _updateState('disconnected');
       }
@@ -249,7 +238,7 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     if (currentConn == AIConnectionState.connected) {
       _updateState(_mapAgentStateToOrb(_livekitService!.currentAgentState));
     } else if (currentConn == AIConnectionState.connecting) {
-      _updateState('idle');
+      _updateState('disconnected');  // still connecting — show as disconnected until confirmed
     } else {
       _updateState('disconnected');
     }
@@ -274,12 +263,8 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   void _handleAgentStateTransition(AIAgentState newState) {
     final prev = _previousAgentState;
     _previousAgentState = newState;
-    // Guard against both the widget state (after rebuild) and the LiveKit
-    // service state (which updates _isMuted before notifyListeners fires).
-    // Without the service check, a fast LiveKit state event between the
-    // toggleMute() call and the rebuild can sneak through and override the
-    // optimistic muted visual.
-    if (widget.isMuted || (_livekitService?.isMuted ?? false)) return;
+    // Mute is now an overlay modifier — agent state transitions continue
+    // even while mic is muted (so the orb shows agent speaking while grayed).
 
     // Re-apply speaker mute state when agent starts speaking.
     // LiveKit creates <audio> elements lazily on first remote track receive,
@@ -298,7 +283,7 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
 
     if (shouldNotify) {
       _updateState('notifying');
-      _notifyRevertTimer = Timer(const Duration(milliseconds: 600), () {
+      _notifyRevertTimer = Timer(const Duration(milliseconds: 1800), () {
         _updateState(_mapAgentStateToOrb(newState));
       });
     } else {
@@ -311,20 +296,30 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   /// 'livekit_audio_container'. We target that first, then fall back to a
   /// global query so we don't miss anything.
   void _applyAudioMuteState(bool muted) {
+    _doApplyAudioMuteState(muted);
+    // iOS Safari creates WebRTC audio elements lazily — retry after a short
+    // delay to catch elements that don't exist yet at the first call.
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) _doApplyAudioMuteState(muted);
+    });
+  }
+
+  void _doApplyAudioMuteState(bool muted) {
     try {
+      void muteAudio(html.Element el) {
+        final audio = el as html.AudioElement;
+        // `muted` property alone is unreliable for WebRTC streams on iOS Safari.
+        // Setting volume = 0 / 1 is the cross-platform fallback.
+        audio.muted = muted;
+        audio.volume = muted ? 0.0 : 1.0;
+      }
       // Target the LiveKit audio container directly (most reliable)
       final container = html.document.getElementById('livekit_audio_container');
       if (container != null) {
-        final audios = container.querySelectorAll('audio');
-        for (final el in audios) {
-          (el as html.AudioElement).muted = muted;
-        }
+        container.querySelectorAll('audio').forEach(muteAudio);
       }
       // Fallback: global query catches elements outside the container
-      final allAudios = html.document.querySelectorAll('audio');
-      for (final el in allAudios) {
-        (el as html.AudioElement).muted = muted;
-      }
+      html.document.querySelectorAll('audio').forEach(muteAudio);
     } catch (_) {}
   }
 
@@ -337,7 +332,9 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   void _updateAudioLevel(double level) {
     final amplified = (level * 1.75).clamp(0.0, 1.0);
     _currentLevel = amplified > 0 ? math.sqrt(amplified) : 0.0;
-    _send();
+    _send(audioOnly: true);  // audio-level ticks must NOT include micMuted/speakerMuted
+    // to avoid reverting the optimistic toggle in orb.html during the 16-50ms gap
+    // between the user clicking unmute and Flutter processing the toggle.
   }
 
   void _updateTheme(String theme) {
@@ -351,7 +348,6 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
       case 'notifying':    return '';
       case 'executing':    return 'Thinking...';
       case 'processing':   return 'Speaking...';
-      case 'muted':        return 'Microphone muted';
       case 'disconnected': return 'Disconnected';
       default:             return 'Ready to assist...';
     }
@@ -359,35 +355,29 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
 
   // ── postMessage bridge ────────────────────────────────────────────────────
 
-  void _send() {
+  void _send({bool audioOnly = false}) {
     final cw = _orbContentWindow;
     if (!_loaded || cw == null) return;
-    // Read mute states directly from the LiveKit service (not just widget props
-    // or _currentState). The service flips _isMuted/_isSpeakerMuted synchronously
-    // inside toggleMute()/toggleSpeakerMute(), BEFORE notifyListeners() triggers
-    // a rebuild. The audio-level timer fires every ~33ms; if we only used
-    // _currentState / widget.isMuted we would send the stale pre-toggle value
-    // during that window, reverting any optimistic visual update in orb.html.
+    // When audioOnly=true (called from the 33ms audio-level loop), only send
+    // the level. Do NOT send micMuted/speakerMuted/state — these are managed
+    // by state-change events and didUpdateWidget. Sending mute state on every
+    // audio tick causes a race: the user clicks unmute in orb.html (optimistic),
+    // but the next 33ms tick sends the stale micMuted:true before Flutter has
+    // processed the toggle, re-graying the orb.
+    final effectiveState = widget.debugOrbState ?? _currentState;
     final svcMuted = _livekitService?.isMuted ?? false;
     final svcSpeakerMuted = _livekitService?.isSpeakerMuted ?? false;
-    final effectiveState = (svcMuted || widget.isMuted)
-        ? 'muted'
-        : (widget.debugOrbState ?? _currentState);
-    final effectiveSpeakerMuted = svcSpeakerMuted || widget.isSpeakerMuted;
     try {
       cw.callMethod('postMessage', [
         js.JsObject.jsify({
           'type': 'livekit-update',
           'payload': {
-            'state':  effectiveState,
-            'level':  _currentLevel,
-            'theme':  _currentTheme,
-            'status': widget.debugOrbState != null
-                ? widget.debugOrbState
-                : (effectiveState == 'muted'
-                    ? 'Microphone muted'
-                    : _currentStatus),
-            'speakerMuted': effectiveSpeakerMuted,
+            if (!audioOnly) 'state':        effectiveState,
+            'level':        _currentLevel,
+            if (!audioOnly) 'theme':        _currentTheme,
+            if (!audioOnly) 'status':      widget.debugOrbState ?? _currentStatus,
+            if (!audioOnly) 'micMuted':    svcMuted,
+            if (!audioOnly) 'speakerMuted': svcSpeakerMuted,
           },
         }),
         '*',

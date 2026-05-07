@@ -256,6 +256,13 @@ class LiveKitService {
   }
 
   Future<void> _startAudioLevelMonitoring() async {
+    // audio_streamer has no web implementation — skip it on web.
+    // On web, audio levels come from the LiveKit remote speaker timer
+    // (_remoteAudioLevelTimer) which fires whenever active speakers change.
+    if (kIsWeb) {
+      debugPrint('LiveKitService: Skipping audio_streamer on web (no web plugin)');
+      return;
+    }
     try {
       _audioStreamer = AudioStreamer();
       _audioStreamSubscription = _audioStreamer!.audioStream.listen(

@@ -57,7 +57,10 @@ const wss = new WebSocketServer({ noServer: true });
 server.on('upgrade', (req, socket, head) => {
   console.log('[WS] upgrade: ' + req.url);
   wss.handleUpgrade(req, socket, head, (ws) => {
-    const upstream = new WebSocket(`ws://127.0.0.1:${LK_PORT}${req.url}`);
+    // iOS Safari + livekit-client sometimes produces /rtc/rtc — normalise to /rtc
+    const lkPath = req.url.startsWith('/rtc/rtc') ? req.url.replace('/rtc/rtc', '/rtc') : req.url;
+    if (lkPath !== req.url) console.log('[WS] normalised double-rtc path → ' + lkPath);
+    const upstream = new WebSocket(`ws://127.0.0.1:${LK_PORT}${lkPath}`);
     upstream.on('open', () => {
       ws.on('message', (d, binary) => upstream.readyState === 1 && upstream.send(d, { binary }));
       upstream.on('message', (d, binary) => ws.readyState === 1 && ws.send(d, { binary }));
