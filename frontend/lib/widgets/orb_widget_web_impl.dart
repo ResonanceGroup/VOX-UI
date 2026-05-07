@@ -5,7 +5,6 @@
 import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:js' as js;
-import 'dart:math' as math;
 import 'dart:async';
 import 'dart:ui_web' as ui_web;
 
@@ -345,12 +344,12 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
 
   String _getStatusForState(String state) {
     switch (state) {
-      case 'idle':         return 'Ready to assist...';
+      case 'idle':         return 'Ready';
       case 'notifying':    return '';
       case 'executing':    return 'Thinking...';
       case 'processing':   return 'Speaking...';
       case 'disconnected': return 'Disconnected';
-      default:             return 'Ready to assist...';
+      default:             return 'Ready';
     }
   }
 

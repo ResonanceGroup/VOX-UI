@@ -217,6 +217,7 @@ class LiveKitService {
       _reconnectAttempts = 0;
       _isConnecting = false;
       _updateConnectionState(AIConnectionState.connected);
+      _startVuMeterTimer(); // Begin continuous 60fps VU polling (local + remote)
 
       if (AppConstants.aiEnableDebugLogs) {
         debugPrint('LiveKitService: Connected successfully');
@@ -586,6 +587,27 @@ class LiveKitService {
     }
   }
 
+  /// Start (or restart) a continuous 60fps VU-meter timer that reads both the
+  /// local participant's mic level and any remote active speakers. This gives
+  /// the orb immediate, smooth response to the user's voice without waiting
+  /// for LiveKit's speaker-detection event to fire.
+  void _startVuMeterTimer() {
+    _remoteAudioLevelTimer?.cancel();
+    _remoteAudioLevelTimer = Timer.periodic(
+      const Duration(milliseconds: 16), // ~60fps
+      (_) {
+        if (_audioLevelController.isClosed) return;
+        // Local mic level (user voice) — always non-zero while speaking
+        double maxLevel = _room?.localParticipant?.audioLevel ?? 0.0;
+        // Remote active speakers (agent audio)
+        for (final p in _activeSpeakers) {
+          if (p.audioLevel > maxLevel) maxLevel = p.audioLevel;
+        }
+        _audioLevelController.add(maxLevel);
+      },
+    );
+  }
+
   void _updateActiveSpeakers(List<Participant> speakers) {
     _activeSpeakers = speakers;
     final localId = _room?.localParticipant?.identity;
@@ -617,23 +639,7 @@ class LiveKitService {
       });
     }
 
-    // VU meter
-    if (speakers.isNotEmpty && _remoteAudioLevelTimer == null) {
-      _remoteAudioLevelTimer = Timer.periodic(
-        const Duration(milliseconds: 33),
-        (_) {
-          double maxLevel = 0.0;
-          for (final p in _activeSpeakers) {
-            if (p.audioLevel > maxLevel) maxLevel = p.audioLevel;
-          }
-          if (!_audioLevelController.isClosed) _audioLevelController.add(maxLevel);
-        },
-      );
-    } else if (speakers.isEmpty && _remoteAudioLevelTimer != null) {
-      _remoteAudioLevelTimer?.cancel();
-      _remoteAudioLevelTimer = null;
-      if (!_audioLevelController.isClosed) _audioLevelController.add(0.0);
-    }
+    // VU meter runs continuously via _startVuMeterTimer() — no per-event start/stop.
   }
 
   void _updateConnectionState(AIConnectionState state) {
