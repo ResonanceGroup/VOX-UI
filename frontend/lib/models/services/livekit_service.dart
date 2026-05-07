@@ -125,12 +125,7 @@ class LiveKitService {
   Timer? _remoteAudioLevelTimer;
   // Debounce for speaking->idle transition: natural TTS pauses between sentences
   // can briefly drop audio level, causing spurious idle/notifying state flashes.
-  Timer? _speakingIdleDebounceTimer;
-  // Blocks all non-speaking state downgrades from the moment we enter speaking
-  // until audio is confirmed via ActiveSpeakersChangedEvent. The backend fires
-  // lk.agent.state='listening' almost immediately after 'speaking', often before
-  // audio has arrived on the client, causing rapid speaking<->idle orb flicker.
-  Timer? _speakingEntryProtectionTimer;
+
   List<Participant> _activeSpeakers = [];
 
   /// Initialize LiveKit service
@@ -533,8 +528,6 @@ class LiveKitService {
         _reconnectAttempts = 0;
       }
 
-      _speakingIdleDebounceTimer?.cancel();
-      _speakingIdleDebounceTimer = null;
       _disconnectDebounceTimer?.cancel();
       _disconnectDebounceTimer = null;
 
@@ -565,32 +558,8 @@ class LiveKitService {
   void _updateActiveSpeakers(List<Participant> speakers) {
     _activeSpeakers = speakers;
 
-    // Infer agent speaking state from active speakers (reliable fallback)
-    final localId = _room?.localParticipant?.identity;
-    final agentSpeaking = speakers.any((p) => p.identity != localId);
-    if (agentSpeaking) {
-      // Agent started/continued speaking — cancel pending debounce and entry guard
-      _speakingIdleDebounceTimer?.cancel();
-      _speakingIdleDebounceTimer = null;
-      // Audio confirmed: protection window is no longer needed
-      _speakingEntryProtectionTimer?.cancel();
-      _speakingEntryProtectionTimer = null;
-      if (_currentAgentState != AIAgentState.speaking) {
-        _updateAgentState(AIAgentState.speaking);
-      }
-    } else if (_currentAgentState == AIAgentState.speaking) {
-      // Agent audio dropped — debounce before declaring idle.
-      // TTS speech has natural pauses between sentences (~200-500ms) that
-      // would otherwise fire spurious speaking->idle->notifying flashes.
-      _speakingIdleDebounceTimer?.cancel();
-      _speakingIdleDebounceTimer = Timer(const Duration(milliseconds: 2500), () {
-        _speakingIdleDebounceTimer = null;
-        if (_currentAgentState == AIAgentState.speaking) {
-          _updateAgentState(AIAgentState.idle);
-        }
-      });
-    }
-
+    // VU meter only — state is driven by ParticipantAttributesChanged and data
+    // channel messages, not by speaker presence. (Matches RV2 implementation.)
     if (speakers.isNotEmpty && _remoteAudioLevelTimer == null) {
       _remoteAudioLevelTimer = Timer.periodic(
         const Duration(milliseconds: 33),
@@ -617,31 +586,7 @@ class LiveKitService {
   }
 
   void _updateAgentState(AIAgentState state) {
-    // Don't downgrade from speaking while active speakers still include the agent.
-    // livekit-agents fires listening/idle immediately after TTS completes, but
-    // there can be a ~1-2s gap between agent speaking state and TTS audio start
-    // (LLM -> TTS pipeline latency) that causes a premature idle flash.
-    if (_currentAgentState == AIAgentState.speaking &&
-        state != AIAgentState.speaking &&
-        state != AIAgentState.error) {
-      final localId = _room?.localParticipant?.identity;
-      final agentAudible = _activeSpeakers.any((p) => p.identity != localId);
-      // Block downgrades while:
-      // (a) agent audio is still playing,
-      // (b) inter-sentence debounce timer is running (~200-500 ms pauses), or
-      // (c) entry protection window is active — the backend fires
-      //     lk.agent.state='listening' almost immediately after 'speaking',
-      //     before audio has arrived on the client, causing the orb to flash.
-      if (agentAudible || _speakingIdleDebounceTimer != null || _speakingEntryProtectionTimer != null) return;
-    }
-    // When entering speaking, start a 2 s entry protection window.
-    // Cancelled early as soon as audio is confirmed in _updateActiveSpeakers().
-    if (state == AIAgentState.speaking && _currentAgentState != AIAgentState.speaking) {
-      _speakingEntryProtectionTimer?.cancel();
-      _speakingEntryProtectionTimer = Timer(const Duration(milliseconds: 2000), () {
-        _speakingEntryProtectionTimer = null;
-      });
-    }
+    // Simple dedup — only emit when state actually changes. (Matches RV2.)
     if (_currentAgentState != state) {
       _currentAgentState = state;
       if (!_agentStateController.isClosed) _agentStateController.add(state);
@@ -655,10 +600,6 @@ class LiveKitService {
     _audioLevelTimer = null;
     _remoteAudioLevelTimer?.cancel();
     _remoteAudioLevelTimer = null;
-    _speakingIdleDebounceTimer?.cancel();
-    _speakingIdleDebounceTimer = null;
-    _speakingEntryProtectionTimer?.cancel();
-    _speakingEntryProtectionTimer = null;
     _audioStreamer = null;
 
     _currentConnectionState = AIConnectionState.disconnected;
