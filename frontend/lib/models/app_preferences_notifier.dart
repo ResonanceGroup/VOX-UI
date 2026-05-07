@@ -107,11 +107,20 @@ class AppPreferencesNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Delete an LLM profile by ID
+  /// Delete an LLM profile by ID. Re-seeds defaults if the list becomes empty.
   Future<void> deleteLlmProfile(String id) async {
     _llmProfiles = _llmProfiles.where((p) => p.id != id).toList();
+    if (_llmProfiles.isEmpty) {
+      // Re-seed default profiles so the user always has a starting point
+      _llmProfiles = _defaultProfiles;
+      _activeProfileId = _llmProfiles.first.id;
+      await _preferencesService.setActiveProfileId(_activeProfileId);
+      await _preferencesService.saveLlmProfiles(_llmProfiles);
+      notifyListeners();
+      return;
+    }
     if (_activeProfileId == id) {
-      _activeProfileId = _llmProfiles.isNotEmpty ? _llmProfiles.first.id : null;
+      _activeProfileId = _llmProfiles.first.id;
       await _preferencesService.setActiveProfileId(_activeProfileId);
     }
     await _preferencesService.saveLlmProfiles(_llmProfiles);

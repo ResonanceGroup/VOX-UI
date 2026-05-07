@@ -183,13 +183,47 @@ class _ProfileViewContent extends StatelessWidget {
           ),
           isThreeLine: true,
           onTap: () => settings.setActiveProfileId(profile.id),
-          trailing: IconButton(
-            icon: Icon(
-              Icons.edit_outlined,
-              color: isDark ? Colors.white54 : Colors.black45,
-              size: 22 * scale,
-            ),
-            onPressed: () => _showAddProfileDialog(context, profile),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.edit_outlined,
+                  color: isDark ? Colors.white54 : Colors.black45,
+                  size: 22 * scale,
+                ),
+                onPressed: () => _showAddProfileDialog(context, profile),
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.delete_outline,
+                  color: isDark ? Colors.white38 : Colors.black38,
+                  size: 22 * scale,
+                ),
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Delete Profile?'),
+                      content: Text('Delete "${profile.name}"?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm == true) {
+                    settings.deleteLlmProfile(profile.id);
+                  }
+                },
+              ),
+            ],
           ),
         ),
       ),
