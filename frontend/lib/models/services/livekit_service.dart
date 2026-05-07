@@ -126,6 +126,11 @@ class LiveKitService {
   // Debounce for speaking->idle transition: natural TTS pauses between sentences
   // can briefly drop audio level, causing spurious idle/notifying state flashes.
   Timer? _speakingIdleDebounceTimer;
+  // Blocks all non-speaking state downgrades from the moment we enter speaking
+  // until audio is confirmed via ActiveSpeakersChangedEvent. The backend fires
+  // lk.agent.state='listening' almost immediately after 'speaking', often before
+  // audio has arrived on the client, causing rapid speaking<->idle orb flicker.
+  Timer? _speakingEntryProtectionTimer;
   List<Participant> _activeSpeakers = [];
 
   /// Initialize LiveKit service
@@ -564,9 +569,12 @@ class LiveKitService {
     final localId = _room?.localParticipant?.identity;
     final agentSpeaking = speakers.any((p) => p.identity != localId);
     if (agentSpeaking) {
-      // Agent started/continued speaking — cancel any pending idle debounce
+      // Agent started/continued speaking — cancel pending debounce and entry guard
       _speakingIdleDebounceTimer?.cancel();
       _speakingIdleDebounceTimer = null;
+      // Audio confirmed: protection window is no longer needed
+      _speakingEntryProtectionTimer?.cancel();
+      _speakingEntryProtectionTimer = null;
       if (_currentAgentState != AIAgentState.speaking) {
         _updateAgentState(AIAgentState.speaking);
       }
@@ -618,11 +626,21 @@ class LiveKitService {
         state != AIAgentState.error) {
       final localId = _room?.localParticipant?.identity;
       final agentAudible = _activeSpeakers.any((p) => p.identity != localId);
-      // Also hold during the debounce window: TTS has natural inter-sentence
-      // pauses (~200-500 ms) where _activeSpeakers briefly empties.
-      // Without this guard, ParticipantAttributesChanged 'listening' fires
-      // during the gap and causes speaking→idle→speaking orb flicker.
-      if (agentAudible || _speakingIdleDebounceTimer != null) return;
+      // Block downgrades while:
+      // (a) agent audio is still playing,
+      // (b) inter-sentence debounce timer is running (~200-500 ms pauses), or
+      // (c) entry protection window is active — the backend fires
+      //     lk.agent.state='listening' almost immediately after 'speaking',
+      //     before audio has arrived on the client, causing the orb to flash.
+      if (agentAudible || _speakingIdleDebounceTimer != null || _speakingEntryProtectionTimer != null) return;
+    }
+    // When entering speaking, start a 2 s entry protection window.
+    // Cancelled early as soon as audio is confirmed in _updateActiveSpeakers().
+    if (state == AIAgentState.speaking && _currentAgentState != AIAgentState.speaking) {
+      _speakingEntryProtectionTimer?.cancel();
+      _speakingEntryProtectionTimer = Timer(const Duration(milliseconds: 2000), () {
+        _speakingEntryProtectionTimer = null;
+      });
     }
     if (_currentAgentState != state) {
       _currentAgentState = state;
@@ -639,6 +657,8 @@ class LiveKitService {
     _remoteAudioLevelTimer = null;
     _speakingIdleDebounceTimer?.cancel();
     _speakingIdleDebounceTimer = null;
+    _speakingEntryProtectionTimer?.cancel();
+    _speakingEntryProtectionTimer = null;
     _audioStreamer = null;
 
     _currentConnectionState = AIConnectionState.disconnected;
