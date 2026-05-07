@@ -4,6 +4,7 @@
 
 import 'dart:convert';
 import 'dart:html' as html;
+import 'dart:math' as math;
 import 'dart:js' as js;
 import 'dart:async';
 import 'dart:ui_web' as ui_web;
@@ -329,15 +330,19 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   }
 
   void _updateAudioLevel(double level) {
-    // Linear mapping — sqrt was compressing dynamic range, making the orb
-    // appear sluggish/filtered. Direct amplification gives snappier response.
-    _currentLevel = (level * 1.75).clamp(0.0, 1.0);
+    // Amplify then apply sqrt curve: sqrt lifts quiet/moderate speech into a
+    // visible range (e.g., 0.1 → sqrt(0.25) ≈ 0.5) while loud audio stays
+    // near 1.0. Factor 2.5x is more aggressive than RV2's 1.75x to compensate
+    // for web's lower measured audio levels vs native AudioStreamer on mobile.
+    final amplified = (level * 2.5).clamp(0.0, 1.0);
+    _currentLevel = amplified > 0 ? math.sqrt(amplified) : 0.0;
     _send(audioOnly: true);  // audio-level ticks must NOT include micMuted/speakerMuted
     // to avoid reverting the optimistic toggle in orb.html during the 16-50ms gap
     // between the user clicking unmute and Flutter processing the toggle.
   }
 
   void _updateTheme(String theme) {
+    if (theme == _currentTheme) return; // no-op if unchanged — prevents spurious sends on every build()
     _currentTheme = theme;
     _send();
   }

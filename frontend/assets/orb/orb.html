@@ -87,17 +87,17 @@
 
     @keyframes morph {
       0%, 100% { 
-        transform: scale(calc(0.85 + var(--intensity) * 0.28)) translateY(0) rotate(0deg);
+        transform: scale(calc(0.85 + var(--intensity) * 0.42)) translateY(0) rotate(0deg);
         border-radius: 60% 40% 55% 45% / 45% 55% 45% 55%;
         opacity: calc(0.85 + var(--intensity) * 0.15);
       }
       33% { 
-        transform: scale(calc(1.1 + var(--intensity) * 0.28)) translateY(-15px) rotate(120deg);
+        transform: scale(calc(1.1 + var(--intensity) * 0.42)) translateY(-15px) rotate(120deg);
         border-radius: 45% 55% 40% 60% / 55% 45% 55% 45%;
         opacity: calc(0.95 + var(--intensity) * 0.05);
       }
       66% {
-        transform: scale(calc(0.9 + var(--intensity) * 0.28)) translateY(15px) rotate(240deg);
+        transform: scale(calc(0.9 + var(--intensity) * 0.42)) translateY(15px) rotate(240deg);
         border-radius: 55% 45% 60% 40% / 40% 60% 40% 60%;
         opacity: calc(0.75 + var(--intensity) * 0.25);
       }
@@ -477,9 +477,9 @@
       justify-content: center;
       gap: 8px;
       font-size: var(--status-font-size, 27px) !important;
-      color: #555;
-      opacity: 0.9;
-      transition: color 0.3s ease, opacity 0.3s ease;
+      color: #D0D0D0;
+      opacity: 0.85;
+      /* No color transition — prevents flicker from rapid class toggles */
       margin-top: var(--status-margin-top, 12px);
     }
 
@@ -493,7 +493,8 @@
       transition: opacity 0.3s ease;
     }
 
-    /* Dark theme */
+    /* Dark theme — color is already hardcoded to #D0D0D0 on .status-display,
+       so these are now no-ops kept for completeness. */
     .overlay-dark .status-display {
       color: #D0D0D0 !important;
       opacity: 0.85 !important;
@@ -833,7 +834,7 @@
     </div>
     <div id="status-display" class="status-display">
       <span class="status-icon"></span>
-      <span class="status-text">Ready to assist...</span>
+      <span class="status-text">Ready</span>
     </div>
   </div>
 
@@ -972,12 +973,12 @@
           return;
         }
         
-        let textContent = 'Ready to assist...';
+        let textContent = 'Ready';
         let iconContent = '';
 
         switch (newState) {
           case 'idle':
-            textContent = 'Ready to assist...';
+            textContent = 'Ready';
             iconContent = '●';
             break;
           case 'executing':

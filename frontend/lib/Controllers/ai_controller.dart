@@ -168,7 +168,12 @@ class AIController extends ChangeNotifier {
 
     _audioLevelSubscription = _livekitService.audioLevel.listen((level) {
       _currentAudioLevel = level;
-      notifyListeners();
+      // Do NOT call notifyListeners() here — audio levels update at 60fps and
+      // nothing in the UI reads currentAudioLevel from the controller.
+      // Calling notifyListeners at 60fps causes a full widget-tree rebuild chain
+      // (OrbWebViewWidget → _updateTheme → _send) every frame, which makes the
+      // status text CSS color transition restart continuously and appear to flicker.
+      // The orb widget subscribes directly to livekitService.audioLevel instead.
     });
 
     if (AppConstants.aiEnableDebugLogs) {

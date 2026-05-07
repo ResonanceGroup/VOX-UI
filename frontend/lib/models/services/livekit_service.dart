@@ -594,7 +594,7 @@ class LiveKitService {
   void _startVuMeterTimer() {
     _remoteAudioLevelTimer?.cancel();
     _remoteAudioLevelTimer = Timer.periodic(
-      const Duration(milliseconds: 16), // ~60fps
+      const Duration(milliseconds: 33), // ~30fps (LiveKit audioLevel updates ~100ms; 33ms is sufficient)
       (_) {
         if (_audioLevelController.isClosed) return;
         // Local mic level (user voice) — always non-zero while speaking
