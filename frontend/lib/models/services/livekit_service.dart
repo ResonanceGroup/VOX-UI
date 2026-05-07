@@ -77,6 +77,10 @@ class LiveKitService {
   LocalAudioTrack? _localAudioTrack;
   RemoteAudioTrack? _remoteAudioTrack;
   bool _isSpeakerMuted = false;
+  // Set to true when the data channel delivers the agent response (fires when
+  // LLM finishes, before TTS ends — text-during-speech behavior).
+  // Prevents the later TranscriptionEvent final from double-adding the same text.
+  bool _agentResponseAddedByDataChannel = false;
 
   // Connection state streams
   final StreamController<AIConnectionState> _connectionStateController =
@@ -343,10 +347,18 @@ class LiveKitService {
           final isAgent = event.participant?.identity != _room!.localParticipant?.identity;
           if (isAgent) {
             if (segment.isFinal) {
-              _streamingResponseController.add('');
-              _responseController.add(text);
+              _streamingResponseController.add('');  // clear streaming preview
+              if (!_agentResponseAddedByDataChannel) {
+                // Fallback: data channel didn't fire — use transcription as source
+                _responseController.add(text);
+              }
+              _agentResponseAddedByDataChannel = false;  // reset for next turn
             } else {
-              _streamingResponseController.add(text);
+              // Stream non-final segments only when the data channel response hasn't
+              // already populated history (avoids a double-preview after early response).
+              if (!_agentResponseAddedByDataChannel) {
+                _streamingResponseController.add(text);
+              }
             }
           } else {
             if (!segment.isFinal) continue;
@@ -369,9 +381,26 @@ class LiveKitService {
   void _handleDataMessage(Map<String, dynamic> json) {
     final type = json['type'] as String?;
     switch (type) {
-      // NOTE: 'transcript' and 'response' intentionally removed — LiveKit
-      // TranscriptionEvent already handles these natively. Keeping both
-      // caused every message to appear twice in the chat history.
+      case 'response':
+        // The Python agent fires this via `on_conversation_item_added` when the
+        // LLM finishes generating — BEFORE TTS finishes playing. This gives
+        // "text appears during speech" behavior. We set a flag so the later
+        // TranscriptionEvent final doesn't add the same text again.
+        final respText = json['text'] as String?;
+        if (respText != null && respText.isNotEmpty) {
+          _agentResponseAddedByDataChannel = true;
+          _streamingResponseController.add('');  // clear any partial preview
+          _responseController.add(respText);
+        }
+        break;
+      case 'user_transcript':
+        // Backend publishes the user's STT text via data channel when
+        // TranscriptionEvent for user speech is unreliable in older clients.
+        final userText = json['text'] as String?;
+        if (userText != null && userText.isNotEmpty) {
+          _transcriptController.add(userText);
+        }
+        break;
       case 'state':
         final stateName = json['state'] as String?;
         if (stateName != null) _updateAgentState(_parseAgentState(stateName));
@@ -394,9 +423,14 @@ class LiveKitService {
   Future<void> sendTextMessage(String message) async {
     if (_currentConnectionState != AIConnectionState.connected) return;
     try {
-      // Agent expects: {"type": "text_input", "text": "..."}
-      final payload = utf8.encode(jsonEncode({'type': 'text_input', 'text': message}));
-      await _room!.localParticipant?.publishData(payload, reliable: true);
+      // Canonical LiveKit Agents pattern — text streams on lk.chat topic.
+      // The agent framework's on_conversation_item_added handler subscribes
+      // to this topic. publishData() with custom JSON is silently ignored
+      // by the standard agent framework. Matches RV2 frontend behavior.
+      await _room!.localParticipant?.sendText(
+        message,
+        options: SendTextOptions(topic: 'lk.chat'),
+      );
     } catch (e) {
       if (AppConstants.aiEnableDebugLogs) {
         debugPrint('LiveKitService: Failed to send message: $e');
@@ -406,10 +440,29 @@ class LiveKitService {
 
   bool get isSpeakerMuted => _isSpeakerMuted;
 
-  // Note: actual audio muting on web is handled in orb_widget_web_impl.dart
-  // via dart:html AudioElement.muted (livekit_client 2.5.4 has no setVolume API)
+  // Speaker mute: toggle flag, then mute/unmute remote audio tracks via
+  // MediaStreamTrack.enabled (reliable on iOS Safari; DOM-level audio.muted
+  // is not guaranteed for WebRTC streams). orb_widget_web_impl also applies
+  // the DOM fallback via _applyAudioMuteState for any audio elements that
+  // bypass the LiveKit track API.
   void toggleSpeakerMute() {
     _isSpeakerMuted = !_isSpeakerMuted;
+    _applyRemoteAudioMuteState(_isSpeakerMuted);
+  }
+
+  void _applyRemoteAudioMuteState(bool muted) {
+    _room?.remoteParticipants.forEach((_, participant) {
+      for (final pub in participant.audioTrackPublications) {
+        final track = pub.track;
+        if (track != null) {
+          if (muted) {
+            track.disable();
+          } else {
+            track.enable();
+          }
+        }
+      }
+    });
   }
 
   Future<void> toggleMute() async {
@@ -513,7 +566,7 @@ class LiveKitService {
       // TTS speech has natural pauses between sentences (~200-500ms) that
       // would otherwise fire spurious speaking->idle->notifying flashes.
       _speakingIdleDebounceTimer?.cancel();
-      _speakingIdleDebounceTimer = Timer(const Duration(milliseconds: 800), () {
+      _speakingIdleDebounceTimer = Timer(const Duration(milliseconds: 2500), () {
         _speakingIdleDebounceTimer = null;
         if (_currentAgentState == AIAgentState.speaking) {
           _updateAgentState(AIAgentState.idle);
@@ -547,6 +600,17 @@ class LiveKitService {
   }
 
   void _updateAgentState(AIAgentState state) {
+    // Don't downgrade from speaking while active speakers still include the agent.
+    // livekit-agents fires listening/idle immediately after TTS completes, but
+    // there can be a ~1-2s gap between agent speaking state and TTS audio start
+    // (LLM -> TTS pipeline latency) that causes a premature idle flash.
+    if (_currentAgentState == AIAgentState.speaking &&
+        state != AIAgentState.speaking &&
+        state != AIAgentState.error) {
+      final localId = _room?.localParticipant?.identity;
+      final agentAudible = _activeSpeakers.any((p) => p.identity != localId);
+      if (agentAudible) return; // hold speaking state; debounce timer handles transition
+    }
     if (_currentAgentState != state) {
       _currentAgentState = state;
       if (!_agentStateController.isClosed) _agentStateController.add(state);

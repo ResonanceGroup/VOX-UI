@@ -464,11 +464,15 @@ class _AIViewContentState extends State<_AIViewContent> {
               child: AnimatedOpacity(
                 duration: const Duration(milliseconds: 180),
                 opacity: _isHistoryTrayOpen ? 1 : 0,
-                child: _buildHistoryTrayOverlay(
-                  displayMessages,
-                  isDark,
-                  scale,
-                  controller,
+                // Consumer ensures tray buttons (mic/speaker icons) rebuild when
+                // notifyListeners fires even when AnimatedOpacity opacity is static.
+                child: Consumer<AIController>(
+                  builder: (_, ctrl, __) => _buildHistoryTrayOverlay(
+                    displayMessages,
+                    isDark,
+                    scale,
+                    ctrl,
+                  ),
                 ),
               ),
             ),
@@ -499,7 +503,10 @@ class _AIViewContentState extends State<_AIViewContent> {
       livekitService: controller.livekitService,
       onToggleMute: () => controller.toggleMute(),
       onToggleSpeakerMute: () => controller.toggleSpeakerMute(),
-      onOpenTray: () => setState(() => _isHistoryTrayOpen = true),
+      onOpenTray: () {
+        setState(() => _isHistoryTrayOpen = true);
+        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      },
       isTrayOpen: _isHistoryTrayOpen,
       isMuted: controller.isMuted,
       isSpeakerMuted: controller.isSpeakerMuted,
@@ -516,7 +523,13 @@ class _AIViewContentState extends State<_AIViewContent> {
 
   Widget _buildHistoryGrabHandle(bool isDark, double scale) {
     return GestureDetector(
-      onTap: () => setState(() => _isHistoryTrayOpen = !_isHistoryTrayOpen),
+      onTap: () {
+        setState(() => _isHistoryTrayOpen = !_isHistoryTrayOpen);
+        if (_isHistoryTrayOpen) {
+          // Tray just opened — jump to most recent message
+          WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+        }
+      },
       child: Container(
         width: 84 * scale,
         height: 28 * scale,

@@ -111,15 +111,39 @@ def run_mcp_server(backend: BackendClient, port: int) -> None:
 # ---------------------------------------------------------------------------
 
 class RVAgent(Agent):
-    """RV voice agent — Milo, conversational assistant for RV systems."""
+    """RV voice agent - Milo, conversational assistant for RV systems."""
 
     def __init__(self) -> None:
-        # Tools are handled by Letta via MCP, not by LiveKit
         super().__init__(
-            instructions="",  # Letta manages its own system prompt via memory blocks
-            tools=[],  # Empty - MCP handles tool calling
+            instructions="",
+            tools=[],
         )
+        self._room = None
         logger.info("RVAgent ready (tools via MCP)")
+
+    async def llm_node(self, chat_ctx, tools, model_settings):
+        """Publish assistant text early (after LLM, before TTS finishes)."""
+        from livekit.agents.voice.agent import Agent as _Agent
+        collected = []
+        async for chunk in _Agent.default.llm_node(self, chat_ctx, tools, model_settings):
+            if isinstance(chunk, str):
+                collected.append(chunk)
+            elif hasattr(chunk, 'delta') and chunk.delta:
+                c = getattr(chunk.delta, 'content', None)
+                if c:
+                    collected.append(c)
+            yield chunk
+        full_text = ''.join(collected).strip()
+        if full_text and self._room is not None:
+            try:
+                import json as _json
+                await self._room.local_participant.publish_data(
+                    _json.dumps({"type": "response", "text": full_text}).encode(),
+                    reliable=True,
+                )
+                logger.debug("early response published: %d chars", len(full_text))
+            except Exception as exc:
+                logger.debug("early response publish failed: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -238,13 +262,15 @@ async def entrypoint(ctx: JobContext) -> None:
 
     # Start session with persistent room IO.
     # Keep the agent session alive when text clients connect/disconnect between probes.
+    rv_agent = RVAgent()
     await session.start(
-        agent=RVAgent(),
+        agent=rv_agent,
         room=ctx.room,
         room_options=room_io.RoomOptions(
             close_on_disconnect=False,
         ),
     )
+    rv_agent._room = ctx.room  # inject room for early response publishing in llm_node
 
     # ── Forward agent state + responses back to Flutter client ──────────────
     @session.on("agent_state_changed")
@@ -262,10 +288,12 @@ async def entrypoint(ctx: JobContext) -> None:
 
     @session.on("conversation_item_added")
     def on_conversation_item_added(ev) -> None:
-        """Publish assistant messages so Flutter chat history is populated."""
+        """Publish assistant and user messages so Flutter chat history is populated."""
         item = ev.item
-        if not hasattr(item, "role") or item.role != "assistant":
+        if not hasattr(item, "role"):
             return
+        if item.role not in ("assistant", "user"):
+            return  # skip system/tool messages
         content = item.content
         if isinstance(content, list):
             text = " ".join(
@@ -275,14 +303,16 @@ async def entrypoint(ctx: JobContext) -> None:
             text = (str(content) if content else "").strip()
         if not text:
             return
+        # assistant → 'response', user → 'user_transcript'
+        msg_type = "response" if item.role == "assistant" else "user_transcript"
         async def _pub():
             try:
                 await ctx.room.local_participant.publish_data(
-                    json.dumps({"type": "response", "text": text}).encode(),
+                    json.dumps({"type": msg_type, "text": text}).encode(),
                     reliable=True,
                 )
             except Exception as e:
-                logger.debug("Failed to publish agent response: %s", e)
+                logger.debug("Failed to publish %s: %s", msg_type, e)
         asyncio.create_task(_pub())
 
     # Log participant and track events for debugging
