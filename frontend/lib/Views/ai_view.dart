@@ -299,12 +299,19 @@ class _AIViewContentState extends State<_AIViewContent>
 
   /// Resize and compress an image for transmission. Keeps longest dimension <=
   /// maxDim and re-encodes as JPEG. Falls back to original bytes on any error.
+  /// Resize image to max 1024px. PNGs stay PNG (preserves transparency +
+  /// quality for screenshots/diagrams). JPEGs and everything else become
+  /// JPEG at 85% quality. Skips re-encode if already under 400 KB and within
+  /// dimension limits. Falls back to original on any error.
   Future<(Uint8List, String)> _compressImageForSend(
     Uint8List bytes,
     String mimeType,
   ) async {
     const int maxDim = 1024;
     const double quality = 0.85;
+    const int smallThreshold = 400 * 1024; // 400 KB — skip re-encode
+    final bool isPng = mimeType == 'image/png';
+    final String outMime = isPng ? 'image/png' : 'image/jpeg';
     try {
       final blob = html.Blob([bytes], mimeType);
       final url = html.Url.createObjectUrlFromBlob(blob);
@@ -314,16 +321,29 @@ class _AIViewContentState extends State<_AIViewContent>
       int w = img.naturalWidth ?? 0;
       int h = img.naturalHeight ?? 0;
       if (w == 0 || h == 0) return (bytes, mimeType);
+      // Skip if already small enough — no reason to re-encode.
+      if (bytes.length <= smallThreshold && w <= maxDim && h <= maxDim) {
+        return (bytes, mimeType);
+      }
       if (w > maxDim || h > maxDim) {
         if (w >= h) { h = (h * maxDim / w).round(); w = maxDim; }
         else { w = (w * maxDim / h).round(); h = maxDim; }
       }
       final canvas = html.CanvasElement(width: w, height: h);
+      // For PNG with transparency, leave background transparent.
+      // For JPEG we need an opaque background.
+      if (!isPng) {
+        canvas.context2D
+          ..fillStyle = '#ffffff'
+          ..fillRect(0, 0, w, h);
+      }
       canvas.context2D.drawImageScaled(img, 0, 0, w, h);
-      final dataUrl = canvas.toDataUrl('image/jpeg', quality);
+      final dataUrl = isPng
+          ? canvas.toDataUrl('image/png')
+          : canvas.toDataUrl('image/jpeg', quality);
       final comma = dataUrl.indexOf(',');
       if (comma == -1) return (bytes, mimeType);
-      return (base64Decode(dataUrl.substring(comma + 1)), 'image/jpeg');
+      return (base64Decode(dataUrl.substring(comma + 1)), outMime);
     } catch (_) {
       return (bytes, mimeType);
     }
