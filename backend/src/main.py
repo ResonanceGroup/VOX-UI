@@ -351,14 +351,32 @@ async def entrypoint(ctx: JobContext) -> None:
                     mime_type,
                     len(image_bytes),
                 )
-                session.generate_reply(
-                    user_input=ChatMessage(
-                        role="user",
-                        content=[prompt, ImageContent(image=data_url, mime_type=mime_type)],
-                    ),
-                    instructions="Respond naturally to the user's image and any accompanying text.",
-                    input_modality="text",
-                )
+                # Check whether the active model supports vision.
+                active_model = eff.get("llm_model", config.llm_model).lower()
+                _VISION_KEYWORDS = ("vl", "vision", "llava", "pixtral", "minicpm-v", "internvl")
+                model_supports_vision = any(kw in active_model for kw in _VISION_KEYWORDS)
+
+                if model_supports_vision:
+                    session.generate_reply(
+                        user_input=ChatMessage(
+                            role="user",
+                            content=[prompt, ImageContent(image=data_url, mime_type=mime_type)],
+                        ),
+                        instructions="Respond naturally to the user's image and any accompanying text.",
+                        input_modality="text",
+                    )
+                else:
+                    logger.warning(
+                        "Model '%s' does not support vision; falling back to text-only reply.",
+                        active_model,
+                    )
+                    session.generate_reply(
+                        user_input=(
+                            f"{prompt}\n\n"
+                            f"[The user sent an image but the current model does not support vision. "
+                            f"Acknowledge it briefly and suggest they describe what they need instead.]"
+                        ),
+                    )
             except RuntimeError as e:
                 logger.debug("Skipping image input because agent session is unavailable: %s", e)
             except Exception as e:
