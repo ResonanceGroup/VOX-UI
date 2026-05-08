@@ -301,7 +301,6 @@ class _AIViewContentState extends State<_AIViewContent>
   /// On iOS Safari this presents the system sheet; on desktop it opens a picker.
   Future<void> _handlePickImage(AIController controller) async {
     if (!controller.isAIEnabled || _isPickingImage) return;
-    setState(() => _isPickingImage = true);
     try {
       final completer = Completer<void>();
       Uint8List? bytes;
@@ -310,7 +309,13 @@ class _AIViewContentState extends State<_AIViewContent>
 
       final uploadInput = html.FileUploadInputElement()
         ..accept = 'image/*'
-        ..multiple = false;
+        ..multiple = false
+        ..style.display = 'none';
+
+      // iOS Safari requires the element be in the DOM before click(), and
+      // click() must happen before any await/microtask-yield in the gesture
+      // handler. Append → listen → click → setState (in that order).
+      html.document.body!.append(uploadInput);
 
       final sub = uploadInput.onChange.listen((_) {
         final file = uploadInput.files?.isNotEmpty == true
@@ -333,13 +338,16 @@ class _AIViewContentState extends State<_AIViewContent>
         });
       });
 
+      // Must happen synchronously (before first await) to preserve gesture ctx.
       uploadInput.click();
+      setState(() => _isPickingImage = true);
       // 60-second timeout in case the user cancels without selecting
       await completer.future.timeout(
         const Duration(seconds: 60),
         onTimeout: () {},
       );
       await sub.cancel();
+      uploadInput.remove(); // clean up DOM element
 
       if (bytes == null) return;
 
