@@ -5,21 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VOX Orb</title>
   <style>
-    /* Keep all non-control iframe wrapper surfaces transparent.
-       iOS Safari can otherwise paint default white rectangles behind orb groups. */
-    html, body,
-    .orb-container,
-    .orb-wrapper,
-    .controls-row,
-    .status-display,
-    .status-icon,
-    .status-text,
-    .orb-status-effects,
-    .orb-particles {
-      background: transparent !important;
-      background-color: transparent !important;
-    }
-
     /* Orb styles */
     .orb {
       position: relative;
@@ -678,7 +663,7 @@
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: transparent !important;
+      background: #1e1e1e;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -692,7 +677,7 @@
       height: 100%;
       width: 100%;
       overflow: hidden;
-      background: transparent !important;
+      background: #1e1e1e;
     }
     
     .orb-container {
@@ -1080,10 +1065,9 @@
         
         // Handle theme
         if (payload.theme) {
-          // Keep iframe document transparent; Flutter owns the page background.
-          document.documentElement.style.setProperty('--orb-page-bg', 'transparent');
-          document.documentElement.style.setProperty('background', 'transparent', 'important');
-          document.body.style.setProperty('background', 'transparent', 'important');
+          var bg = payload.theme === 'dark' ? '#1e1e1e' : '#f9f9f9';
+          document.documentElement.style.setProperty('background', bg, 'important');
+          document.body.style.setProperty('background', bg, 'important');
           if (payload.theme === 'dark') {
             document.body.classList.add('overlay-dark');
           } else {

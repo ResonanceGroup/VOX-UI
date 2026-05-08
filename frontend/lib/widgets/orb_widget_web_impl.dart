@@ -191,6 +191,7 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
               if (cw != null) {
                 _orbContentWindow = cw as js.JsObject;
                 _iframeElement = iframe;  // store for pointer-events toggling
+                _applyIframeBacking(_currentTheme);
                 // Apply current tray/drawer block state immediately
                 iframe.style.pointerEvents = (widget.isTrayOpen || widget.isDrawerOpen) ? 'none' : 'auto';
               }
@@ -350,13 +351,17 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     // between the user clicking unmute and Flutter processing the toggle.
   }
 
-  void _updateTheme(String theme) {
+  void _applyIframeBacking(String theme) {
     final color = theme == 'dark' ? '#1e1e1e' : '#f9f9f9';
-    // Keep the orb document transparent, but color the iframe platform-view
-    // backing surface itself. iOS Safari otherwise paints it white behind the
-    // controls/status area even when the iframe document is transparent.
+    // Match the known-good RV/original pattern: do not depend on iframe
+    // transparency for the visible backing surface. Color the platform-view
+    // iframe itself so iOS Safari never falls back to white.
     _iframeElement?.style.backgroundColor = color;
     _iframeElement?.style.setProperty('background', color, 'important');
+  }
+
+  void _updateTheme(String theme) {
+    _applyIframeBacking(theme);
 
     if (theme == _currentTheme) return;
     _currentTheme = theme;
