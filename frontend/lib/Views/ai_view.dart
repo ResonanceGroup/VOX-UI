@@ -574,7 +574,7 @@ class _AIViewContentState extends State<_AIViewContent> {
           Positioned(
             left: 0,
             right: 0,
-            bottom: (MediaQuery.of(context).padding.bottom + 4) * scale,
+            bottom: 4 * scale,
             child: Center(
               child: _buildHistoryGrabHandle(isDark, scale),
             ),
@@ -626,7 +626,8 @@ class _AIViewContentState extends State<_AIViewContent> {
       child: SizedBox(
         width: 168 * scale,
         height: 72 * scale,
-        child: Center(
+        child: Align(
+          alignment: Alignment.bottomCenter,
           child: Container(
             width: 76 * scale,
             height: 28 * scale,
