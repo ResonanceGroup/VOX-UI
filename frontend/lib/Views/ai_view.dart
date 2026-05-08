@@ -258,8 +258,10 @@ class _AIViewContentState extends State<_AIViewContent> {
     final isDark = themeManager.themeMode == ThemeMode.dark;
     final showAvailableUiForPreview = controller.isAIAvailable || kDebugMode;
 
+    final pageBackground = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9F9F9);
+
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9F9F9),
+      backgroundColor: pageBackground,
       body: showAvailableUiForPreview
           ? _buildAvailableContent(controller, isDark, scale)
           : SafeArea(
@@ -501,7 +503,9 @@ class _AIViewContentState extends State<_AIViewContent> {
     return Stack(
       children: [
         Positioned.fill(
-          child: ColoredBox(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeInOut,
             color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9F9F9),
           ),
         ),

@@ -26,7 +26,7 @@ void _ensureFactory() {
       ..setAttribute('allowtransparency', 'true')
       // iOS Safari paints a white platform-view backing surface when this is
       // transparent. Start dark; runtime theme sync updates this immediately.
-      ..style.cssText = 'border:none;width:100%;height:100%;display:block;background:#1e1e1e;';
+      ..style.cssText = 'border:none;width:100%;height:100%;display:block;background:#1e1e1e;transition:background-color 260ms ease-in-out, background 260ms ease-in-out;';
   });
 }
 
