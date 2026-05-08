@@ -317,6 +317,9 @@ class _AIViewContentState extends State<_AIViewContent>
       // handler. Append → listen → click → setState (in that order).
       html.document.body!.append(uploadInput);
 
+      // previewDataUrl captured in the listener closure (set by readAsDataUrl).
+      String? previewDataUrl;
+
       final sub = uploadInput.onChange.listen((_) {
         final file = uploadInput.files?.isNotEmpty == true
             ? uploadInput.files!.first
@@ -328,11 +331,19 @@ class _AIViewContentState extends State<_AIViewContent>
         fileName = file.name;
         mimeType = file.type.isNotEmpty ? file.type : 'image/jpeg';
         final reader = html.FileReader();
-        reader.readAsArrayBuffer(file);
+        // readAsDataUrl returns a plain String — no ByteBuffer interop, works
+        // reliably across all browsers and compilation modes (dart2js / CanvasKit).
+        reader.readAsDataUrl(file);
         reader.onLoadEnd.listen((_) {
-          final result = reader.result;
-          if (result is ByteBuffer) {
-            bytes = result.asUint8List();
+          final dataUrl = reader.result;
+          if (dataUrl is String) {
+            previewDataUrl = dataUrl;
+            final comma = dataUrl.indexOf(',');
+            if (comma != -1) {
+              try {
+                bytes = base64Decode(dataUrl.substring(comma + 1));
+              } catch (_) {}
+            }
           }
           completer.complete();
         });
@@ -353,14 +364,15 @@ class _AIViewContentState extends State<_AIViewContent>
 
       final effectiveMime = mimeType ?? 'image/jpeg';
       final prompt = _textController.text.trim();
-      final previewDataUrl =
+      // Use data URL from reader directly (already base64-encoded).
+      final effectivePreviewUrl = previewDataUrl ??
           'data:$effectiveMime;base64,${base64Encode(bytes!)}';
 
       await controller.sendImageMessage(
         bytes: bytes!,
         mimeType: effectiveMime,
         prompt: prompt,
-        previewDataUrl: previewDataUrl,
+        previewDataUrl: effectivePreviewUrl,
         name: fileName,
       );
       _textController.clear();
