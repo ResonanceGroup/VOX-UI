@@ -673,6 +673,7 @@
       height: 100%;
       width: 100%;
       overflow: hidden;
+      background: transparent !important;
     }
     
     .orb-container {
@@ -1277,11 +1278,14 @@
       
       const orbData = {
         level: data.level !== undefined ? data.level : 0,
-        theme: data.theme || 'light',
-        status: data.status || '',
-        speakerMuted: data.speakerMuted,  // pass through → state-speaker-muted class
-        micMuted: data.micMuted           // pass through → orb-mic-muted modifier class
       };
+      // Only include fields that Flutter explicitly sent. Audio-level-only ticks
+      // do not include theme/status/mute fields, and must not reset dark mode to
+      // light or overwrite the current status text.
+      if (data.theme !== undefined) { orbData.theme = data.theme; }
+      if (data.status !== undefined) { orbData.status = data.status; }
+      if (data.speakerMuted !== undefined) { orbData.speakerMuted = data.speakerMuted; }
+      if (data.micMuted !== undefined) { orbData.micMuted = data.micMuted; }
       if (mappedState !== undefined) { orbData.state = mappedState; }
       
       if (window.updateOrbOverlay) {

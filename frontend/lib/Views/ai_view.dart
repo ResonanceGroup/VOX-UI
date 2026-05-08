@@ -259,6 +259,7 @@ class _AIViewContentState extends State<_AIViewContent> {
     final showAvailableUiForPreview = controller.isAIAvailable || kDebugMode;
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9F9F9),
       body: showAvailableUiForPreview
           ? _buildAvailableContent(controller, isDark, scale)
           : SafeArea(
@@ -499,6 +500,11 @@ class _AIViewContentState extends State<_AIViewContent> {
 
     return Stack(
       children: [
+        Positioned.fill(
+          child: ColoredBox(
+            color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9F9F9),
+          ),
+        ),
         Positioned.fill(
           child: Align(
             widthFactor: 1.0,

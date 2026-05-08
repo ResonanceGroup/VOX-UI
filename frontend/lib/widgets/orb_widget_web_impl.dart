@@ -23,7 +23,8 @@ void _ensureFactory() {
   ui_web.platformViewRegistry.registerViewFactory(_kOrbViewType, (int viewId) {
     return html.IFrameElement()
       ..src = 'assets/assets/orb/orb.html?v=' + DateTime.now().millisecondsSinceEpoch.toString()
-      ..style.cssText = 'border:none;width:100%;height:100%;display:block;';
+      ..setAttribute('allowtransparency', 'true')
+      ..style.cssText = 'border:none;width:100%;height:100%;display:block;background:transparent;';
   });
 }
 
