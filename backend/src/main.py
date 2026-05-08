@@ -36,6 +36,7 @@ Environment variables (see config.py for full list):
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import logging
 import time
@@ -52,6 +53,7 @@ from livekit.agents import (
     cli,
 )
 from livekit.agents.voice import room_io
+from livekit.agents.llm import ChatMessage, ImageContent
 from livekit.plugins import openai, silero
 
 from api import BackendClient
@@ -300,6 +302,57 @@ async def entrypoint(ctx: JobContext) -> None:
     # Log already-connected participants at session start
     for identity, participant in ctx.room.remote_participants.items():
         logger.info("Already in room: %s (tracks: %d)", identity, len(participant.track_publications))
+
+    def on_image_stream(reader, participant_identity: str) -> None:
+        async def _handle_image() -> None:
+            try:
+                if not _session_can_generate_reply(session):
+                    logger.debug(
+                        "Ignoring image input from %s because agent session is not running",
+                        participant_identity,
+                    )
+                    return
+
+                chunks: list[bytes] = []
+                total = 0
+                async for chunk in reader:
+                    total += len(chunk)
+                    # Keep uploads bounded for vision prompts; frontend already resizes.
+                    if total > 6 * 1024 * 1024:
+                        logger.warning("Image upload from %s too large: %d bytes", participant_identity, total)
+                        return
+                    chunks.append(chunk)
+
+                image_bytes = b"".join(chunks)
+                mime_type = reader.info.mime_type or "image/jpeg"
+                if not mime_type.startswith("image/"):
+                    logger.warning("Ignoring non-image stream from %s: %s", participant_identity, mime_type)
+                    return
+
+                prompt = (reader.info.attributes or {}).get("prompt") or "Please analyze this image."
+                data_url = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode('ascii')}"
+                logger.info(
+                    "Received image input from %s: %s (%d bytes)",
+                    participant_identity,
+                    mime_type,
+                    len(image_bytes),
+                )
+                session.generate_reply(
+                    user_input=ChatMessage(
+                        role="user",
+                        content=[prompt, ImageContent(image=data_url, mime_type=mime_type)],
+                    ),
+                    instructions="Respond naturally to the user's image and any accompanying text.",
+                    input_modality="text",
+                )
+            except RuntimeError as e:
+                logger.debug("Skipping image input because agent session is unavailable: %s", e)
+            except Exception as e:
+                logger.error("Error processing image stream: %s", e)
+
+        asyncio.create_task(_handle_image())
+
+    ctx.room.register_byte_stream_handler("image_input", on_image_stream)
 
     # LiveKit event emitter expects sync callbacks; schedule async work inside.
     @ctx.room.on("data_received")

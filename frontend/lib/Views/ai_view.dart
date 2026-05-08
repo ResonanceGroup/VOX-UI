@@ -1,9 +1,11 @@
 import '../widgets/orb_widget.dart';
+import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:js' as js;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../debug/ui_tuning_values.dart';
 import '../Controllers/ai_controller.dart';
@@ -107,10 +109,12 @@ class _AIViewContent extends StatefulWidget {
   State<_AIViewContent> createState() => _AIViewContentState();
 }
 
-class _AIViewContentState extends State<_AIViewContent> with SingleTickerProviderStateMixin {
+class _AIViewContentState extends State<_AIViewContent>
+    with SingleTickerProviderStateMixin {
   void _playSpeakerClick() {
     try {
-      js.context.callMethod('eval', [r'''
+      js.context.callMethod('eval', [
+        r'''
         (function() {
           try {
             window.__voxClickCtx = window.__voxClickCtx || new (window.AudioContext || window.webkitAudioContext)();
@@ -134,7 +138,8 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
             }
           } catch(e) {}
         })();
-      ''']);
+      ''',
+      ]);
     } catch (_) {}
   }
 
@@ -143,6 +148,8 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
 
   final TextEditingController _textController = TextEditingController();
   final ScrollController _conversationScrollController = ScrollController();
+  final ImagePicker _imagePicker = ImagePicker();
+  bool _isPickingImage = false;
   bool _isHistoryTrayOpen = false;
   late final AnimationController _trayController;
   String? _debugOrbState; // null = driven by LiveKit
@@ -280,12 +287,89 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
     _textController.clear();
   }
 
+  Future<void> _handlePickImage(
+    AIController controller,
+    ImageSource source,
+  ) async {
+    if (!controller.isAIEnabled || _isPickingImage) return;
+    setState(() => _isPickingImage = true);
+    try {
+      final image = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (image == null) return;
+
+      final bytes = await image.readAsBytes();
+      final mimeType = image.mimeType ?? 'image/jpeg';
+      final prompt = _textController.text.trim();
+      final previewDataUrl = 'data:$mimeType;base64,${base64Encode(bytes)}';
+
+      await controller.sendImageMessage(
+        bytes: bytes,
+        mimeType: mimeType,
+        prompt: prompt,
+        previewDataUrl: previewDataUrl,
+        name: image.name,
+      );
+      _textController.clear();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not send image: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isPickingImage = false);
+    }
+  }
+
+  void _showImageSourceSheet(
+    AIController controller,
+    bool isDark,
+    double scale,
+  ) {
+    if (!controller.isAIEnabled) return;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Photos'),
+              onTap: () {
+                Navigator.pop(context);
+                _handlePickImage(controller, ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Take Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _handlePickImage(controller, ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   int _buildCount = 0;
 
   @override
   Widget build(BuildContext context) {
     _buildCount++;
-    debugPrint('[CHAT-DEBUG] build() #$_buildCount history=${context.read<AIController>().conversationHistory.length}');
+    debugPrint(
+      '[CHAT-DEBUG] build() #$_buildCount history=${context.read<AIController>().conversationHistory.length}',
+    );
     // Use read (not watch) — AIController changes are handled via _onAIControllerChanged → setState
     final controller = context.read<AIController>();
     final themeManager = context.watch<ThemeManager>();
@@ -294,7 +378,9 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
     final isDark = themeManager.themeMode == ThemeMode.dark;
     final showAvailableUiForPreview = controller.isAIAvailable || kDebugMode;
 
-    final pageBackground = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9F9F9);
+    final pageBackground = isDark
+        ? const Color(0xFF1E1E1E)
+        : const Color(0xFFF9F9F9);
 
     return Scaffold(
       backgroundColor: pageBackground,
@@ -314,7 +400,11 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
   }
 
   /// Build status bar
-  Widget _buildAlwaysVisibleInput(AIController controller, bool isDark, double scale) {
+  Widget _buildAlwaysVisibleInput(
+    AIController controller,
+    bool isDark,
+    double scale,
+  ) {
     final isConnected = controller.isAIEnabled;
     return Container(
       decoration: BoxDecoration(
@@ -333,25 +423,38 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: EdgeInsets.fromLTRB(12 * scale, 4 * scale, 12 * scale, 0),
+              padding: EdgeInsets.fromLTRB(
+                12 * scale,
+                4 * scale,
+                12 * scale,
+                0,
+              ),
               child: Row(
                 children: [
                   Container(
-                    width: 7 * scale, height: 7 * scale,
+                    width: 7 * scale,
+                    height: 7 * scale,
                     decoration: BoxDecoration(
-                      color: isConnected ? Colors.green[400]! : Colors.orange[400]!,
+                      color: isConnected
+                          ? Colors.green[400]!
+                          : Colors.orange[400]!,
                       shape: BoxShape.circle,
                     ),
                   ),
                   SizedBox(width: 5 * scale),
-                  Flexible(child: Text(
-                    isConnected ? 'Connected' : (controller.errorMessage ?? controller.statusMessage),
-                    style: TextStyle(
-                      fontSize: 11 * scale,
-                      color: isDark ? Colors.white38 : Colors.black38,
+                  Flexible(
+                    child: Text(
+                      isConnected
+                          ? 'Connected'
+                          : (controller.errorMessage ??
+                                controller.statusMessage),
+                      style: TextStyle(
+                        fontSize: 11 * scale,
+                        color: isDark ? Colors.white38 : Colors.black38,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    overflow: TextOverflow.ellipsis,
-                  )),
+                  ),
                 ],
               ),
             ),
@@ -359,52 +462,57 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
               children: [
                 Expanded(
                   child: TextField(
-                controller: _textController,
-                onSubmitted: (_) => _handleSendMessage(controller),
-                textInputAction: TextInputAction.send,
-                decoration: InputDecoration(
-                  hintText: 'Type a message...',
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: false,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 16.0 * scale,
-                    vertical: 14.0 * scale,
+                    controller: _textController,
+                    onSubmitted: (_) => _handleSendMessage(controller),
+                    textInputAction: TextInputAction.send,
+                    decoration: InputDecoration(
+                      hintText: 'Type a message...',
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16.0 * scale,
+                        vertical: 14.0 * scale,
+                      ),
+                      hintStyle: TextStyle(
+                        fontSize: 16.0 * scale,
+                        color: isDark
+                            ? const Color(0xFF555555)
+                            : const Color(0xFF999999),
+                      ),
+                    ),
+                    style: TextStyle(
+                      fontSize: 16.0 * scale,
+                      color: isDark ? const Color(0xFFEEEEEE) : Colors.black87,
+                    ),
                   ),
-                  hintStyle: TextStyle(
-                    fontSize: 16.0 * scale,
-                    color: isDark ? const Color(0xFF555555) : const Color(0xFF999999),
+                ),
+                Listener(
+                  onPointerUp: (_) => _handleSendMessage(controller),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Icon(
+                      Icons.send,
+                      color: AppColors.primaryBlue,
+                      size: 24.0 * scale,
+                    ),
                   ),
                 ),
-                style: TextStyle(
-                  fontSize: 16.0 * scale,
-                  color: isDark ? const Color(0xFFEEEEEE) : Colors.black87,
-                ),
-              ),
-            ),
-            Listener(
-              onPointerUp: (_) => _handleSendMessage(controller),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Icon(
-                  Icons.send,
-                  color: AppColors.primaryBlue,
-                  size: 24.0 * scale,
-                ),
-              ),
-            ),
-          ],  // end Row children
-            ),  // end Row
-          ],  // end Column children
-        ),  // end Column
+              ], // end Row children
+            ), // end Row
+          ], // end Column children
+        ), // end Column
       ),
     );
   }
 
   Widget _buildStatusBar(AIController controller, bool isDark, double scale) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 12 * scale),
+      padding: EdgeInsets.symmetric(
+        horizontal: 16 * scale,
+        vertical: 12 * scale,
+      ),
       decoration: BoxDecoration(
         color: isDark ? Colors.grey[900] : Colors.grey[100],
         border: Border(
@@ -430,11 +538,9 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
               ),
             ),
           ),
-
-
-          ],
-        ),
-      );
+        ],
+      ),
+    );
   }
 
   /// Build status indicator dot
@@ -478,7 +584,8 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
 
   /// Build connect/disconnect button
   Widget _buildConnectionButton(AIController controller, double scale) {
-    final isConnected = controller.connectionState == AIConnectionState.connected;
+    final isConnected =
+        controller.connectionState == AIConnectionState.connected;
 
     return ElevatedButton.icon(
       onPressed: controller.connectionState == AIConnectionState.connecting
@@ -490,22 +597,26 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
                 await controller.connect();
               }
             },
-      icon: Icon(
-        isConnected ? Icons.power_off : Icons.power,
-        size: 18 * scale,
-      ),
+      icon: Icon(isConnected ? Icons.power_off : Icons.power, size: 18 * scale),
       label: Text(isConnected ? 'Disconnect' : 'Connect'),
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primaryBlue,
         foregroundColor: Colors.white,
-        padding: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 8 * scale),
+        padding: EdgeInsets.symmetric(
+          horizontal: 16 * scale,
+          vertical: 8 * scale,
+        ),
         minimumSize: Size.zero,
       ),
     );
   }
 
   /// Build content when AI is available
-  Widget _buildAvailableContent(AIController controller, bool isDark, double scale) {
+  Widget _buildAvailableContent(
+    AIController controller,
+    bool isDark,
+    double scale,
+  ) {
     final messages = controller.conversationHistory.isNotEmpty
         ? controller.conversationHistory
         : const <ConversationMessage>[];
@@ -534,7 +645,9 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
           ]
         : messages;
 
-    debugPrint('[CHAT-DEBUG] _buildAvailableContent: displayMessages.length=${displayMessages.length} trayOpen=$_isHistoryTrayOpen');
+    debugPrint(
+      '[CHAT-DEBUG] _buildAvailableContent: displayMessages.length=${displayMessages.length} trayOpen=$_isHistoryTrayOpen',
+    );
 
     return Stack(
       children: [
@@ -584,7 +697,9 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
           builder: (context, child) {
             // Use easeInCubic so the tray starts gently and accelerates into
             // place instead of jumping upward then slowing near the top.
-            final progress = Curves.easeInCubic.transform(_trayController.value);
+            final progress = Curves.easeInCubic.transform(
+              _trayController.value,
+            );
             final viewportHeight = MediaQuery.of(context).size.height;
             final hiddenOffset = viewportHeight * (1 - progress);
             return Positioned(
@@ -594,10 +709,7 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
               bottom: -hiddenOffset,
               child: IgnorePointer(
                 ignoring: !_isHistoryTrayOpen,
-                child: Opacity(
-                  opacity: progress.clamp(0.0, 1.0),
-                  child: child,
-                ),
+                child: Opacity(opacity: progress.clamp(0.0, 1.0), child: child),
               ),
             );
           },
@@ -608,8 +720,6 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
             controller,
           ),
         ),
-
-
 
         // Grab handle — only shown when tray is closed. Keep it anchored near
         // the visual bottom of the usable viewport (above Safari's toolbar), not
@@ -635,7 +745,11 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
   }
 
   /// Build orb visualization widget
-  Widget _buildOrbVisualization(AIController controller, bool isDark, double scale) {
+  Widget _buildOrbVisualization(
+    AIController controller,
+    bool isDark,
+    double scale,
+  ) {
     // Use WebView-based orb for exact visual fidelity
     return OrbWebViewWidget(
       size: UiTuningValues.orbSize * scale,
@@ -688,7 +802,9 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
                 width: 34 * scale,
                 height: 4 * scale,
                 decoration: BoxDecoration(
-                  color: (isDark ? Colors.white : Colors.black).withOpacity(0.85),
+                  color: (isDark ? Colors.white : Colors.black).withOpacity(
+                    0.85,
+                  ),
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -722,27 +838,30 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
         color: overlayBg,
         // No SafeArea — overlay fills all the way to the top of the body
         child: Column(
-        children: [
-          // Scrollable message area fills full tray height; handle floats on top
-          Expanded(
-            child: Stack(
-              children: [
-                // Full-height ListView — extends to very top of tray
-                Padding(
-                  padding: EdgeInsets.fromLTRB(28 * scale, 0, 28 * scale, 0),
-                  child: ListView.separated(
-                    controller: _conversationScrollController,
-                    // Top padding clears the floating handle; bottom gives
-                    // breathing room above the input box (Change #1)
-                    padding: EdgeInsets.only(
-                      top: 56 * scale,
-                      bottom: UiTuningValues.trayMessageSpacing * scale,
-                    ),
-                    itemCount: messages.length,
-                    separatorBuilder: (_, __) =>
-                        SizedBox(height: UiTuningValues.trayMessageSpacing * scale),
-                    itemBuilder: (context, index) {
-                        debugPrint('[CHAT-DEBUG] itemBuilder: index=$index of ${messages.length}');
+          children: [
+            // Scrollable message area fills full tray height; handle floats on top
+            Expanded(
+              child: Stack(
+                children: [
+                  // Full-height ListView — extends to very top of tray
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(28 * scale, 0, 28 * scale, 0),
+                    child: ListView.separated(
+                      controller: _conversationScrollController,
+                      // Top padding clears the floating handle; bottom gives
+                      // breathing room above the input box (Change #1)
+                      padding: EdgeInsets.only(
+                        top: 56 * scale,
+                        bottom: UiTuningValues.trayMessageSpacing * scale,
+                      ),
+                      itemCount: messages.length,
+                      separatorBuilder: (_, __) => SizedBox(
+                        height: UiTuningValues.trayMessageSpacing * scale,
+                      ),
+                      itemBuilder: (context, index) {
+                        debugPrint(
+                          '[CHAT-DEBUG] itemBuilder: index=$index of ${messages.length}',
+                        );
                         final message = messages[index];
                         return Align(
                           alignment: message.isUser
@@ -759,11 +878,15 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
                             decoration: BoxDecoration(
                               color: message.isUser
                                   ? (isDark
-                                      ? AppColors.primaryBlue.withOpacity(0.30)
-                                      : AppColors.primaryBlue.withOpacity(0.12))
+                                        ? AppColors.primaryBlue.withOpacity(
+                                            0.30,
+                                          )
+                                        : AppColors.primaryBlue.withOpacity(
+                                            0.12,
+                                          ))
                                   : (isDark
-                                      ? Colors.white.withOpacity(0.12)
-                                      : Colors.black.withOpacity(0.07)),
+                                        ? Colors.white.withOpacity(0.12)
+                                        : Colors.black.withOpacity(0.07)),
                               borderRadius: BorderRadius.circular(16 * scale),
                               border: Border.all(
                                 color: (isDark ? Colors.white : Colors.black)
@@ -781,44 +904,46 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
                             ),
                           ),
                         );
-                    },
-                  ),
-                ),
-
-                // Handle floats over the top of the scroll content
-                Positioned(
-                  top: 0, left: 0, right: 0,
-                  child: Padding(
-                    padding: EdgeInsets.only(top: _trayHandleEdgeGap * scale),
-                    child: Center(
-                      child: _buildHistoryGrabHandle(
-                        isDark,
-                        scale,
-                        pillAlignment: Alignment.topCenter,
-                      ),
+                      },
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
 
-          // Chat input box — flush to left/right/bottom edges, top border only, like VOX-UI
-          Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-                      border: Border(
-                        top: BorderSide(
-                          color: isDark
-                              ? const Color(0xFF444444)
-                              : const Color(0xFFDDDDDD),
-                          width: 1.0,
+                  // Handle floats over the top of the scroll content
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Padding(
+                      padding: EdgeInsets.only(top: _trayHandleEdgeGap * scale),
+                      child: Center(
+                        child: _buildHistoryGrabHandle(
+                          isDark,
+                          scale,
+                          pillAlignment: Alignment.topCenter,
                         ),
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        // Mic + speaker toggles in tray
+                  ),
+                ],
+              ),
+            ),
+
+            // Chat input box — flush to left/right/bottom edges, top border only, like VOX-UI
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                border: Border(
+                  top: BorderSide(
+                    color: isDark
+                        ? const Color(0xFF444444)
+                        : const Color(0xFFDDDDDD),
+                    width: 1.0,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Mic + speaker toggles in tray
                   IconButton(
                     icon: Icon(
                       controller.isMuted ? Icons.mic_off : Icons.mic,
@@ -840,7 +965,9 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
                   ),
                   IconButton(
                     icon: Icon(
-                      controller.isSpeakerMuted ? Icons.volume_off : Icons.volume_up,
+                      controller.isSpeakerMuted
+                          ? Icons.volume_off
+                          : Icons.volume_up,
                       color: controller.isSpeakerMuted
                           ? Colors.red[400]
                           : (isDark ? Colors.white70 : Colors.black87),
@@ -853,53 +980,75 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
                     },
                     padding: EdgeInsets.symmetric(horizontal: 4 * scale),
                     constraints: const BoxConstraints(),
-                    tooltip: controller.isSpeakerMuted ? 'Unmute speaker' : 'Mute speaker',
+                    tooltip: controller.isSpeakerMuted
+                        ? 'Unmute speaker'
+                        : 'Mute speaker',
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      _isPickingImage
+                          ? Icons.hourglass_empty
+                          : Icons.add_photo_alternate_outlined,
+                      color: controller.isAIEnabled
+                          ? (isDark ? Colors.white70 : Colors.black87)
+                          : (isDark ? Colors.white24 : Colors.black26),
+                      size: 24.0 * scale,
+                    ),
+                    onPressed: (!controller.isAIEnabled || _isPickingImage)
+                        ? null
+                        : () =>
+                              _showImageSourceSheet(controller, isDark, scale),
+                    padding: EdgeInsets.symmetric(horizontal: 4 * scale),
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Send image',
                   ),
                   Expanded(
-                          child: TextField(
-                            controller: _textController,
-                            onSubmitted: (_) => _handleSendMessage(controller),
-                            textInputAction: TextInputAction.send,
-                            decoration: InputDecoration(
-                              hintText: 'Type a message...',
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              filled: false,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16.0 * scale,
-                                vertical: 12.0 * scale,
-                              ),
-                              hintStyle: TextStyle(
-                                fontSize: 24.0 * scale,
-                                fontWeight: FontWeight.w400,
-                                color: isDark
-                                    ? const Color(0xFF555555)
-                                    : const Color(0xFF999999),
-                              ),
-                            ),
-                            style: TextStyle(
-                              fontSize: 24.0 * scale,
-                              fontWeight: FontWeight.w400,
-                              color: isDark
-                                  ? const Color(0xFFEEEEEE)
-                                  : Colors.black87,
-                            ),
-                          ),
+                    child: TextField(
+                      controller: _textController,
+                      onSubmitted: (_) => _handleSendMessage(controller),
+                      textInputAction: TextInputAction.send,
+                      decoration: InputDecoration(
+                        hintText: 'Type a message...',
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16.0 * scale,
+                          vertical: 12.0 * scale,
                         ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.send,
-                            color: AppColors.primaryBlue,
-                            size: 32.0 * scale,
-                          ),
-                          onPressed: (_textController.text.trim().isEmpty || !controller.isAIEnabled)
-                              ? null
-                              : () => _handleSendMessage(controller),
+                        hintStyle: TextStyle(
+                          fontSize: 24.0 * scale,
+                          fontWeight: FontWeight.w400,
+                          color: isDark
+                              ? const Color(0xFF555555)
+                              : const Color(0xFF999999),
                         ),
-                      ],
+                      ),
+                      style: TextStyle(
+                        fontSize: 24.0 * scale,
+                        fontWeight: FontWeight.w400,
+                        color: isDark
+                            ? const Color(0xFFEEEEEE)
+                            : Colors.black87,
+                      ),
                     ),
                   ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.send,
+                      color: AppColors.primaryBlue,
+                      size: 32.0 * scale,
+                    ),
+                    onPressed:
+                        (_textController.text.trim().isEmpty ||
+                            !controller.isAIEnabled)
+                        ? null
+                        : () => _handleSendMessage(controller),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -907,7 +1056,11 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
   }
 
   /// Build conversation history
-  Widget _buildConversationHistory(AIController controller, bool isDark, double scale) {
+  Widget _buildConversationHistory(
+    AIController controller,
+    bool isDark,
+    double scale,
+  ) {
     if (controller.conversationHistory.isEmpty) {
       return Center(
         child: Text(
@@ -945,7 +1098,9 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
     required Color textColor,
     FontWeight fontWeight = FontWeight.w400,
   }) {
-    final borderColor = (isDark ? Colors.white : Colors.black).withOpacity(0.18);
+    final borderColor = (isDark ? Colors.white : Colors.black).withOpacity(
+      0.18,
+    );
     final tableStripeColor = isDark
         ? Colors.white.withOpacity(0.06)
         : Colors.black.withOpacity(0.035);
@@ -976,10 +1131,22 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
           color: isUser ? Colors.white : AppColors.primaryBlue,
           decoration: TextDecoration.underline,
         ),
-        h1: baseStyle.copyWith(fontSize: fontSize * 1.45, fontWeight: FontWeight.w800),
-        h2: baseStyle.copyWith(fontSize: fontSize * 1.30, fontWeight: FontWeight.w800),
-        h3: baseStyle.copyWith(fontSize: fontSize * 1.18, fontWeight: FontWeight.w700),
-        h4: baseStyle.copyWith(fontSize: fontSize * 1.08, fontWeight: FontWeight.w700),
+        h1: baseStyle.copyWith(
+          fontSize: fontSize * 1.45,
+          fontWeight: FontWeight.w800,
+        ),
+        h2: baseStyle.copyWith(
+          fontSize: fontSize * 1.30,
+          fontWeight: FontWeight.w800,
+        ),
+        h3: baseStyle.copyWith(
+          fontSize: fontSize * 1.18,
+          fontWeight: FontWeight.w700,
+        ),
+        h4: baseStyle.copyWith(
+          fontSize: fontSize * 1.08,
+          fontWeight: FontWeight.w700,
+        ),
         h5: baseStyle.copyWith(fontWeight: FontWeight.w700),
         h6: baseStyle.copyWith(fontWeight: FontWeight.w700),
         listBullet: baseStyle,
@@ -987,11 +1154,17 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
         blockquoteDecoration: BoxDecoration(
           color: blockquoteBackground,
           border: Border(
-            left: BorderSide(color: AppColors.primaryBlue.withOpacity(0.75), width: 4 * scale),
+            left: BorderSide(
+              color: AppColors.primaryBlue.withOpacity(0.75),
+              width: 4 * scale,
+            ),
           ),
           borderRadius: BorderRadius.circular(8 * scale),
         ),
-        blockquotePadding: EdgeInsets.symmetric(horizontal: 12 * scale, vertical: 8 * scale),
+        blockquotePadding: EdgeInsets.symmetric(
+          horizontal: 12 * scale,
+          vertical: 8 * scale,
+        ),
         code: baseStyle.copyWith(
           fontFamily: 'monospace',
           backgroundColor: codeBackground,
@@ -1008,7 +1181,10 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
         tableHeadAlign: TextAlign.left,
         tableBorder: TableBorder.all(color: borderColor, width: 1),
         tableColumnWidth: const IntrinsicColumnWidth(),
-        tableCellsPadding: EdgeInsets.symmetric(horizontal: 12 * scale, vertical: 8 * scale),
+        tableCellsPadding: EdgeInsets.symmetric(
+          horizontal: 12 * scale,
+          vertical: 8 * scale,
+        ),
         // flutter_markdown applies this to alternating body rows; the header is
         // kept separate by its text weight/color and the table border.
         tableCellsDecoration: BoxDecoration(color: tableStripeColor),
@@ -1018,10 +1194,17 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
         ),
       ),
       imageBuilder: (uri, title, alt) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(12 * scale),
-          child: Image.network(
-            uri.toString(),
+        final imageUri = uri.toString();
+        Widget image;
+        if (imageUri.startsWith('data:image/')) {
+          final commaIndex = imageUri.indexOf(',');
+          final encoded = commaIndex >= 0
+              ? imageUri.substring(commaIndex + 1)
+              : '';
+          image = Image.memory(base64Decode(encoded), fit: BoxFit.cover);
+        } else {
+          image = Image.network(
+            imageUri,
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) => Container(
               padding: EdgeInsets.all(10 * scale),
@@ -1031,18 +1214,26 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
                 border: Border.all(color: borderColor),
               ),
               child: Text(
-                alt ?? uri.toString(),
+                alt ?? imageUri,
                 style: baseStyle.copyWith(fontSize: fontSize * 0.85),
               ),
             ),
-          ),
+          );
+        }
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12 * scale),
+          child: image,
         );
       },
     );
   }
 
   /// Build message bubble
-  Widget _buildMessageBubble(ConversationMessage message, bool isDark, double scale) {
+  Widget _buildMessageBubble(
+    ConversationMessage message,
+    bool isDark,
+    double scale,
+  ) {
     final isUser = message.isUser;
 
     return Align(
@@ -1053,15 +1244,21 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         child: Column(
-          crossAxisAlignment:
-              isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: isUser
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 12 * scale),
+              padding: EdgeInsets.symmetric(
+                horizontal: 16 * scale,
+                vertical: 12 * scale,
+              ),
               decoration: BoxDecoration(
                 color: isUser
                     ? AppColors.primaryBlue
-                    : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE8E8E8)),
+                    : (isDark
+                          ? const Color(0xFF2C2C2C)
+                          : const Color(0xFFE8E8E8)),
                 borderRadius: BorderRadius.circular(18 * scale),
               ),
               child: _buildMarkdownMessage(
@@ -1135,7 +1332,10 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
               style: TextStyle(fontSize: 16 * scale),
             ),
             style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 24 * scale, vertical: 16 * scale),
+              padding: EdgeInsets.symmetric(
+                horizontal: 24 * scale,
+                vertical: 16 * scale,
+              ),
               backgroundColor: controller.isMuted
                   ? Colors.red.withOpacity(0.15)
                   : AppColors.primaryBlue,
@@ -1160,7 +1360,11 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
   }
 
   /// Build content when AI is unavailable
-  Widget _buildUnavailableContent(AIController controller, bool isDark, double scale) {
+  Widget _buildUnavailableContent(
+    AIController controller,
+    bool isDark,
+    double scale,
+  ) {
     return Center(
       child: Padding(
         padding: EdgeInsets.all(32 * scale),
@@ -1219,16 +1423,8 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
             ),
           ),
           SizedBox(height: 12 * scale),
-          _buildRequirementItem(
-            '📱 Tablet or larger device',
-            isDark,
-            scale,
-          ),
-          _buildRequirementItem(
-            '🌐 TCP/Wi-Fi connection',
-            isDark,
-            scale,
-          ),
+          _buildRequirementItem('📱 Tablet or larger device', isDark, scale),
+          _buildRequirementItem('🌐 TCP/Wi-Fi connection', isDark, scale),
           SizedBox(height: 16 * scale),
           Text(
             'Note: In debug mode, AI is available on all devices.',

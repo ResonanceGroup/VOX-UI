@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../models/services/livekit_service.dart';
 import 'package:livekit_client/livekit_client.dart' show RTCIceServer;
@@ -38,8 +39,8 @@ class AIController extends ChangeNotifier {
   AIController({
     LiveKitService? livekitService,
     PreferencesService? preferencesService,
-  })  : _livekitService = livekitService ?? LiveKitService(),
-        _preferencesService = preferencesService {
+  }) : _livekitService = livekitService ?? LiveKitService(),
+       _preferencesService = preferencesService {
     _initialize();
   }
 
@@ -95,7 +96,8 @@ class AIController extends ChangeNotifier {
 
   /// Get the token service URL from preferences or defaults
   String get _tokenServiceUrl {
-    return _preferencesService?.tokenServiceUrl ?? AppConstants.aiTokenServiceUrl;
+    return _preferencesService?.tokenServiceUrl ??
+        AppConstants.aiTokenServiceUrl;
   }
 
   /// Initialize the controller
@@ -104,8 +106,9 @@ class AIController extends ChangeNotifier {
       debugPrint('AIController: Initializing...');
     }
 
-    _connectionStateSubscription =
-        _livekitService.connectionState.listen((state) {
+    _connectionStateSubscription = _livekitService.connectionState.listen((
+      state,
+    ) {
       _connectionState = state;
       if (state == AIConnectionState.error) {
         _errorMessage = 'Failed to connect to AI service';
@@ -134,7 +137,9 @@ class AIController extends ChangeNotifier {
       notifyListeners();
     });
 
-    _partialTranscriptSubscription = _livekitService.userPartialTranscript.listen((text) {
+    _partialTranscriptSubscription = _livekitService.userPartialTranscript.listen((
+      text,
+    ) {
       // Partial user STT -- show in status bar as user speaks, no history entry
       _currentTranscript = text;
       notifyListeners();
@@ -142,26 +147,32 @@ class AIController extends ChangeNotifier {
 
     _transcriptSubscription = _livekitService.transcript.listen((text) {
       _currentTranscript = text;
-      _addToHistory(ConversationMessage(
-        text: text,
-        isUser: true,
-        timestamp: DateTime.now(),
-      ));
+      _addToHistory(
+        ConversationMessage(
+          text: text,
+          isUser: true,
+          timestamp: DateTime.now(),
+        ),
+      );
       notifyListeners();
     });
 
     _responseSubscription = _livekitService.response.listen((text) {
       _currentResponse = text;
       _streamingAgentMessage = null;
-      _addToHistory(ConversationMessage(
-        text: text,
-        isUser: false,
-        timestamp: DateTime.now(),
-      ));
+      _addToHistory(
+        ConversationMessage(
+          text: text,
+          isUser: false,
+          timestamp: DateTime.now(),
+        ),
+      );
       notifyListeners();
     });
 
-    _streamingResponseSubscription = _livekitService.streamingResponse.listen((text) {
+    _streamingResponseSubscription = _livekitService.streamingResponse.listen((
+      text,
+    ) {
       _streamingAgentMessage = text.isEmpty ? null : text;
       notifyListeners();
     });
@@ -179,7 +190,9 @@ class AIController extends ChangeNotifier {
     if (AppConstants.aiEnableDebugLogs) {
       _audioLevelLogTimer = Timer.periodic(const Duration(seconds: 2), (_) {
         if (_currentAudioLevel > 0.0) {
-          debugPrint('AIController: Audio level: ${(_currentAudioLevel * 100).toStringAsFixed(1)}%');
+          debugPrint(
+            'AIController: Audio level: ${(_currentAudioLevel * 100).toStringAsFixed(1)}%',
+          );
         }
       });
     }
@@ -241,7 +254,9 @@ class AIController extends ChangeNotifier {
       final success = await _livekitService.connect(
         url: tokenData['url']! as String,
         token: tokenData['token']! as String,
-        iceServers: (iceServers != null && iceServers.isNotEmpty) ? iceServers : null,
+        iceServers: (iceServers != null && iceServers.isNotEmpty)
+            ? iceServers
+            : null,
         onError: (msg) {
           _errorMessage = msg;
           notifyListeners();
@@ -281,24 +296,67 @@ class AIController extends ChangeNotifier {
   }
 
   /// Send a text message to the AI
+  Future<void> sendImageMessage({
+    required Uint8List bytes,
+    required String mimeType,
+    String? prompt,
+    String? previewDataUrl,
+    String? name,
+  }) async {
+    if (!isAIEnabled) return;
+
+    final trimmedPrompt = prompt?.trim() ?? '';
+    await _livekitService.sendImageMessage(
+      bytes: bytes,
+      mimeType: mimeType,
+      prompt: trimmedPrompt,
+      name: name,
+    );
+
+    final displayText = trimmedPrompt.isEmpty
+        ? '![Uploaded image](${previewDataUrl ?? ''})'
+        : '$trimmedPrompt\n\n![Uploaded image](${previewDataUrl ?? ''})';
+    _addToHistory(
+      ConversationMessage(
+        text: previewDataUrl == null
+            ? (trimmedPrompt.isEmpty
+                  ? '[Image uploaded]'
+                  : '$trimmedPrompt\n\n[Image uploaded]')
+            : displayText,
+        isUser: true,
+        timestamp: DateTime.now(),
+      ),
+    );
+    _currentTranscript = trimmedPrompt.isEmpty
+        ? '[Image uploaded]'
+        : trimmedPrompt;
+    _agentState = AIAgentState.processing;
+    notifyListeners();
+  }
+
   Future<void> sendMessage(String message) async {
     if (!isAIEnabled) return;
 
     if (kDebugMode && AppConstants.isDemoMode) {
-      _addToHistory(ConversationMessage(
-        text: message,
-        isUser: true,
-        timestamp: DateTime.now(),
-      ));
+      _addToHistory(
+        ConversationMessage(
+          text: message,
+          isUser: true,
+          timestamp: DateTime.now(),
+        ),
+      );
       _agentState = AIAgentState.processing;
       notifyListeners();
       await Future.delayed(const Duration(seconds: 1));
-      final demoResponse = 'This is a demo response. In production, the AI would respond based on your input: "$message"';
-      _addToHistory(ConversationMessage(
-        text: demoResponse,
-        isUser: false,
-        timestamp: DateTime.now(),
-      ));
+      final demoResponse =
+          'This is a demo response. In production, the AI would respond based on your input: "$message"';
+      _addToHistory(
+        ConversationMessage(
+          text: demoResponse,
+          isUser: false,
+          timestamp: DateTime.now(),
+        ),
+      );
       _agentState = AIAgentState.idle;
       notifyListeners();
       return;
@@ -306,11 +364,13 @@ class AIController extends ChangeNotifier {
 
     await _livekitService.sendTextMessage(message);
     _currentTranscript = message;
-    _addToHistory(ConversationMessage(
-      text: message,
-      isUser: true,
-      timestamp: DateTime.now(),
-    ));
+    _addToHistory(
+      ConversationMessage(
+        text: message,
+        isUser: true,
+        timestamp: DateTime.now(),
+      ),
+    );
     notifyListeners();
   }
 
@@ -358,7 +418,9 @@ class AIController extends ChangeNotifier {
       }
     }
     _conversationHistory.add(message);
-    debugPrint("[CHAT-DEBUG] _addToHistory: history.length=${_conversationHistory.length} user=${message.isUser} text=${message.text.substring(0, message.text.length.clamp(0, 40))}");
+    debugPrint(
+      "[CHAT-DEBUG] _addToHistory: history.length=${_conversationHistory.length} user=${message.isUser} text=${message.text.substring(0, message.text.length.clamp(0, 40))}",
+    );
     if (_conversationHistory.length > 50) {
       _conversationHistory.removeAt(0);
     }

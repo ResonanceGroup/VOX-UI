@@ -39,7 +39,9 @@ class LiveKitService {
       final json = jsonDecode(response.body) as Map<String, dynamic>;
 
       if (AppConstants.aiEnableDebugLogs) {
-        debugPrint('LiveKitService: Token received for ${json['identity']} in room ${json['room']}');
+        debugPrint(
+          'LiveKitService: Token received for ${json['identity']} in room ${json['room']}',
+        );
       }
 
       // Extract ICE servers if provided by token service (Cloudflare TURN)
@@ -50,15 +52,19 @@ class LiveKitService {
           final m = e as Map<String, dynamic>;
           final urls = (m['urls'] as List<dynamic>?)?.cast<String>() ?? [];
           if (urls.isNotEmpty) {
-            iceServers.add(RTCIceServer(
-              urls: urls,
-              username:   m['username']   as String?,
-              credential: m['credential'] as String?,
-            ));
+            iceServers.add(
+              RTCIceServer(
+                urls: urls,
+                username: m['username'] as String?,
+                credential: m['credential'] as String?,
+              ),
+            );
           }
         }
         if (AppConstants.aiEnableDebugLogs) {
-          debugPrint('LiveKitService: Got ${iceServers.length} ICE server(s) from token service');
+          debugPrint(
+            'LiveKitService: Got ${iceServers.length} ICE server(s) from token service',
+          );
         }
       }
 
@@ -77,7 +83,6 @@ class LiveKitService {
   LocalAudioTrack? _localAudioTrack;
   RemoteAudioTrack? _remoteAudioTrack;
   bool _isSpeakerMuted = false;
-
 
   // Connection state streams
   final StreamController<AIConnectionState> _connectionStateController =
@@ -99,7 +104,8 @@ class LiveKitService {
   Stream<AIConnectionState> get connectionState =>
       _connectionStateController.stream;
   Stream<String> get transcript => _transcriptController.stream;
-  Stream<String> get userPartialTranscript => _userPartialTranscriptController.stream;
+  Stream<String> get userPartialTranscript =>
+      _userPartialTranscriptController.stream;
   Stream<String> get response => _responseController.stream;
   Stream<String> get streamingResponse => _streamingResponseController.stream;
   Stream<AIAgentState> get agentState => _agentStateController.stream;
@@ -169,7 +175,12 @@ class LiveKitService {
   }
 
   /// Connect to LiveKit room
-  Future<bool> connect({required String url, required String token, List<RTCIceServer>? iceServers, Function(String)? onError}) async {
+  Future<bool> connect({
+    required String url,
+    required String token,
+    List<RTCIceServer>? iceServers,
+    Function(String)? onError,
+  }) async {
     if (!_isInitialized) await initialize();
 
     if (_currentConnectionState == AIConnectionState.connected ||
@@ -232,12 +243,19 @@ class LiveKitService {
 
       if (_reconnectAttempts < AppConstants.aiMaxReconnectAttempts) {
         _reconnectAttempts++;
-        _isConnecting = false;  // allow recursive retry call to enter
+        _isConnecting = false; // allow recursive retry call to enter
         if (AppConstants.aiEnableDebugLogs) {
-          debugPrint('LiveKitService: Reconnect attempt $_reconnectAttempts/${AppConstants.aiMaxReconnectAttempts}');
+          debugPrint(
+            'LiveKitService: Reconnect attempt $_reconnectAttempts/${AppConstants.aiMaxReconnectAttempts}',
+          );
         }
         await Future.delayed(AppConstants.aiReconnectDelay);
-        return connect(url: url, token: token, iceServers: iceServers, onError: onError);
+        return connect(
+          url: url,
+          token: token,
+          iceServers: iceServers,
+          onError: onError,
+        );
       }
 
       // All retries exhausted — reset counter and transition to disconnected
@@ -278,7 +296,9 @@ class LiveKitService {
     // On web, audio levels come from the LiveKit remote speaker timer
     // (_remoteAudioLevelTimer) which fires whenever active speakers change.
     if (kIsWeb) {
-      debugPrint('LiveKitService: Skipping audio_streamer on web (no web plugin)');
+      debugPrint(
+        'LiveKitService: Skipping audio_streamer on web (no web plugin)',
+      );
       return;
     }
     try {
@@ -317,7 +337,8 @@ class LiveKitService {
   void _setupEventListeners() {
     ConnectionState? _lastRoomState;
     _room!.addListener(() {
-      if (_room == null) return;  // guard: room disposed between event and callback
+      if (_room == null)
+        return; // guard: room disposed between event and callback
       final state = _room!.connectionState;
       if (state == _lastRoomState) return;
       _lastRoomState = state;
@@ -336,9 +357,12 @@ class LiveKitService {
           break;
         case ConnectionState.disconnected:
           _disconnectDebounceTimer?.cancel();
-          _disconnectDebounceTimer = Timer(const Duration(milliseconds: 5000), () {
-            _updateConnectionState(AIConnectionState.disconnected);
-          });
+          _disconnectDebounceTimer = Timer(
+            const Duration(milliseconds: 5000),
+            () {
+              _updateConnectionState(AIConnectionState.disconnected);
+            },
+          );
           break;
       }
     });
@@ -373,11 +397,14 @@ class LiveKitService {
         for (final segment in event.segments) {
           final text = segment.text.trim();
           if (text.isEmpty) continue;
-          final isAgent = event.participant?.identity != _room!.localParticipant?.identity;
+          final isAgent =
+              event.participant?.identity != _room!.localParticipant?.identity;
           if (isAgent) {
             if (segment.isFinal) {
-              _streamingResponseController.add('');  // clear streaming preview
-              _responseController.add(text);         // TranscriptionEvent is sole source
+              _streamingResponseController.add(''); // clear streaming preview
+              _responseController.add(
+                text,
+              ); // TranscriptionEvent is sole source
             } else {
               // Always stream non-final segments as the LLM generates / TTS speaks.
               // TranscriptionEvent non-final segments are the standard LiveKit streaming
@@ -398,7 +425,8 @@ class LiveKitService {
       ..on<ParticipantAttributesChanged>((event) {
         final agentState = event.attributes['lk.agent.state'];
         if (agentState != null) {
-          if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] ATTR: " + agentState);
+          if (AppConstants.aiEnableDebugLogs)
+            debugPrint("[STATE] ATTR: " + agentState);
           final state = _parseAgentState(agentState);
           _updateAgentState(state, source: "attr");
         }
@@ -406,7 +434,8 @@ class LiveKitService {
       ..on<ActiveSpeakersChangedEvent>((event) {
         final _li = _room?.localParticipant?.identity;
         final _ha = event.speakers.any((p) => p.identity != _li);
-        if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] SPKR: " + (_ha ? "audible" : "empty"));
+        if (AppConstants.aiEnableDebugLogs)
+          debugPrint("[STATE] SPKR: " + (_ha ? "audible" : "empty"));
         _updateActiveSpeakers(event.speakers);
       });
   }
@@ -437,20 +466,32 @@ class LiveKitService {
         break;
       case 'state':
         final stateName = json['state'] as String?;
-        if (stateName != null) { if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] DC: " + stateName); _updateAgentState(_parseAgentState(stateName), source: "dc"); }
+        if (stateName != null) {
+          if (AppConstants.aiEnableDebugLogs)
+            debugPrint("[STATE] DC: " + stateName);
+          _updateAgentState(_parseAgentState(stateName), source: "dc");
+        }
         break;
     }
   }
 
   AIAgentState _parseAgentState(String state) {
     switch (state.toLowerCase()) {
-      case 'idle': return AIAgentState.idle;
-      case 'listening': return AIAgentState.listening;
-      case 'thinking': case 'processing': return AIAgentState.processing;
-      case 'speaking': return AIAgentState.speaking;
-      case 'initializing': return AIAgentState.idle;
-      case 'error': return AIAgentState.error;
-      default: return AIAgentState.idle;
+      case 'idle':
+        return AIAgentState.idle;
+      case 'listening':
+        return AIAgentState.listening;
+      case 'thinking':
+      case 'processing':
+        return AIAgentState.processing;
+      case 'speaking':
+        return AIAgentState.speaking;
+      case 'initializing':
+        return AIAgentState.idle;
+      case 'error':
+        return AIAgentState.error;
+      default:
+        return AIAgentState.idle;
     }
   }
 
@@ -469,6 +510,36 @@ class LiveKitService {
       if (AppConstants.aiEnableDebugLogs) {
         debugPrint('LiveKitService: Failed to send message: $e');
       }
+    }
+  }
+
+  Future<void> sendImageMessage({
+    required Uint8List bytes,
+    required String mimeType,
+    String? prompt,
+    String? name,
+  }) async {
+    if (_currentConnectionState != AIConnectionState.connected) return;
+    try {
+      final writer = await _room!.localParticipant?.streamBytes(
+        StreamBytesOptions(
+          topic: 'image_input',
+          name: name ?? 'image',
+          mimeType: mimeType,
+          totalSize: bytes.length,
+          attributes: {
+            if (prompt != null && prompt.trim().isNotEmpty)
+              'prompt': prompt.trim(),
+          },
+        ),
+      );
+      await writer?.write(bytes);
+      await writer?.close();
+    } catch (e) {
+      if (AppConstants.aiEnableDebugLogs) {
+        debugPrint('LiveKitService: Failed to send image message: $e');
+      }
+      rethrow;
     }
   }
 
@@ -594,7 +665,9 @@ class LiveKitService {
   void _startVuMeterTimer() {
     _remoteAudioLevelTimer?.cancel();
     _remoteAudioLevelTimer = Timer.periodic(
-      const Duration(milliseconds: 33), // ~30fps (LiveKit audioLevel updates ~100ms; 33ms is sufficient)
+      const Duration(
+        milliseconds: 33,
+      ), // ~30fps (LiveKit audioLevel updates ~100ms; 33ms is sufficient)
       (_) {
         if (_audioLevelController.isClosed) return;
         // Local mic level (user voice) — always non-zero while speaking
@@ -633,7 +706,8 @@ class LiveKitService {
           // stuck at idle when the backend already declared listening.
           final nextState = _pendingBackendState ?? AIAgentState.listening;
           _pendingBackendState = null;
-          if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] DBC: -> " + nextState.name);
+          if (AppConstants.aiEnableDebugLogs)
+            debugPrint("[STATE] DBC: -> " + nextState.name);
           _updateAgentState(nextState, source: "debounce");
         }
       });
@@ -645,7 +719,8 @@ class LiveKitService {
   void _updateConnectionState(AIConnectionState state) {
     if (_currentConnectionState != state) {
       _currentConnectionState = state;
-      if (!_connectionStateController.isClosed) _connectionStateController.add(state);
+      if (!_connectionStateController.isClosed)
+        _connectionStateController.add(state);
     }
   }
 
@@ -658,13 +733,31 @@ class LiveKitService {
       final localId = _room?.localParticipant?.identity;
       final agentAudible = _activeSpeakers.any((p) => p.identity != localId);
       if (agentAudible || _speakingIdleDebounceTimer != null) {
-        _pendingBackendState = state;  // remember last blocked state
-        if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] BLOCK [" + source + "]: " + state.name + " aud=" + agentAudible.toString() + " dbc=" + (_speakingIdleDebounceTimer!=null).toString());
+        _pendingBackendState = state; // remember last blocked state
+        if (AppConstants.aiEnableDebugLogs)
+          debugPrint(
+            "[STATE] BLOCK [" +
+                source +
+                "]: " +
+                state.name +
+                " aud=" +
+                agentAudible.toString() +
+                " dbc=" +
+                (_speakingIdleDebounceTimer != null).toString(),
+          );
         return;
       }
     }
     if (_currentAgentState != state) {
-      if (AppConstants.aiEnableDebugLogs) debugPrint("[STATE] EMIT [" + source + "]: " + _currentAgentState.name + " -> " + state.name);
+      if (AppConstants.aiEnableDebugLogs)
+        debugPrint(
+          "[STATE] EMIT [" +
+              source +
+              "]: " +
+              _currentAgentState.name +
+              " -> " +
+              state.name,
+        );
       _currentAgentState = state;
       if (!_agentStateController.isClosed) _agentStateController.add(state);
     }
@@ -684,11 +777,14 @@ class LiveKitService {
     _currentConnectionState = AIConnectionState.disconnected;
     _currentAgentState = AIAgentState.idle;
 
-    if (!_connectionStateController.isClosed) _connectionStateController.close();
+    if (!_connectionStateController.isClosed)
+      _connectionStateController.close();
     if (!_transcriptController.isClosed) _transcriptController.close();
-    if (!_userPartialTranscriptController.isClosed) _userPartialTranscriptController.close();
+    if (!_userPartialTranscriptController.isClosed)
+      _userPartialTranscriptController.close();
     if (!_responseController.isClosed) _responseController.close();
-    if (!_streamingResponseController.isClosed) _streamingResponseController.close();
+    if (!_streamingResponseController.isClosed)
+      _streamingResponseController.close();
     if (!_agentStateController.isClosed) _agentStateController.close();
     if (!_audioLevelController.isClosed) _audioLevelController.close();
 
