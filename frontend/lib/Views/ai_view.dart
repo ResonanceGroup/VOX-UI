@@ -138,6 +138,7 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
   }
 
   static const double _trayHandleEdgeGap = 16.0;
+  static const double _closedTrayHandleBottomGap = 4.0;
 
   final TextEditingController _textController = TextEditingController();
   final ScrollController _conversationScrollController = ScrollController();
@@ -616,7 +617,10 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
           Positioned(
             left: 0,
             right: 0,
-            bottom: _trayHandleEdgeGap * scale,
+            // iOS Safari's bottom toolbar already creates visible breathing room;
+            // use a smaller viewport offset so the visible gap matches the open
+            // tray's top spacing.
+            bottom: _closedTrayHandleBottomGap * scale,
             child: Center(
               child: _buildHistoryGrabHandle(
                 isDark,
