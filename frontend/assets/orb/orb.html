@@ -849,22 +849,22 @@
       let _micMuted = false;
       let _speakerMuted = false;
 
-      // Short click sound for button feedback (Web Audio API — works on iOS Safari)
+      // Subtle click sound for speaker mute (Web Audio API — works on iOS Safari)
       var _clickAudioCtx = null;
-      function playClickSound() {
+      function playSubtleClick() {
         try {
           if (!_clickAudioCtx) _clickAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          // Very short, quiet single tick — no sweep, no extra mic sound
           var osc = _clickAudioCtx.createOscillator();
           var gain = _clickAudioCtx.createGain();
           osc.connect(gain);
           gain.connect(_clickAudioCtx.destination);
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(1200, _clickAudioCtx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(600, _clickAudioCtx.currentTime + 0.04);
-          gain.gain.setValueAtTime(0.15, _clickAudioCtx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, _clickAudioCtx.currentTime + 0.06);
+          osc.frequency.setValueAtTime(880, _clickAudioCtx.currentTime);
+          gain.gain.setValueAtTime(0.012, _clickAudioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, _clickAudioCtx.currentTime + 0.018);
           osc.start(_clickAudioCtx.currentTime);
-          osc.stop(_clickAudioCtx.currentTime + 0.06);
+          osc.stop(_clickAudioCtx.currentTime + 0.018);
         } catch(e) {}
       }
 
@@ -1170,7 +1170,6 @@
       // Flutter processes the toggle.
       if (document.getElementById('mic-button')) {
         document.getElementById('mic-button').addEventListener('click', function() {
-          playClickSound();
           // Optimistic toggle: flip orb-mic-muted class immediately.
           // Flutter confirms via rebuild → _send() → micMuted payload.
           var willBeMuted = !document.body.classList.contains('orb-mic-muted');
@@ -1198,7 +1197,7 @@
       // Add click handler for speaker button
       if (document.getElementById('speaker-button')) {
         document.getElementById('speaker-button').addEventListener('click', function() {
-          playClickSound();
+          playSubtleClick();
           // Optimistic visual toggle — _send() reads _livekitService.isSpeakerMuted
           // directly so the audio-level loop won't revert this before the rebuild.
           var willBeMuted = !document.body.classList.contains('state-speaker-muted');

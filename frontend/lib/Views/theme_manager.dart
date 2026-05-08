@@ -43,6 +43,11 @@ class ThemeManager extends ChangeNotifier {
       if (meta != null) {
         meta.setAttribute('content', color);
       }
+      // Safari's bottom toolbar/overscroll area samples the page background,
+      // not just the theme-color meta tag. Keep html/body in sync too.
+      html.document.documentElement?.style.backgroundColor = color;
+      html.document.body?.style.backgroundColor = color;
+      html.document.body?.style.setProperty('background', color);
     } catch (_) {
       // Not running on web — ignore
     }

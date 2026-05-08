@@ -1,4 +1,6 @@
 import '../widgets/orb_widget.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:js' as js;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -105,6 +107,29 @@ class _AIViewContent extends StatefulWidget {
 }
 
 class _AIViewContentState extends State<_AIViewContent> {
+  void _playSpeakerClick() {
+    try {
+      js.context.callMethod('eval', [r'''
+        (function() {
+          try {
+            window.__voxClickCtx = window.__voxClickCtx || new (window.AudioContext || window.webkitAudioContext)();
+            var ctx = window.__voxClickCtx;
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            gain.gain.setValueAtTime(0.012, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.018);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.018);
+          } catch(e) {}
+        })();
+      ''']);
+    } catch (_) {}
+  }
+
   final TextEditingController _textController = TextEditingController();
   final ScrollController _conversationScrollController = ScrollController();
   bool _isHistoryTrayOpen = false;
@@ -713,6 +738,7 @@ class _AIViewContentState extends State<_AIViewContent> {
                       size: 22.0 * scale,
                     ),
                     onPressed: () {
+                      _playSpeakerClick();
                       controller.toggleSpeakerMute();
                       setState(() {});
                     },
