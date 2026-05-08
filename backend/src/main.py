@@ -51,6 +51,7 @@ from livekit.agents import (
     JobContext,
     JobProcess,
     cli,
+    get_job_context,
 )
 from livekit.agents.voice import room_io
 from livekit.agents.llm import ChatMessage, ImageContent
@@ -139,6 +140,7 @@ class RVAgent(Agent):
 
     async def on_enter(self) -> None:
         """Register byte-stream handler for images when agent enters the room."""
+        logger.info("RVAgent.on_enter() called — registering image_input handler")
         def _handler(reader, participant_identity: str) -> None:
             task = asyncio.create_task(
                 self._receive_image(reader, participant_identity)
@@ -146,7 +148,7 @@ class RVAgent(Agent):
             self._image_tasks.append(task)
             task.add_done_callback(lambda t: self._image_tasks.remove(t))
 
-        self.session.room.register_byte_stream_handler("image_input", _handler)
+        get_job_context().room.register_byte_stream_handler("image_input", _handler)
 
     async def _receive_image(self, reader, participant_identity: str) -> None:
         """Collect image bytes, add to chat context, then trigger a reply."""
@@ -187,6 +189,7 @@ class RVAgent(Agent):
                 content=[prompt, ImageContent(image=data_url, mime_type=mime_type)],
             )
             await self.update_chat_ctx(chat_ctx)
+            logger.info("Image added to chat_ctx, calling generate_reply()")
             self.session.generate_reply()
 
         except RuntimeError as e:
