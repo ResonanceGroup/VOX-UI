@@ -396,7 +396,7 @@ async def entrypoint(ctx: JobContext) -> None:
             logger.debug("Skipping %s because agent session is not running", reason)
             return
         try:
-            session.generate_reply(instructions=instructions)
+            session.generate_reply(user_input=instructions)
         except RuntimeError as e:
             logger.debug("Skipping %s because agent session is unavailable: %s", reason, e)
         except Exception as e:
