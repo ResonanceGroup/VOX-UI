@@ -58,6 +58,20 @@ from livekit.plugins import openai, silero
 
 from api import BackendClient
 from config import config
+
+def _get_skip_greeting() -> bool:
+    Read skip_greeting from config_override.json live so UI changes take effect.
+    import json, os
+    try:
+        override_file = os.path.join(os.path.dirname(__file__), 'config_override.json')
+        if os.path.exists(override_file):
+            with open(override_file) as _f:
+                data = json.load(_f)
+            if 'skip_greeting' in data:
+                return bool(data['skip_greeting'])
+    except Exception:
+        pass
+    return config.skip_greeting
 try:
     from token_service import get_effective_config, load_config_override
     load_config_override()
@@ -411,7 +425,7 @@ async def entrypoint(ctx: JobContext) -> None:
         logger.info("Participant connected: %s", participant.identity)
         async def _greet() -> None:
             await asyncio.sleep(0.5)
-            if config.skip_greeting:
+            if _get_skip_greeting():
                 return
             now = time.time()
             elapsed = now - _last_greeting_time[0]
@@ -435,7 +449,7 @@ async def entrypoint(ctx: JobContext) -> None:
 
     # Greet any participants already in the room when the agent connects
     existing = [p for p in ctx.room.remote_participants.values()]
-    if existing and not config.skip_greeting:
+    if existing and not _get_skip_greeting():
         async def _greet_existing() -> None:
             await asyncio.sleep(0.5)
             _try_generate_reply(

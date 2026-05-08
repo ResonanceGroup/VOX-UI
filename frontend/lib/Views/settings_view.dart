@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../models/app_preferences.dart';
 import '../models/app_preferences_notifier.dart';
@@ -45,6 +47,9 @@ class _SettingsBodyState extends State<_SettingsBody> {
   late final TextEditingController _llmApiKeyCtrl;
   late final TextEditingController _previewTextCtrl;
 
+  // ── Agent behavior ───────────────────────────────────────────────────────
+  bool _skipGreeting = false;
+
   // ── Voice dropdown ───────────────────────────────────────────────────────
   List<TtsVoice> _voices = [];
   bool _loadingVoices = false;
@@ -56,6 +61,14 @@ class _SettingsBodyState extends State<_SettingsBody> {
   // ── Preview ─────────────────────────────────────────────────────────────
   bool _previewLoading = false;
   final _audioPlayer = AudioPlayer();
+
+  // ── LLM test ─────────────────────────────────────────────────────────────
+  bool _llmTesting = false;
+  String? _llmTestResult;
+
+  // ── STT test ─────────────────────────────────────────────────────────────
+  bool _sttTesting = false;
+  String? _sttTestResult;
 
   // ── Save state ──────────────────────────────────────────────────────────
   bool _saving = false;
@@ -87,7 +100,6 @@ class _SettingsBodyState extends State<_SettingsBody> {
       tokenServiceUrl: () => _tokenServiceUrlCtrl.text.trim(),
     );
 
-    // Load backend config + voices after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadBackendConfig();
       _loadVoices();
@@ -116,18 +128,15 @@ class _SettingsBodyState extends State<_SettingsBody> {
     final cfg = await _configApi.fetchConfig();
     if (cfg == null || !mounted) return;
     setState(() {
-      if (cfg['stt_url']      != null) _sttUrlCtrl.text   = cfg['stt_url']!;
-      if (cfg['stt_model']    != null) _sttModelCtrl.text = cfg['stt_model']!;
-      if (cfg['tts_url']      != null) _ttsUrlCtrl.text   = cfg['tts_url']!;
-      if (cfg['llm_base_url'] != null) _llmUrlCtrl.text   = cfg['llm_base_url']!;
-      if (cfg['llm_model']    != null) _llmModelCtrl.text = cfg['llm_model']!;
+      if (cfg['stt_url']      != null) _sttUrlCtrl.text   = cfg['stt_url']! as String;
+      if (cfg['stt_model']    != null) _sttModelCtrl.text = cfg['stt_model']! as String;
+      if (cfg['tts_url']      != null) _ttsUrlCtrl.text   = cfg['tts_url']! as String;
+      if (cfg['llm_base_url'] != null) _llmUrlCtrl.text   = cfg['llm_base_url']! as String;
+      if (cfg['llm_model']    != null) _llmModelCtrl.text = cfg['llm_model']! as String;
       if (cfg['llm_api_key']  != null) _llmApiKeyCtrl.text = (cfg['llm_api_key'] ?? '') as String;
-      if (cfg['tts_voice']    != null) {
-        _selectedVoice = cfg['tts_voice'] as String;
-      }
-      if (cfg['tts_speed']    != null) {
-        _ttsSpeed = (cfg['tts_speed'] as num).toDouble();
-      }
+      if (cfg['tts_voice']    != null) _selectedVoice = cfg['tts_voice'] as String;
+      if (cfg['tts_speed']    != null) _ttsSpeed = (cfg['tts_speed'] as num).toDouble();
+      if (cfg['skip_greeting'] != null) _skipGreeting = cfg['skip_greeting'] as bool;
     });
   }
 
@@ -138,7 +147,6 @@ class _SettingsBodyState extends State<_SettingsBody> {
     setState(() {
       _voices = voices;
       _loadingVoices = false;
-      // If selected voice isn't in the list, reset to first
       if (_selectedVoice != null &&
           !voices.any((v) => v.id == _selectedVoice)) {
         _selectedVoice = voices.isNotEmpty ? voices.first.id : null;
@@ -150,11 +158,8 @@ class _SettingsBodyState extends State<_SettingsBody> {
     final prefs  = context.read<PreferencesService>();
     final notifier = context.read<AppPreferencesNotifier>();
 
-    // Persist connection settings locally
     final backendBase = _backendBaseUrlCtrl.text.trim().trimRight();
-    // Remove trailing slash for consistency
     prefs.backendBaseUrl  = backendBase.endsWith('/') ? backendBase.substring(0, backendBase.length - 1) : backendBase;
-    // Derive tokenServiceUrl from base unless user has overridden it manually
     prefs.tokenServiceUrl = '${prefs.backendBaseUrl}/api';
     _tokenServiceUrlCtrl.text = prefs.tokenServiceUrl;
     prefs.livekitUrl      = _livekitUrlCtrl.text.trim();
@@ -168,7 +173,6 @@ class _SettingsBodyState extends State<_SettingsBody> {
 
     setState(() { _saving = true; _saveStatus = null; });
 
-    // Push to backend
     final ok = await _configApi.updateConfig({
       'stt_url':       _sttUrlCtrl.text.trim(),
       'stt_model':     _sttModelCtrl.text.trim(),
@@ -178,6 +182,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
       'llm_base_url':  _llmUrlCtrl.text.trim(),
       'llm_model':     _llmModelCtrl.text.trim(),
       'llm_api_key':   _llmApiKeyCtrl.text.trim(),
+      'skip_greeting': _skipGreeting,
     });
 
     if (!mounted) return;
@@ -192,18 +197,18 @@ class _SettingsBodyState extends State<_SettingsBody> {
       duration: const Duration(seconds: 3),
     ));
 
-    // Auto-clear status icon after 4 s
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted) setState(() => _saveStatus = null);
     });
 
-    // Navigate back to home screen after successful save
     if (ok) {
       Future.delayed(const Duration(milliseconds: 1200), () {
         if (mounted) widget.onSaved?.call();
       });
     }
   }
+
+  // ── TTS preview ──────────────────────────────────────────────────────────
 
   Future<void> _playPreview() async {
     final text  = _previewTextCtrl.text.trim();
@@ -229,6 +234,70 @@ class _SettingsBodyState extends State<_SettingsBody> {
     await _audioPlayer.play(BytesSource(bytes));
   }
 
+  // ── LLM test ─────────────────────────────────────────────────────────────
+
+  Future<void> _testLlm() async {
+    setState(() { _llmTesting = true; _llmTestResult = null; });
+    try {
+      final baseUrl = _llmUrlCtrl.text.trim().replaceAll(RegExp(r'/v1/*$'), '');
+      final uri = Uri.parse('$baseUrl/v1/chat/completions');
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (_llmApiKeyCtrl.text.isNotEmpty) {
+        headers['Authorization'] = 'Bearer ${_llmApiKeyCtrl.text.trim()}';
+      }
+      final resp = await http.post(
+        uri,
+        headers: headers,
+        body: jsonEncode({
+          'model': _llmModelCtrl.text.trim(),
+          'messages': [{'role': 'user', 'content': 'Say: pong'}],
+          'max_tokens': 10,
+          'stream': false,
+        }),
+      ).timeout(const Duration(seconds: 20));
+
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final reply = (data['choices'] as List)[0]['message']['content'] as String;
+        final preview = reply.trim();
+        setState(() => _llmTestResult = '✓ ${preview.length > 60 ? preview.substring(0, 60) : preview}');
+      } else {
+        setState(() => _llmTestResult = '✗ HTTP ${resp.statusCode}');
+      }
+    } catch (e) {
+      final msg = e.toString();
+      setState(() => _llmTestResult = '✗ ${msg.length > 70 ? msg.substring(0, 70) : msg}');
+    } finally {
+      setState(() => _llmTesting = false);
+    }
+  }
+
+  // ── STT test ─────────────────────────────────────────────────────────────
+
+  Future<void> _testStt() async {
+    setState(() { _sttTesting = true; _sttTestResult = null; });
+    try {
+      final baseUrl = _sttUrlCtrl.text.trim();
+      final uri = Uri.parse('$baseUrl/v1/models');
+      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final models = (data['data'] as List?)
+            ?.map((m) => (m as Map)['id'] as String)
+            .take(2)
+            .join(', ') ?? 'OK';
+        setState(() => _sttTestResult = '✓ $models');
+      } else {
+        setState(() => _sttTestResult = '✗ HTTP ${resp.statusCode}');
+      }
+    } catch (e) {
+      final msg = e.toString();
+      setState(() => _sttTestResult = '✗ ${msg.length > 70 ? msg.substring(0, 70) : msg}');
+    } finally {
+      setState(() => _sttTesting = false);
+    }
+  }
+
   // ── Build ────────────────────────────────────────────────────────────────
 
   @override
@@ -240,7 +309,6 @@ class _SettingsBodyState extends State<_SettingsBody> {
     return Stack(
       children: [
         Container(
-          // Flat background matching original VoxUI: #1e1e1e dark / #f9f9f9 light
           color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9F9F9),
           child: SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(16 * scale, 16 * scale, 16 * scale, 100 * scale),
@@ -249,11 +317,13 @@ class _SettingsBodyState extends State<_SettingsBody> {
               children: [
                 _buildConnectionSection(isDark, scale),
                 SizedBox(height: 24 * scale),
+                _buildAgentBehaviorSection(isDark, scale),
+                SizedBox(height: 24 * scale),
                 _buildLlmSection(settings, isDark, scale),
                 SizedBox(height: 24 * scale),
-                _buildVoiceSection(isDark, scale),
+                _buildSttSection(isDark, scale),
                 SizedBox(height: 24 * scale),
-                _buildPreviewCard(isDark, scale),
+                _buildTtsSection(isDark, scale),
                 SizedBox(height: 24 * scale),
                 _buildThemeSection(settings, isDark, scale),
                 SizedBox(height: 24 * scale),
@@ -265,32 +335,12 @@ class _SettingsBodyState extends State<_SettingsBody> {
             ),
           ),
         ),
-
-        // Floating save button
         Positioned(
           bottom: 24 * scale,
           left: 24 * scale,
           right: 24 * scale,
           child: _buildSaveButton(scale),
         ),
-      ],
-    );
-  }
-
-  // ── Header ───────────────────────────────────────────────────────────────
-
-  Widget _buildHeader(bool isDark, double scale) {
-    return Row(
-      children: [
-        Icon(Icons.admin_panel_settings, size: 36,
-            color: isDark ? AppColors.primaryBlue : const Color(0xFF0066CC)),
-        SizedBox(width: 16 * scale),
-        Text('Settings',
-            style: TextStyle(
-              color: isDark ? AppColors.textPrimary : AppColors.textPrimaryLight,
-              fontSize: 28 * scale,
-              fontWeight: FontWeight.bold,
-            )),
       ],
     );
   }
@@ -306,15 +356,14 @@ class _SettingsBodyState extends State<_SettingsBody> {
             _field(
               label: 'Backend Base URL',
               ctrl: _backendBaseUrlCtrl,
-              scale: scale,
-              isDark: isDark,
+              scale: scale, isDark: isDark,
               hint: 'https://rg-w00-chat.resonancegroupusa.com',
               helperText: 'Root URL for all backend API calls (/api/token, /api/config, etc.)',
             ),
             SizedBox(height: 16 * scale),
-            _field(label: 'LiveKit Server URL',   ctrl: _livekitUrlCtrl,      scale: scale, isDark: isDark),
+            _field(label: 'LiveKit Server URL', ctrl: _livekitUrlCtrl, scale: scale, isDark: isDark),
             SizedBox(height: 16 * scale),
-            _field(label: 'Token Service URL',    ctrl: _tokenServiceUrlCtrl, scale: scale, isDark: isDark,
+            _field(label: 'Token Service URL', ctrl: _tokenServiceUrlCtrl, scale: scale, isDark: isDark,
                 hint: 'http://localhost:7882',
                 suffix: IconButton(
                   icon: const Icon(Icons.refresh),
@@ -325,11 +374,46 @@ class _SettingsBodyState extends State<_SettingsBody> {
         ));
   }
 
+  // ── Agent Behavior ────────────────────────────────────────────────────────
+
+  Widget _buildAgentBehaviorSection(bool isDark, double scale) {
+    final labelStyle = TextStyle(
+      fontSize: 15 * scale, fontWeight: FontWeight.w500,
+      color: isDark ? Colors.white70 : Colors.black87,
+    );
+    final subtitleStyle = TextStyle(
+      fontSize: 12 * scale,
+      color: isDark ? Colors.white38 : Colors.black38,
+    );
+    return _Section(title: 'Agent Behavior', icon: Icons.smart_toy_outlined,
+        scale: scale, isDark: isDark,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 8 * scale),
+          child: Column(children: [
+            Row(children: [
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Skip greeting', style: labelStyle),
+                  Text('Agent stays silent when a participant joins',
+                      style: subtitleStyle),
+                ],
+              )),
+              Switch(
+                value: _skipGreeting,
+                onChanged: (v) => setState(() => _skipGreeting = v),
+                activeColor: AppColors.primaryBlue,
+              ),
+            ]),
+          ]),
+        ));
+  }
+
   // ── LLM ─────────────────────────────────────────────────────────────────
 
   Widget _buildLlmSection(AppPreferencesNotifier settings, bool isDark, double scale) {
-    final profiles  = settings.llmProfiles;
-    final activeId  = settings.activeProfileId;
+    final profiles = settings.llmProfiles;
+    final activeId = settings.activeProfileId;
 
     return _Section(title: 'LLM', icon: Icons.psychology_outlined,
         scale: scale, isDark: isDark,
@@ -346,6 +430,19 @@ class _SettingsBodyState extends State<_SettingsBody> {
               SizedBox(height: 16 * scale),
               _field(label: 'API Key', ctrl: _llmApiKeyCtrl, scale: scale, isDark: isDark,
                   hint: 'Leave blank if not required', obscure: true),
+              SizedBox(height: 16 * scale),
+
+              // Test button + result
+              _testRow(
+                label: 'Test LLM Connection',
+                icon: Icons.send_outlined,
+                loading: _llmTesting,
+                result: _llmTestResult,
+                onTap: _testLlm,
+                scale: scale,
+                isDark: isDark,
+              ),
+
               if (profiles.isNotEmpty) ...[
                 SizedBox(height: 16 * scale),
                 Text('Saved Profiles', style: TextStyle(
@@ -393,10 +490,10 @@ class _SettingsBodyState extends State<_SettingsBody> {
         ));
   }
 
-  // ── Voice Endpoints ───────────────────────────────────────────────────────
+  // ── STT ──────────────────────────────────────────────────────────────────
 
-  Widget _buildVoiceSection(bool isDark, double scale) {
-    return _Section(title: 'Voice Endpoints', icon: Icons.record_voice_over_outlined,
+  Widget _buildSttSection(bool isDark, double scale) {
+    return _Section(title: 'STT (Speech-to-Text)', icon: Icons.mic_outlined,
         scale: scale, isDark: isDark,
         child: Padding(
           padding: EdgeInsets.all(16 * scale),
@@ -409,6 +506,32 @@ class _SettingsBodyState extends State<_SettingsBody> {
               _field(label: 'STT Model', ctrl: _sttModelCtrl, scale: scale, isDark: isDark,
                   hint: 'Systran/faster-distil-whisper-small.en'),
               SizedBox(height: 16 * scale),
+
+              // Test button + result
+              _testRow(
+                label: 'Test STT Connection',
+                icon: Icons.hearing_outlined,
+                loading: _sttTesting,
+                result: _sttTestResult,
+                onTap: _testStt,
+                scale: scale,
+                isDark: isDark,
+              ),
+            ],
+          ),
+        ));
+  }
+
+  // ── TTS ──────────────────────────────────────────────────────────────────
+
+  Widget _buildTtsSection(bool isDark, double scale) {
+    return _Section(title: 'TTS (Text-to-Speech)', icon: Icons.volume_up_outlined,
+        scale: scale, isDark: isDark,
+        child: Padding(
+          padding: EdgeInsets.all(16 * scale),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               _field(label: 'TTS Base URL', ctrl: _ttsUrlCtrl, scale: scale, isDark: isDark,
                   hint: 'https://jetson-kokoro.resonancegroupusa.com',
                   suffix: IconButton(
@@ -422,7 +545,7 @@ class _SettingsBodyState extends State<_SettingsBody> {
               SizedBox(height: 16 * scale),
 
               // Voice dropdown
-              Text('TTS Voice', style: TextStyle(
+              Text('Voice', style: TextStyle(
                 fontSize: 14 * scale, fontWeight: FontWeight.w500,
                 color: isDark ? Colors.white70 : Colors.black87,
               )),
@@ -473,21 +596,15 @@ class _SettingsBodyState extends State<_SettingsBody> {
                 activeColor: AppColors.primaryBlue,
                 onChanged: (v) => setState(() => _ttsSpeed = v),
               ),
-            ],
-          ),
-        ));
-  }
 
-  // ── Voice Preview ─────────────────────────────────────────────────────────
+              Divider(height: 24 * scale, color: isDark ? const Color(0xFF444444) : const Color(0xFFCCCCCC)),
 
-  Widget _buildPreviewCard(bool isDark, double scale) {
-    return _Section(title: 'Voice Preview', icon: Icons.play_circle_outline,
-        scale: scale, isDark: isDark,
-        child: Padding(
-          padding: EdgeInsets.all(16 * scale),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+              // Preview
+              Text('Voice Preview', style: TextStyle(
+                fontSize: 14 * scale, fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white70 : Colors.black87,
+              )),
+              SizedBox(height: 10 * scale),
               TextField(
                 controller: _previewTextCtrl,
                 maxLines: 3,
@@ -546,7 +663,6 @@ class _SettingsBodyState extends State<_SettingsBody> {
       onChanged: (v) {
         if (v == null) return;
         settings.setThemeMode(v);
-        // Also update ThemeManager so the app reacts immediately
         context.read<ThemeManager>().setThemeMode(v);
       },
       activeColor: AppColors.primaryBlue,
@@ -590,7 +706,6 @@ class _SettingsBodyState extends State<_SettingsBody> {
         label: Text('Reset All Settings', style: TextStyle(
             fontSize: 16 * scale, fontWeight: FontWeight.bold)),
         style: ElevatedButton.styleFrom(
-          // Secondary style — matches original VoxUI .button.secondary
           backgroundColor: isDark ? const Color(0xFF444444) : const Color(0xFFF0F0F0),
           foregroundColor: isDark ? const Color(0xFFCCCCCC) : const Color(0xFF555555),
           padding: EdgeInsets.symmetric(horizontal: 24 * scale, vertical: 16 * scale),
@@ -667,7 +782,74 @@ class _SettingsBodyState extends State<_SettingsBody> {
     );
   }
 
-  // ── Shared widgets ────────────────────────────────────────────────────────
+  // ── Test row (button + result) ────────────────────────────────────────────
+
+  Widget _testRow({
+    required String label,
+    required IconData icon,
+    required bool loading,
+    required String? result,
+    required VoidCallback onTap,
+    required double scale,
+    required bool isDark,
+  }) {
+    final isSuccess = result != null && result.startsWith('✓');
+    final isError   = result != null && result.startsWith('✗');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: loading ? null : onTap,
+              icon: loading
+                  ? SizedBox(width: 16 * scale, height: 16 * scale,
+                      child: CircularProgressIndicator(strokeWidth: 2,
+                          color: isDark ? Colors.white54 : Colors.black54))
+                  : Icon(icon, size: 18 * scale),
+              label: Text(label, style: TextStyle(fontSize: 14 * scale)),
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 10 * scale),
+                side: BorderSide(
+                  color: isSuccess ? Colors.green.shade600
+                      : isError ? Colors.red.shade400
+                      : (isDark ? const Color(0xFF555555) : const Color(0xFFCCCCCC)),
+                ),
+                foregroundColor: isSuccess ? Colors.green.shade600
+                    : isError ? Colors.red.shade400
+                    : (isDark ? Colors.white70 : Colors.black87),
+              ),
+            ),
+          ),
+        ]),
+        if (result != null) ...[
+          SizedBox(height: 6 * scale),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(horizontal: 12 * scale, vertical: 8 * scale),
+            decoration: BoxDecoration(
+              color: isSuccess
+                  ? Colors.green.withOpacity(0.10)
+                  : Colors.red.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(6 * scale),
+              border: Border.all(
+                color: isSuccess ? Colors.green.shade600.withOpacity(0.4)
+                    : Colors.red.shade400.withOpacity(0.4),
+              ),
+            ),
+            child: Text(result,
+                style: TextStyle(
+                  fontSize: 12 * scale,
+                  fontFamily: 'Courier New',
+                  color: isSuccess ? Colors.green.shade700 : Colors.red.shade700,
+                )),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // ── Shared field widget ───────────────────────────────────────────────────
 
   Widget _field({
     required String label,
@@ -747,8 +929,6 @@ class _Section extends StatelessWidget {
     final headerText   = isDark ? const Color(0xFFEEEEEE) : const Color(0xFF333333);
     final chevronColor = isDark ? const Color(0xFFAAAAAA) : const Color(0xFF666666);
 
-    // Card gives reliable rounded-corner clipping on all platforms (incl. iOS Safari).
-    // Shape border draws the outline as part of the rounded path so corners match exactly.
     return Card(
       margin: EdgeInsets.zero,
       elevation: 0,
@@ -759,17 +939,17 @@ class _Section extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Theme(
-        // Suppress the ExpansionTile's built-in divider line above children
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           initiallyExpanded: initiallyExpanded,
           tilePadding: EdgeInsets.symmetric(
               horizontal: 16 * scale, vertical: 4 * scale),
-          // Transparent lets Card background show through consistently
           backgroundColor: Colors.transparent,
           collapsedBackgroundColor: Colors.transparent,
           iconColor: chevronColor,
           collapsedIconColor: chevronColor,
+          leading: Icon(icon, size: 22 * scale,
+              color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF666666)),
           title: Text(title, style: TextStyle(
             fontSize: 16 * scale,
             fontWeight: FontWeight.w600,

@@ -151,6 +151,7 @@ CONFIGURABLE_KEYS = {
     "llm_temperature", "llm_max_completion_tokens", "llm_disable_thinking",
     "livekit_url",
     "livekit_public_url",
+    "skip_greeting",
 }
 
 # ---------------------------------------------------------------------------
@@ -216,6 +217,7 @@ def get_effective_config() -> dict:
         "llm_disable_thinking":        ov("llm_disable_thinking",        config.llm_disable_thinking),
         "livekit_url":                 ov("livekit_url",                 config.livekit_url),
         "livekit_public_url":          ov("livekit_public_url",          config.livekit_public_url),
+        "skip_greeting":               ov("skip_greeting",               config.skip_greeting),
     }
 
 
