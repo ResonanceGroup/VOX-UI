@@ -588,31 +588,37 @@ class _AIViewContentState extends State<_AIViewContent> {
   }
 
   Widget _buildHistoryGrabHandle(bool isDark, double scale) {
+    void openTray() {
+      setState(() => _isHistoryTrayOpen = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    }
+
     return GestureDetector(
-      onTap: () {
-        setState(() => _isHistoryTrayOpen = !_isHistoryTrayOpen);
-        if (_isHistoryTrayOpen) {
-          // Tray just opened — jump to most recent message
-          WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
-        }
-      },
-      child: Container(
-        width: 84 * scale,
-        height: 28 * scale,
-        decoration: BoxDecoration(
-          color: (isDark ? Colors.black : Colors.white).withOpacity(0.55),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: (isDark ? Colors.white : Colors.black).withOpacity(0.2),
-          ),
-        ),
+      behavior: HitTestBehavior.opaque,
+      onTap: openTray,
+      child: SizedBox(
+        width: 132 * scale,
+        height: 56 * scale,
         child: Center(
           child: Container(
-            width: 34 * scale,
-            height: 4 * scale,
+            width: 76 * scale,
+            height: 28 * scale,
             decoration: BoxDecoration(
-              color: (isDark ? Colors.white : Colors.black).withOpacity(0.85),
+              color: (isDark ? Colors.black : Colors.white).withOpacity(0.55),
               borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: (isDark ? Colors.white : Colors.black).withOpacity(0.2),
+              ),
+            ),
+            child: Center(
+              child: Container(
+                width: 34 * scale,
+                height: 4 * scale,
+                decoration: BoxDecoration(
+                  color: (isDark ? Colors.white : Colors.black).withOpacity(0.85),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
             ),
           ),
         ),

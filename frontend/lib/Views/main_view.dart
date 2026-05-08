@@ -91,7 +91,9 @@ class _MainViewContentState extends State<_MainViewContent> {
   /// Side drawer with navigation items + blur/dark overlay (provided by Flutter)
   Widget _buildDrawer(BuildContext context, double scale, List<NavDestination> destinations) {
     final theme = Theme.of(context);
+    final drawerWidth = 224.0 * scale;
     return Drawer(
+      width: drawerWidth.clamp(208.0, 260.0),
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
