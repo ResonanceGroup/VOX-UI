@@ -24,7 +24,9 @@ void _ensureFactory() {
     return html.IFrameElement()
       ..src = 'assets/assets/orb/orb.html?v=' + DateTime.now().millisecondsSinceEpoch.toString()
       ..setAttribute('allowtransparency', 'true')
-      ..style.cssText = 'border:none;width:100%;height:100%;display:block;background:transparent;';
+      // iOS Safari paints a white platform-view backing surface when this is
+      // transparent. Start dark; runtime theme sync updates this immediately.
+      ..style.cssText = 'border:none;width:100%;height:100%;display:block;background:#1e1e1e;';
   });
 }
 
@@ -349,10 +351,12 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   }
 
   void _updateTheme(String theme) {
-    // The iframe itself should stay transparent so the Flutter page background
-    // changes instantly. Theme messages only update orb controls/status styling.
-    _iframeElement?.style.backgroundColor = 'transparent';
-    _iframeElement?.style.setProperty('background', 'transparent', 'important');
+    final color = theme == 'dark' ? '#1e1e1e' : '#f9f9f9';
+    // Keep the orb document transparent, but color the iframe platform-view
+    // backing surface itself. iOS Safari otherwise paints it white behind the
+    // controls/status area even when the iframe document is transparent.
+    _iframeElement?.style.backgroundColor = color;
+    _iframeElement?.style.setProperty('background', color, 'important');
 
     if (theme == _currentTheme) return;
     _currentTheme = theme;
