@@ -1,6 +1,7 @@
 import '../widgets/orb_widget.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../debug/ui_tuning_values.dart';
 import '../Controllers/ai_controller.dart';
@@ -694,6 +695,7 @@ class _AIViewContentState extends State<_AIViewContent> {
                       size: 22.0 * scale,
                     ),
                     onPressed: () {
+                      HapticFeedback.mediumImpact();
                       // toggleMute() flips _isMuted synchronously on its first line,
                       // but notifyListeners() fires only after the async track await.
                       // Call setState() immediately so the icon updates without waiting.
@@ -713,6 +715,7 @@ class _AIViewContentState extends State<_AIViewContent> {
                       size: 22.0 * scale,
                     ),
                     onPressed: () {
+                      HapticFeedback.mediumImpact();
                       controller.toggleSpeakerMute();
                       setState(() {});
                     },

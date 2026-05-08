@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 
 /// Theme Manager for RV Dashboard App
 /// Handles dark and light mode themes with runtime switching capability
 class ThemeManager extends ChangeNotifier {
   static final ThemeManager _instance = ThemeManager._internal();
   factory ThemeManager() => _instance;
-  ThemeManager._internal();
+  ThemeManager._internal() {
+    // Set initial theme-color to match default dark mode
+    _updateBrowserThemeColor();
+  }
 
   ThemeMode _themeMode = ThemeMode.dark;
 
@@ -16,6 +21,7 @@ class ThemeManager extends ChangeNotifier {
   /// Toggle between dark and light mode
   void toggleTheme() {
     _themeMode = _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    _updateBrowserThemeColor();
     notifyListeners();
   }
 
@@ -23,7 +29,22 @@ class ThemeManager extends ChangeNotifier {
   void setThemeMode(ThemeMode mode) {
     if (_themeMode != mode) {
       _themeMode = mode;
+      _updateBrowserThemeColor();
       notifyListeners();
+    }
+  }
+
+  /// Update <meta name="theme-color"> so the iOS Safari address bar
+  /// and Chrome toolbar match the app's dark/light theme.
+  void _updateBrowserThemeColor() {
+    final color = isDarkMode ? '#1e1e1e' : '#ffffff';
+    try {
+      final meta = html.document.querySelector('meta[name="theme-color"]');
+      if (meta != null) {
+        meta.setAttribute('content', color);
+      }
+    } catch (_) {
+      // Not running on web — ignore
     }
   }
 

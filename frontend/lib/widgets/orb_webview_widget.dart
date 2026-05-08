@@ -249,7 +249,11 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
         try {
           final data = jsonDecode(message.message);
           if (data['type'] == 'toggle-mute') {
+            HapticFeedback.mediumImpact();
             widget.onToggleMute?.call();
+          } else if (data['type'] == 'toggle-speaker-mute') {
+            HapticFeedback.mediumImpact();
+            widget.onToggleSpeakerMute?.call();
           }
         } catch (e) {
           // Ignore parse errors
