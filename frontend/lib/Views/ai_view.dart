@@ -137,6 +137,8 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
     } catch (_) {}
   }
 
+  static const double _trayHandleEdgeGap = 16.0;
+
   final TextEditingController _textController = TextEditingController();
   final ScrollController _conversationScrollController = ScrollController();
   bool _isHistoryTrayOpen = false;
@@ -177,8 +179,8 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
   void initState() {
     super.initState();
     _trayController = AnimationController(
-      duration: const Duration(milliseconds: 900),
-      reverseDuration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 450),
+      reverseDuration: const Duration(milliseconds: 350),
       vsync: this,
       animationBehavior: AnimationBehavior.preserve,
     );
@@ -578,7 +580,9 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
         AnimatedBuilder(
           animation: _trayController,
           builder: (context, child) {
-            final progress = Curves.easeOutCubic.transform(_trayController.value);
+            // Use easeInCubic so the tray starts gently and accelerates into
+            // place instead of jumping upward then slowing near the top.
+            final progress = Curves.easeInCubic.transform(_trayController.value);
             final viewportHeight = MediaQuery.of(context).size.height;
             final hiddenOffset = viewportHeight * (1 - progress);
             return Positioned(
@@ -612,7 +616,7 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
           Positioned(
             left: 0,
             right: 0,
-            bottom: 4 * scale,
+            bottom: _trayHandleEdgeGap * scale,
             child: Center(
               child: _buildHistoryGrabHandle(
                 isDark,
@@ -780,7 +784,7 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
                 Positioned(
                   top: 0, left: 0, right: 0,
                   child: Padding(
-                    padding: EdgeInsets.only(top: 16 * scale),
+                    padding: EdgeInsets.only(top: _trayHandleEdgeGap * scale),
                     child: Center(
                       child: _buildHistoryGrabHandle(
                         isDark,
