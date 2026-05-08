@@ -3,6 +3,7 @@ import '../widgets/orb_widget.dart';
 import 'dart:js' as js;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 import '../debug/ui_tuning_values.dart';
 import '../Controllers/ai_controller.dart';
@@ -769,14 +770,14 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
                                     .withOpacity(0.12),
                               ),
                             ),
-                            child: Text(
+                            child: _buildMarkdownMessage(
                               message.text,
-                              style: TextStyle(
-                                color: textColor,
-                                fontSize: 28 * scale,
-                                height: 1.28,
-                                fontWeight: FontWeight.w500,
-                              ),
+                              isDark: isDark,
+                              isUser: message.isUser,
+                              scale: scale,
+                              fontSize: 28 * scale,
+                              textColor: textColor,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         );
@@ -935,6 +936,111 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
     );
   }
 
+  Widget _buildMarkdownMessage(
+    String data, {
+    required bool isDark,
+    required bool isUser,
+    required double scale,
+    required double fontSize,
+    required Color textColor,
+    FontWeight fontWeight = FontWeight.w400,
+  }) {
+    final borderColor = (isDark ? Colors.white : Colors.black).withOpacity(0.18);
+    final tableStripeColor = isDark
+        ? Colors.white.withOpacity(0.06)
+        : Colors.black.withOpacity(0.035);
+    final codeBackground = isDark
+        ? Colors.black.withOpacity(0.28)
+        : Colors.black.withOpacity(0.06);
+    final blockquoteBackground = isDark
+        ? Colors.white.withOpacity(0.06)
+        : Colors.black.withOpacity(0.04);
+
+    final baseStyle = TextStyle(
+      color: textColor,
+      fontSize: fontSize,
+      height: 1.28,
+      fontWeight: fontWeight,
+    );
+
+    return MarkdownBody(
+      data: data,
+      selectable: false,
+      softLineBreak: true,
+      styleSheet: MarkdownStyleSheet(
+        p: baseStyle,
+        strong: baseStyle.copyWith(fontWeight: FontWeight.w800),
+        em: baseStyle.copyWith(fontStyle: FontStyle.italic),
+        del: baseStyle.copyWith(decoration: TextDecoration.lineThrough),
+        a: baseStyle.copyWith(
+          color: isUser ? Colors.white : AppColors.primaryBlue,
+          decoration: TextDecoration.underline,
+        ),
+        h1: baseStyle.copyWith(fontSize: fontSize * 1.45, fontWeight: FontWeight.w800),
+        h2: baseStyle.copyWith(fontSize: fontSize * 1.30, fontWeight: FontWeight.w800),
+        h3: baseStyle.copyWith(fontSize: fontSize * 1.18, fontWeight: FontWeight.w700),
+        h4: baseStyle.copyWith(fontSize: fontSize * 1.08, fontWeight: FontWeight.w700),
+        h5: baseStyle.copyWith(fontWeight: FontWeight.w700),
+        h6: baseStyle.copyWith(fontWeight: FontWeight.w700),
+        listBullet: baseStyle,
+        blockquote: baseStyle.copyWith(color: textColor.withOpacity(0.88)),
+        blockquoteDecoration: BoxDecoration(
+          color: blockquoteBackground,
+          border: Border(
+            left: BorderSide(color: AppColors.primaryBlue.withOpacity(0.75), width: 4 * scale),
+          ),
+          borderRadius: BorderRadius.circular(8 * scale),
+        ),
+        blockquotePadding: EdgeInsets.symmetric(horizontal: 12 * scale, vertical: 8 * scale),
+        code: baseStyle.copyWith(
+          fontFamily: 'monospace',
+          backgroundColor: codeBackground,
+          fontSize: fontSize * 0.92,
+        ),
+        codeblockDecoration: BoxDecoration(
+          color: codeBackground,
+          borderRadius: BorderRadius.circular(10 * scale),
+          border: Border.all(color: borderColor),
+        ),
+        codeblockPadding: EdgeInsets.all(12 * scale),
+        tableHead: baseStyle.copyWith(fontWeight: FontWeight.w800),
+        tableBody: baseStyle.copyWith(fontSize: fontSize * 0.92),
+        tableHeadAlign: TextAlign.left,
+        tableBorder: TableBorder.all(color: borderColor, width: 1),
+        tableColumnWidth: const IntrinsicColumnWidth(),
+        tableCellsPadding: EdgeInsets.symmetric(horizontal: 12 * scale, vertical: 8 * scale),
+        // flutter_markdown applies this to alternating body rows; the header is
+        // kept separate by its text weight/color and the table border.
+        tableCellsDecoration: BoxDecoration(color: tableStripeColor),
+        tableVerticalAlignment: TableCellVerticalAlignment.middle,
+        horizontalRuleDecoration: BoxDecoration(
+          border: Border(top: BorderSide(color: borderColor, width: 1)),
+        ),
+      ),
+      imageBuilder: (uri, title, alt) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12 * scale),
+          child: Image.network(
+            uri.toString(),
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(
+              padding: EdgeInsets.all(10 * scale),
+              decoration: BoxDecoration(
+                color: codeBackground,
+                borderRadius: BorderRadius.circular(8 * scale),
+                border: Border.all(color: borderColor),
+              ),
+              child: Text(
+                alt ?? uri.toString(),
+                style: baseStyle.copyWith(fontSize: fontSize * 0.85),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   /// Build message bubble
   Widget _buildMessageBubble(ConversationMessage message, bool isDark, double scale) {
     final isUser = message.isUser;
@@ -958,14 +1064,15 @@ class _AIViewContentState extends State<_AIViewContent> with SingleTickerProvide
                     : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE8E8E8)),
                 borderRadius: BorderRadius.circular(18 * scale),
               ),
-              child: Text(
+              child: _buildMarkdownMessage(
                 message.text,
-                style: TextStyle(
-                  color: isUser
-                      ? Colors.white
-                      : (isDark ? Colors.white : Colors.black87),
-                  fontSize: 15 * scale,
-                ),
+                isDark: isDark,
+                isUser: isUser,
+                scale: scale,
+                fontSize: 15 * scale,
+                textColor: isUser
+                    ? Colors.white
+                    : (isDark ? Colors.white : Colors.black87),
               ),
             ),
             SizedBox(height: 4 * scale),
