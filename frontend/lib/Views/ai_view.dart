@@ -9,7 +9,6 @@ import 'dart:js' as js;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
@@ -1280,7 +1279,7 @@ class _AIViewContentState extends State<_AIViewContent>
         // Inline code: no background highlight — Jason's preference.
         // Block code is handled by _CodePreBuilder below.
         code: baseStyle.copyWith(
-          fontFamily: 'Courier New',
+          
           fontSize: fontSize * 0.82,
           // No backgroundColor — keeps the bubble's own bg visible.
         ),
@@ -1739,13 +1738,11 @@ class _CodeBlockWidget extends StatelessWidget {
   final Color codeBackground;
   final Color borderColor;
 
-  TextStyle get _codeStyle => GoogleFonts.sourceCodePro(
-    textStyle: baseStyle.copyWith(
-      fontSize: (fontSize * 0.55).clamp(9.0, 13.0),
-      color: isDark ? Colors.white : Colors.black87,
-      backgroundColor: Colors.transparent,
-      height: 1.45,
-    ),
+  TextStyle get _codeStyle => baseStyle.copyWith(
+    fontSize: (fontSize * 0.55).clamp(9.0, 13.0),
+    color: isDark ? Colors.white : Colors.black87,
+    backgroundColor: Colors.transparent,
+    height: 1.45,
   );
 
   @override
@@ -1827,7 +1824,7 @@ class _CodeBlockWidget extends StatelessWidget {
             title: Text(
               language != null && language!.isNotEmpty ? language! : 'Code',
               style: TextStyle(
-                fontFamily: 'Courier New',
+                
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
@@ -1856,7 +1853,7 @@ class _CodeBlockWidget extends StatelessWidget {
               child: SelectableText(
                 code,
                 style: TextStyle(
-                  fontFamily: 'Courier New',
+                  
                   fontSize: 14,
                   height: 1.5,
                   color: isDark ? Colors.white : Colors.black87,
