@@ -60,7 +60,7 @@ from api import BackendClient
 from config import config
 
 def _get_skip_greeting() -> bool:
-    Read skip_greeting from config_override.json live so UI changes take effect.
+    """Read skip_greeting from config_override.json live so UI changes take effect."""
     import json, os
     try:
         override_file = os.path.join(os.path.dirname(__file__), 'config_override.json')
