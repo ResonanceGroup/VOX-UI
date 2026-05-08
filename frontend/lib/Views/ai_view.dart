@@ -396,9 +396,9 @@ class _AIViewContentState extends State<_AIViewContent> {
           ),
 
 
-        ],
-      ),
-    );
+          ],
+        ),
+      );
   }
 
   /// Build status indicator dot
@@ -521,6 +521,26 @@ class _AIViewContentState extends State<_AIViewContent> {
           ),
         ),
 
+        // Bottom-half swipe target — gives a natural open gesture without
+        // requiring a precise tap on the small visible handle.
+        if (!_isHistoryTrayOpen)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onVerticalDragEnd: (details) {
+                if ((details.primaryVelocity ?? 0) < -250) {
+                  setState(() => _isHistoryTrayOpen = true);
+                  WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+                }
+              },
+              child: const SizedBox.expand(),
+            ),
+          ),
+
         // Expandable history tray overlay (slides up from bottom)
         // Parent build() uses context.watch<AIController>() so it rebuilds on every
         // notifyListeners() — displayMessages is always fresh, no Consumer needed.
@@ -588,14 +608,25 @@ class _AIViewContentState extends State<_AIViewContent> {
   }
 
   Widget _buildHistoryGrabHandle(bool isDark, double scale) {
-    void openTray() {
-      setState(() => _isHistoryTrayOpen = true);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    void toggleTray() {
+      setState(() => _isHistoryTrayOpen = !_isHistoryTrayOpen);
+      if (_isHistoryTrayOpen) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      }
     }
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: openTray,
+      onTap: toggleTray,
+      onVerticalDragEnd: (details) {
+        final velocity = details.primaryVelocity ?? 0;
+        if (!_isHistoryTrayOpen && velocity < -200) {
+          setState(() => _isHistoryTrayOpen = true);
+          WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+        } else if (_isHistoryTrayOpen && velocity > 200) {
+          setState(() => _isHistoryTrayOpen = false);
+        }
+      },
       child: SizedBox(
         width: 132 * scale,
         height: 56 * scale,
@@ -638,10 +669,17 @@ class _AIViewContentState extends State<_AIViewContent> {
     final titleColor = isDark ? Colors.white : Colors.black.withOpacity(0.92);
     final textColor = isDark ? Colors.white : Colors.black.withOpacity(0.92);
 
-    return Material(
-      color: overlayBg,
-      // No SafeArea — overlay fills all the way to the top of the body
-      child: Column(
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onVerticalDragEnd: (details) {
+        if ((details.primaryVelocity ?? 0) > 250) {
+          setState(() => _isHistoryTrayOpen = false);
+        }
+      },
+      child: Material(
+        color: overlayBg,
+        // No SafeArea — overlay fills all the way to the top of the body
+        child: Column(
         children: [
           // Scrollable message area fills full tray height; handle floats on top
           Expanded(
@@ -814,7 +852,8 @@ class _AIViewContentState extends State<_AIViewContent> {
                       ],
                     ),
                   ),
-        ],
+          ],
+        ),
       ),
     );
   }
