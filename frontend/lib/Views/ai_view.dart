@@ -106,7 +106,7 @@ class _AIViewContent extends StatefulWidget {
   State<_AIViewContent> createState() => _AIViewContentState();
 }
 
-class _AIViewContentState extends State<_AIViewContent> {
+class _AIViewContentState extends State<_AIViewContent> with SingleTickerProviderStateMixin {
   void _playSpeakerClick() {
     try {
       js.context.callMethod('eval', [r'''
@@ -140,6 +140,7 @@ class _AIViewContentState extends State<_AIViewContent> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _conversationScrollController = ScrollController();
   bool _isHistoryTrayOpen = false;
+  late final AnimationController _trayController;
   String? _debugOrbState; // null = driven by LiveKit
   int _lastMessageCount = 0;
   String? _lastStreamingMessage;
@@ -175,6 +176,12 @@ class _AIViewContentState extends State<_AIViewContent> {
   @override
   void initState() {
     super.initState();
+    _trayController = AnimationController(
+      duration: const Duration(milliseconds: 900),
+      reverseDuration: const Duration(milliseconds: 700),
+      vsync: this,
+      animationBehavior: AnimationBehavior.preserve,
+    );
     _textController.addListener(_onInputChanged);
     _ensureConnected();
   }
@@ -217,9 +224,34 @@ class _AIViewContentState extends State<_AIViewContent> {
   void dispose() {
     _aiController?.removeListener(_onAIControllerChanged);
     _textController.removeListener(_onInputChanged);
+    _trayController.dispose();
     _textController.dispose();
     _conversationScrollController.dispose();
     super.dispose();
+  }
+
+  void _openHistoryTray() {
+    if (!mounted) return;
+    if (!_isHistoryTrayOpen) {
+      setState(() => _isHistoryTrayOpen = true);
+    }
+    _trayController.forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+  }
+
+  Future<void> _closeHistoryTray() async {
+    await _trayController.reverse();
+    if (mounted) {
+      setState(() => _isHistoryTrayOpen = false);
+    }
+  }
+
+  void _toggleHistoryTray() {
+    if (_isHistoryTrayOpen) {
+      _closeHistoryTray();
+    } else {
+      _openHistoryTray();
+    }
   }
 
   void _scrollToBottom() {
@@ -533,8 +565,7 @@ class _AIViewContentState extends State<_AIViewContent> {
               behavior: HitTestBehavior.translucent,
               onVerticalDragEnd: (details) {
                 if ((details.primaryVelocity ?? 0) < -250) {
-                  setState(() => _isHistoryTrayOpen = true);
-                  WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+                  _openHistoryTray();
                 }
               },
               child: const SizedBox.expand(),
@@ -544,25 +575,31 @@ class _AIViewContentState extends State<_AIViewContent> {
         // Expandable history tray overlay (slides up from bottom)
         // Parent build() uses context.watch<AIController>() so it rebuilds on every
         // notifyListeners() — displayMessages is always fresh, no Consumer needed.
-        AnimatedPositioned(
-          duration: const Duration(milliseconds: 750),
-          curve: Curves.easeOutCubic,
-          left: 0,
-          right: 0,
-          top: _isHistoryTrayOpen ? 0 : MediaQuery.of(context).size.height,
-          bottom: _isHistoryTrayOpen ? 0 : -MediaQuery.of(context).size.height,
-          child: IgnorePointer(
-            ignoring: !_isHistoryTrayOpen,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 450),
-              opacity: _isHistoryTrayOpen ? 1 : 0,
-              child: _buildHistoryTrayOverlay(
-                displayMessages,
-                isDark,
-                scale,
-                controller,
+        AnimatedBuilder(
+          animation: _trayController,
+          builder: (context, child) {
+            final progress = Curves.easeOutCubic.transform(_trayController.value);
+            final viewportHeight = MediaQuery.of(context).size.height;
+            final hiddenOffset = viewportHeight * (1 - progress);
+            return Positioned(
+              left: 0,
+              right: 0,
+              top: hiddenOffset,
+              bottom: -hiddenOffset,
+              child: IgnorePointer(
+                ignoring: !_isHistoryTrayOpen,
+                child: Opacity(
+                  opacity: progress.clamp(0.0, 1.0),
+                  child: child,
+                ),
               ),
-            ),
+            );
+          },
+          child: _buildHistoryTrayOverlay(
+            displayMessages,
+            isDark,
+            scale,
+            controller,
           ),
         ),
 
@@ -596,10 +633,7 @@ class _AIViewContentState extends State<_AIViewContent> {
       livekitService: controller.livekitService,
       onToggleMute: () => controller.toggleMute(),
       onToggleSpeakerMute: () => controller.toggleSpeakerMute(),
-      onOpenTray: () {
-        setState(() => _isHistoryTrayOpen = true);
-        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
-      },
+      onOpenTray: _openHistoryTray,
       isTrayOpen: _isHistoryTrayOpen,
       isMuted: controller.isMuted,
       isSpeakerMuted: controller.isSpeakerMuted,
@@ -619,19 +653,12 @@ class _AIViewContentState extends State<_AIViewContent> {
     double scale, {
     Alignment pillAlignment = Alignment.center,
   }) {
-    void toggleTray() {
-      setState(() => _isHistoryTrayOpen = !_isHistoryTrayOpen);
-      if (_isHistoryTrayOpen) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
-      }
-    }
-
     return Listener(
       behavior: HitTestBehavior.opaque,
       // Use the low-level pointer-up event for the handle instead of mixing
       // tap and vertical-drag recognizers. On mobile Safari small finger motion
       // was entering the gesture arena as a drag, canceling otherwise-valid taps.
-      onPointerUp: (_) => toggleTray(),
+      onPointerUp: (_) => _toggleHistoryTray(),
       child: SizedBox(
         width: 168 * scale,
         height: 72 * scale,
@@ -679,7 +706,7 @@ class _AIViewContentState extends State<_AIViewContent> {
       behavior: HitTestBehavior.translucent,
       onVerticalDragEnd: (details) {
         if ((details.primaryVelocity ?? 0) > 250) {
-          setState(() => _isHistoryTrayOpen = false);
+          _closeHistoryTray();
         }
       },
       child: Material(
@@ -753,7 +780,7 @@ class _AIViewContentState extends State<_AIViewContent> {
                 Positioned(
                   top: 0, left: 0, right: 0,
                   child: Padding(
-                    padding: EdgeInsets.only(top: 4 * scale),
+                    padding: EdgeInsets.only(top: 16 * scale),
                     child: Center(
                       child: _buildHistoryGrabHandle(
                         isDark,
