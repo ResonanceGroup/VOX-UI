@@ -544,22 +544,23 @@ class _AIViewContentState extends State<_AIViewContent> {
         // Expandable history tray overlay (slides up from bottom)
         // Parent build() uses context.watch<AIController>() so it rebuilds on every
         // notifyListeners() — displayMessages is always fresh, no Consumer needed.
-        Positioned.fill(
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 750),
+          curve: Curves.easeOutCubic,
+          left: 0,
+          right: 0,
+          top: _isHistoryTrayOpen ? 0 : MediaQuery.of(context).size.height,
+          bottom: _isHistoryTrayOpen ? 0 : -MediaQuery.of(context).size.height,
           child: IgnorePointer(
             ignoring: !_isHistoryTrayOpen,
-            child: AnimatedSlide(
-              duration: const Duration(milliseconds: 520),
-              curve: Curves.easeOutCubic,
-              offset: _isHistoryTrayOpen ? Offset.zero : const Offset(0, 1.05),
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 320),
-                opacity: _isHistoryTrayOpen ? 1 : 0,
-                child: _buildHistoryTrayOverlay(
-                  displayMessages,
-                  isDark,
-                  scale,
-                  controller,
-                ),
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 450),
+              opacity: _isHistoryTrayOpen ? 1 : 0,
+              child: _buildHistoryTrayOverlay(
+                displayMessages,
+                isDark,
+                scale,
+                controller,
               ),
             ),
           ),
@@ -752,8 +753,14 @@ class _AIViewContentState extends State<_AIViewContent> {
                 Positioned(
                   top: 0, left: 0, right: 0,
                   child: Padding(
-                    padding: EdgeInsets.only(top: 9 * scale),
-                    child: Center(child: _buildHistoryGrabHandle(isDark, scale)),
+                    padding: EdgeInsets.only(top: 4 * scale),
+                    child: Center(
+                      child: _buildHistoryGrabHandle(
+                        isDark,
+                        scale,
+                        pillAlignment: Alignment.topCenter,
+                      ),
+                    ),
                   ),
                 ),
               ],
