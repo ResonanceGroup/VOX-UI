@@ -407,15 +407,26 @@ class _AIViewContentState extends State<_AIViewContent>
         });
       });
 
+      // Detect picker dismissal: when the user cancels the picker the
+      // browser restores window focus. We wait a short debounce so
+      // onChange can fire first if a file was actually selected.
+      StreamSubscription<html.Event>? focusSub;
+      focusSub = html.window.onFocus.listen((_) {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (!completer.isCompleted) completer.complete();
+        });
+      });
+
       // Must happen synchronously (before first await) to preserve gesture ctx.
       uploadInput.click();
       setState(() => _isPickingImage = true);
-      // 60-second timeout in case the user cancels without selecting
+      // 15-second fallback in case focus event never fires (e.g. iOS quirk).
       await completer.future.timeout(
-        const Duration(seconds: 60),
+        const Duration(seconds: 15),
         onTimeout: () {},
       );
       await sub.cancel();
+      await focusSub.cancel();
       uploadInput.remove(); // clean up DOM element
 
       if (bytes == null) return;
