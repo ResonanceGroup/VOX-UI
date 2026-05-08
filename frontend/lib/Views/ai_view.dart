@@ -567,12 +567,14 @@ class _AIViewContentState extends State<_AIViewContent> {
 
 
 
-        // Grab handle at bottom — only shown when tray is closed
+        // Grab handle — only shown when tray is closed. Keep it anchored near
+        // the visual bottom of the usable viewport (above Safari's toolbar), not
+        // up under the orb/status cluster.
         if (!_isHistoryTrayOpen)
           Positioned(
             left: 0,
             right: 0,
-            bottom: 20 * scale,
+            bottom: (MediaQuery.of(context).padding.bottom + 4) * scale,
             child: Center(
               child: _buildHistoryGrabHandle(isDark, scale),
             ),
