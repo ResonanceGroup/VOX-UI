@@ -5,6 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VOX Orb</title>
   <style>
+    /* Keep all non-control iframe wrapper surfaces transparent.
+       iOS Safari can otherwise paint default white rectangles behind orb groups. */
+    html, body,
+    .orb-container,
+    .orb-wrapper,
+    .controls-row,
+    .status-display,
+    .status-icon,
+    .status-text,
+    .orb-status-effects,
+    .orb-particles {
+      background: transparent !important;
+      background-color: transparent !important;
+    }
+
     /* Orb styles */
     .orb {
       position: relative;
