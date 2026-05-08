@@ -8,7 +8,9 @@ import 'dart:js' as js;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
 import '../debug/ui_tuning_values.dart';
 import '../Controllers/ai_controller.dart';
@@ -1118,6 +1120,21 @@ class _AIViewContentState extends State<_AIViewContent>
       data: data,
       selectable: false,
       softLineBreak: true,
+      onTapLink: (text, url, title) {
+        if (url != null && url.isNotEmpty) {
+          html.window.open(url, '_blank');
+        }
+      },
+      builders: {
+        'pre': _CodePreBuilder(
+          isDark: isDark,
+          scale: scale,
+          baseStyle: baseStyle,
+          fontSize: fontSize,
+          codeBackground: codeBackground,
+          borderColor: borderColor,
+        ),
+      },
       styleSheet: MarkdownStyleSheet(
         p: baseStyle,
         strong: baseStyle.copyWith(fontWeight: FontWeight.w800),
@@ -1161,17 +1178,15 @@ class _AIViewContentState extends State<_AIViewContent>
           horizontal: 12 * scale,
           vertical: 8 * scale,
         ),
+        // Inline code: no background highlight — Jason's preference.
+        // Block code is handled by _CodePreBuilder below.
         code: baseStyle.copyWith(
           fontFamily: 'monospace',
-          backgroundColor: codeBackground,
-          fontSize: fontSize * 0.92,
+          fontSize: fontSize * 0.82,
+          // No backgroundColor — keeps the bubble's own bg visible.
         ),
-        codeblockDecoration: BoxDecoration(
-          color: codeBackground,
-          borderRadius: BorderRadius.circular(10 * scale),
-          border: Border.all(color: borderColor),
-        ),
-        codeblockPadding: EdgeInsets.all(12 * scale),
+        codeblockDecoration: const BoxDecoration(),
+        codeblockPadding: EdgeInsets.zero,
         tableHead: baseStyle.copyWith(fontWeight: FontWeight.w800),
         tableBody: baseStyle.copyWith(fontSize: fontSize * 0.92),
         tableHeadAlign: TextAlign.left,
@@ -1299,6 +1314,7 @@ class _AIViewContentState extends State<_AIViewContent>
                 horizontal: 16 * scale,
                 vertical: 12 * scale,
               ),
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: isUser
                     ? AppColors.primaryBlue
@@ -1505,6 +1521,211 @@ class _AIViewContentState extends State<_AIViewContent>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Custom code-block builder for flutter_markdown
+// ─────────────────────────────────────────────────────────────
+
+/// Intercepts <pre> elements and renders them as tappable code blocks.
+class _CodePreBuilder extends MarkdownElementBuilder {
+  _CodePreBuilder({
+    required this.isDark,
+    required this.scale,
+    required this.baseStyle,
+    required this.fontSize,
+    required this.codeBackground,
+    required this.borderColor,
+  });
+
+  final bool isDark;
+  final double scale;
+  final TextStyle baseStyle;
+  final double fontSize;
+  final Color codeBackground;
+  final Color borderColor;
+
+  @override
+  Widget? visitElementAfterWithContext(
+    BuildContext context,
+    md.Element element,
+    TextStyle? preferredStyle,
+    TextStyle? parentStyle,
+  ) {
+    // <pre> contains a <code> child — extract language hint and raw text.
+    final codeEl = element.children?.whereType<md.Element>().firstWhere(
+      (e) => e.tag == 'code',
+      orElse: () => element,
+    );
+    final language = codeEl?.attributes['class']?.replaceFirst(
+      RegExp(r'^language-'),
+      '',
+    );
+    final code = (codeEl ?? element).textContent.trimRight();
+
+    return _CodeBlockWidget(
+      code: code,
+      language: language,
+      isDark: isDark,
+      scale: scale,
+      baseStyle: baseStyle,
+      fontSize: fontSize,
+      codeBackground: codeBackground,
+      borderColor: borderColor,
+    );
+  }
+}
+
+/// Compact, tappable code block.  Tap opens a full-screen viewer with copy.
+class _CodeBlockWidget extends StatelessWidget {
+  const _CodeBlockWidget({
+    required this.code,
+    this.language,
+    required this.isDark,
+    required this.scale,
+    required this.baseStyle,
+    required this.fontSize,
+    required this.codeBackground,
+    required this.borderColor,
+  });
+
+  final String code;
+  final String? language;
+  final bool isDark;
+  final double scale;
+  final TextStyle baseStyle;
+  final double fontSize;
+  final Color codeBackground;
+  final Color borderColor;
+
+  TextStyle get _codeStyle => baseStyle.copyWith(
+    fontFamily: 'monospace',
+    fontSize: (fontSize * 0.55).clamp(9.0, 13.0),
+    color: isDark ? Colors.white : Colors.black87,
+    backgroundColor: Colors.transparent,
+    height: 1.45,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _openFullScreen(context),
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 6 * scale),
+        decoration: BoxDecoration(
+          color: codeBackground,
+          borderRadius: BorderRadius.circular(10 * scale),
+          border: Border.all(color: borderColor),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Top bar with language + tap hint
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: 12 * scale,
+                vertical: 5 * scale,
+              ),
+              color: borderColor.withOpacity(0.12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    language != null && language!.isNotEmpty
+                        ? language!
+                        : 'code',
+                    style: baseStyle.copyWith(
+                      fontSize: fontSize * 0.65,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white54 : Colors.black45,
+                    ),
+                  ),
+                  Text(
+                    'tap to expand',
+                    style: baseStyle.copyWith(
+                      fontSize: fontSize * 0.60,
+                      color: isDark ? Colors.white38 : Colors.black38,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Preview (first ~12 lines, clipped)
+            Padding(
+              padding: EdgeInsets.all(12 * scale),
+              child: Text(
+                code,
+                style: _codeStyle,
+                maxLines: 12,
+                overflow: TextOverflow.fade,
+                softWrap: false,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openFullScreen(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog.fullscreen(
+        child: Scaffold(
+          backgroundColor: isDark
+              ? const Color(0xFF1A1A1A)
+              : const Color(0xFFF5F5F5),
+          appBar: AppBar(
+            backgroundColor: isDark
+                ? const Color(0xFF1E1E1E)
+                : const Color(0xFFEEEEEE),
+            foregroundColor: isDark ? Colors.white : Colors.black87,
+            elevation: 0,
+            title: Text(
+              language != null && language!.isNotEmpty ? language! : 'Code',
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.copy),
+                tooltip: 'Copy',
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: code));
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(
+                      content: Text('Code copied!'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SelectableText(
+                code,
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 14,
+                  height: 1.5,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

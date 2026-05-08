@@ -303,19 +303,13 @@ class AIController extends ChangeNotifier {
     String? previewDataUrl,
     String? name,
   }) async {
-    if (!isAIEnabled) return;
-
     final trimmedPrompt = prompt?.trim() ?? '';
-    await _livekitService.sendImageMessage(
-      bytes: bytes,
-      mimeType: mimeType,
-      prompt: trimmedPrompt,
-      name: name,
-    );
-
     final displayText = trimmedPrompt.isEmpty
         ? '![Uploaded image](${previewDataUrl ?? ''})'
         : '$trimmedPrompt\n\n![Uploaded image](${previewDataUrl ?? ''})';
+
+    // Always add to history so the user sees the image regardless of
+    // connection state.
     _addToHistory(
       ConversationMessage(
         text: previewDataUrl == null
@@ -327,9 +321,30 @@ class AIController extends ChangeNotifier {
         timestamp: DateTime.now(),
       ),
     );
-    _currentTranscript = trimmedPrompt.isEmpty
-        ? '[Image uploaded]'
-        : trimmedPrompt;
+    notifyListeners();
+
+    if (!isAIEnabled) {
+      // Show in chat but note AI is offline.
+      _addToHistory(
+        ConversationMessage(
+          text: '_AI not connected — image logged but not sent._',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ),
+      );
+      notifyListeners();
+      return;
+    }
+
+    await _livekitService.sendImageMessage(
+      bytes: bytes,
+      mimeType: mimeType,
+      prompt: trimmedPrompt,
+      name: name,
+    );
+
+    _currentTranscript =
+        trimmedPrompt.isEmpty ? '[Image uploaded]' : trimmedPrompt;
     _agentState = AIAgentState.processing;
     notifyListeners();
   }
