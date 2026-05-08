@@ -478,8 +478,8 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      font-size: var(--status-font-size, 14px) !important;
-      color: #555555;
+      font-size: var(--status-font-size, 17.5px) !important;
+      color: var(--status-color, #555555) !important;
       opacity: 0.85;
       /* No color transition — prevents flicker from rapid class toggles */
       margin-top: var(--status-margin-top, 12px);
@@ -495,15 +495,18 @@
       transition: opacity 0.3s ease;
     }
 
-    /* Dark theme — color is already hardcoded to #D0D0D0 on .status-display,
-       so these are now no-ops kept for completeness. */
-    .overlay-dark .status-display {
-      color: #D0D0D0 !important;
-      opacity: 0.85 !important;
+    body.overlay-dark {
+      --status-color: #D0D0D0;
     }
 
+    body:not(.overlay-dark) {
+      --status-color: #555555;
+    }
+
+    .overlay-dark .status-display,
     .overlay-dark .status-text {
-      color: #D0D0D0 !important;
+      color: var(--status-color, #D0D0D0) !important;
+      opacity: 0.85 !important;
     }
 
     .overlay-dark .status-icon {
@@ -854,17 +857,24 @@
       function playSubtleClick() {
         try {
           if (!_clickAudioCtx) _clickAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          // Very short, quiet single tick — no sweep, no extra mic sound
-          var osc = _clickAudioCtx.createOscillator();
-          var gain = _clickAudioCtx.createGain();
-          osc.connect(gain);
-          gain.connect(_clickAudioCtx.destination);
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(880, _clickAudioCtx.currentTime);
-          gain.gain.setValueAtTime(0.012, _clickAudioCtx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, _clickAudioCtx.currentTime + 0.018);
-          osc.start(_clickAudioCtx.currentTime);
-          osc.stop(_clickAudioCtx.currentTime + 0.018);
+          var ctx = _clickAudioCtx;
+          var startClick = function() {
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(660, ctx.currentTime);
+            gain.gain.setValueAtTime(0.04, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.045);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.045);
+          };
+          if (ctx.resume) {
+            ctx.resume().then(startClick).catch(startClick);
+          } else {
+            startClick();
+          }
         } catch(e) {}
       }
 

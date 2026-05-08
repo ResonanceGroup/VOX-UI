@@ -33,12 +33,30 @@
   <title>RG Smart Control</title>
   <link rel="manifest" href="manifest.json">
   <style>
+    :root {
+      --vox-page-bg: #1e1e1e;
+      color-scheme: dark light;
+    }
     html, body {
       margin: 0;
       width: 100%;
-      height: 100%;
-      background: #1e1e1e;
+      min-height: 100%;
+      background: var(--vox-page-bg) !important;
       overscroll-behavior: none;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: var(--vox-page-bg) !important;
+    }
+    flutter-view,
+    flt-glass-pane,
+    flt-scene-host,
+    flt-scene,
+    flt-canvas-container {
+      background: var(--vox-page-bg) !important;
     }
   </style>
 </head>

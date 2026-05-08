@@ -43,11 +43,17 @@ class ThemeManager extends ChangeNotifier {
       if (meta != null) {
         meta.setAttribute('content', color);
       }
-      // Safari's bottom toolbar/overscroll area samples the page background,
-      // not just the theme-color meta tag. Keep html/body in sync too.
-      html.document.documentElement?.style.backgroundColor = color;
-      html.document.body?.style.backgroundColor = color;
-      html.document.body?.style.setProperty('background', color);
+      // Safari's bottom toolbar/overscroll area samples the actual page/
+      // Flutter host background, not just the theme-color meta tag.
+      final root = html.document.documentElement;
+      root?.style.setProperty('--vox-page-bg', color);
+      root?.style.setProperty('background', color, 'important');
+      html.document.body?.style.setProperty('background', color, 'important');
+      for (final el in html.document.querySelectorAll(
+        'flutter-view, flt-glass-pane, flt-scene-host, flt-scene, flt-canvas-container',
+      )) {
+        (el as html.Element).style.setProperty('background', color, 'important');
+      }
     } catch (_) {
       // Not running on web — ignore
     }

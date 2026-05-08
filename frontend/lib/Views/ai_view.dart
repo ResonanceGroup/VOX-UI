@@ -114,16 +114,23 @@ class _AIViewContentState extends State<_AIViewContent> {
           try {
             window.__voxClickCtx = window.__voxClickCtx || new (window.AudioContext || window.webkitAudioContext)();
             var ctx = window.__voxClickCtx;
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, ctx.currentTime);
-            gain.gain.setValueAtTime(0.012, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.018);
-            osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + 0.018);
+            var startClick = function() {
+              var osc = ctx.createOscillator();
+              var gain = ctx.createGain();
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(660, ctx.currentTime);
+              gain.gain.setValueAtTime(0.04, ctx.currentTime);
+              gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.045);
+              osc.start(ctx.currentTime);
+              osc.stop(ctx.currentTime + 0.045);
+            };
+            if (ctx.resume) {
+              ctx.resume().then(startClick).catch(startClick);
+            } else {
+              startClick();
+            }
           } catch(e) {}
         })();
       ''']);
