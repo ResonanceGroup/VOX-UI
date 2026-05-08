@@ -615,21 +615,15 @@ class _AIViewContentState extends State<_AIViewContent> {
       }
     }
 
-    return GestureDetector(
+    return Listener(
       behavior: HitTestBehavior.opaque,
-      onTap: toggleTray,
-      onVerticalDragEnd: (details) {
-        final velocity = details.primaryVelocity ?? 0;
-        if (!_isHistoryTrayOpen && velocity < -200) {
-          setState(() => _isHistoryTrayOpen = true);
-          WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
-        } else if (_isHistoryTrayOpen && velocity > 200) {
-          setState(() => _isHistoryTrayOpen = false);
-        }
-      },
+      // Use the low-level pointer-up event for the handle instead of mixing
+      // tap and vertical-drag recognizers. On mobile Safari small finger motion
+      // was entering the gesture arena as a drag, canceling otherwise-valid taps.
+      onPointerUp: (_) => toggleTray(),
       child: SizedBox(
-        width: 132 * scale,
-        height: 56 * scale,
+        width: 168 * scale,
+        height: 72 * scale,
         child: Center(
           child: Container(
             width: 76 * scale,
