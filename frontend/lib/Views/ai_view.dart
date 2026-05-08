@@ -576,7 +576,11 @@ class _AIViewContentState extends State<_AIViewContent> {
             right: 0,
             bottom: 4 * scale,
             child: Center(
-              child: _buildHistoryGrabHandle(isDark, scale),
+              child: _buildHistoryGrabHandle(
+                isDark,
+                scale,
+                pillAlignment: Alignment.bottomCenter,
+              ),
             ),
           ),
       ],
@@ -609,7 +613,11 @@ class _AIViewContentState extends State<_AIViewContent> {
     );
   }
 
-  Widget _buildHistoryGrabHandle(bool isDark, double scale) {
+  Widget _buildHistoryGrabHandle(
+    bool isDark,
+    double scale, {
+    Alignment pillAlignment = Alignment.center,
+  }) {
     void toggleTray() {
       setState(() => _isHistoryTrayOpen = !_isHistoryTrayOpen);
       if (_isHistoryTrayOpen) {
@@ -627,7 +635,7 @@ class _AIViewContentState extends State<_AIViewContent> {
         width: 168 * scale,
         height: 72 * scale,
         child: Align(
-          alignment: Alignment.bottomCenter,
+          alignment: pillAlignment,
           child: Container(
             width: 76 * scale,
             height: 28 * scale,
