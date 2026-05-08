@@ -296,6 +296,39 @@ class _AIViewContentState extends State<_AIViewContent>
     _textController.clear();
   }
 
+
+  /// Resize and compress an image for transmission. Keeps longest dimension <=
+  /// maxDim and re-encodes as JPEG. Falls back to original bytes on any error.
+  Future<(Uint8List, String)> _compressImageForSend(
+    Uint8List bytes,
+    String mimeType,
+  ) async {
+    const int maxDim = 1024;
+    const double quality = 0.85;
+    try {
+      final blob = html.Blob([bytes], mimeType);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final img = html.ImageElement()..src = url;
+      await img.onLoad.first;
+      html.Url.revokeObjectUrl(url);
+      int w = img.naturalWidth ?? 0;
+      int h = img.naturalHeight ?? 0;
+      if (w == 0 || h == 0) return (bytes, mimeType);
+      if (w > maxDim || h > maxDim) {
+        if (w >= h) { h = (h * maxDim / w).round(); w = maxDim; }
+        else { w = (w * maxDim / h).round(); h = maxDim; }
+      }
+      final canvas = html.CanvasElement(width: w, height: h);
+      canvas.context2D.drawImageScaled(img, 0, 0, w, h);
+      final dataUrl = canvas.toDataUrl('image/jpeg', quality);
+      final comma = dataUrl.indexOf(',');
+      if (comma == -1) return (bytes, mimeType);
+      return (base64Decode(dataUrl.substring(comma + 1)), 'image/jpeg');
+    } catch (_) {
+      return (bytes, mimeType);
+    }
+  }
+
   /// Web-native image picker — uses a hidden <input type="file" accept="image/*">
   /// so the browser handles source selection (gallery / camera / files).
   /// On iOS Safari this presents the system sheet; on desktop it opens a picker.
@@ -362,14 +395,18 @@ class _AIViewContentState extends State<_AIViewContent>
 
       if (bytes == null) return;
 
-      final effectiveMime = mimeType ?? 'image/jpeg';
+      // Compress before sending: raw photos (3-8 MB) flood the TURN relay
+      // and destabilize the WebRTC connection causing TTS to cut off.
+      final (compressedBytes, compressedMime) =
+          await _compressImageForSend(bytes!, mimeType ?? 'image/jpeg');
+      final effectiveMime = compressedMime;
       final prompt = _textController.text.trim();
-      // Use data URL from reader directly (already base64-encoded).
+      // Keep original data URL for preview quality; backend gets compressed.
       final effectivePreviewUrl = previewDataUrl ??
-          'data:$effectiveMime;base64,${base64Encode(bytes!)}';
+          'data:$effectiveMime;base64,${base64Encode(compressedBytes)}';
 
       await controller.sendImageMessage(
-        bytes: bytes!,
+        bytes: compressedBytes,
         mimeType: effectiveMime,
         prompt: prompt,
         previewDataUrl: effectivePreviewUrl,
