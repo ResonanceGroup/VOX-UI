@@ -130,11 +130,69 @@ class RVAgent(Agent):
     """RV voice agent - Milo, conversational assistant for RV systems."""
 
     def __init__(self) -> None:
+        self._image_tasks: list = []  # keep tasks alive (prevent GC)
         super().__init__(
             instructions="",  # Letta manages its own system prompt via memory blocks
             tools=[],         # Empty - MCP handles tool calling
         )
         logger.info("RVAgent ready (tools via MCP)")
+
+    async def on_enter(self) -> None:
+        """Register byte-stream handler for images when agent enters the room."""
+        def _handler(reader, participant_identity: str) -> None:
+            task = asyncio.create_task(
+                self._receive_image(reader, participant_identity)
+            )
+            self._image_tasks.append(task)
+            task.add_done_callback(lambda t: self._image_tasks.remove(t))
+
+        self.session.room.register_byte_stream_handler("image_input", _handler)
+
+    async def _receive_image(self, reader, participant_identity: str) -> None:
+        """Collect image bytes, add to chat context, then trigger a reply."""
+        try:
+            chunks: list[bytes] = []
+            total = 0
+            async for chunk in reader:
+                total += len(chunk)
+                if total > 6 * 1024 * 1024:
+                    logger.warning(
+                        "Image upload from %s too large (%d bytes), dropping",
+                        participant_identity, total,
+                    )
+                    return
+                chunks.append(chunk)
+
+            image_bytes = b"".join(chunks)
+            mime_type = reader.info.mime_type or "image/jpeg"
+            if not mime_type.startswith("image/"):
+                logger.warning(
+                    "Ignoring non-image stream from %s: %s",
+                    participant_identity, mime_type,
+                )
+                return
+
+            prompt = (reader.info.attributes or {}).get("prompt") or "Please describe what you see in this image."
+            data_url = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode('ascii')}"
+            logger.info(
+                "Image received from %s: %s, %d bytes",
+                participant_identity, mime_type, len(image_bytes),
+            )
+
+            # Official LiveKit v1 pattern: add image to chat context, then
+            # call generate_reply() with no user_input so the context is used.
+            chat_ctx = self.chat_ctx.copy()
+            chat_ctx.add_message(
+                role="user",
+                content=[prompt, ImageContent(image=data_url, mime_type=mime_type)],
+            )
+            await self.update_chat_ctx(chat_ctx)
+            self.session.generate_reply()
+
+        except RuntimeError as e:
+            logger.debug("Image handler: session unavailable: %s", e)
+        except Exception as e:
+            logger.error("Image handler error: %s", e)
 
 
 # ---------------------------------------------------------------------------
@@ -317,56 +375,8 @@ async def entrypoint(ctx: JobContext) -> None:
     for identity, participant in ctx.room.remote_participants.items():
         logger.info("Already in room: %s (tracks: %d)", identity, len(participant.track_publications))
 
-    def on_image_stream(reader, participant_identity: str) -> None:
-        async def _handle_image() -> None:
-            try:
-                if not _session_can_generate_reply(session):
-                    logger.debug(
-                        "Ignoring image input from %s because agent session is not running",
-                        participant_identity,
-                    )
-                    return
-
-                chunks: list[bytes] = []
-                total = 0
-                async for chunk in reader:
-                    total += len(chunk)
-                    # Keep uploads bounded for vision prompts; frontend already resizes.
-                    if total > 6 * 1024 * 1024:
-                        logger.warning("Image upload from %s too large: %d bytes", participant_identity, total)
-                        return
-                    chunks.append(chunk)
-
-                image_bytes = b"".join(chunks)
-                mime_type = reader.info.mime_type or "image/jpeg"
-                if not mime_type.startswith("image/"):
-                    logger.warning("Ignoring non-image stream from %s: %s", participant_identity, mime_type)
-                    return
-
-                prompt = (reader.info.attributes or {}).get("prompt") or "Please analyze this image."
-                data_url = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode('ascii')}"
-                logger.info(
-                    "Received image input from %s: %s (%d bytes)",
-                    participant_identity,
-                    mime_type,
-                    len(image_bytes),
-                )
-                session.generate_reply(
-                    user_input=ChatMessage(
-                        role="user",
-                        content=[prompt, ImageContent(image=data_url, mime_type=mime_type)],
-                    ),
-                    instructions="Respond naturally to the user's image and any accompanying text.",
-                    input_modality="text",
-                )
-            except RuntimeError as e:
-                logger.debug("Skipping image input because agent session is unavailable: %s", e)
-            except Exception as e:
-                logger.error("Error processing image stream: %s", e)
-
-        asyncio.create_task(_handle_image())
-
-    ctx.room.register_byte_stream_handler("image_input", on_image_stream)
+    # Image handling is registered in RVAgent.on_enter() using the official
+    # LiveKit v1 pattern (chat_ctx + update_chat_ctx + generate_reply).
 
     # LiveKit event emitter expects sync callbacks; schedule async work inside.
     @ctx.room.on("data_received")
