@@ -548,11 +548,11 @@ class _AIViewContentState extends State<_AIViewContent> {
           child: IgnorePointer(
             ignoring: !_isHistoryTrayOpen,
             child: AnimatedSlide(
-              duration: const Duration(milliseconds: 260),
+              duration: const Duration(milliseconds: 520),
               curve: Curves.easeOutCubic,
               offset: _isHistoryTrayOpen ? Offset.zero : const Offset(0, 1.05),
               child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 180),
+                duration: const Duration(milliseconds: 320),
                 opacity: _isHistoryTrayOpen ? 1 : 0,
                 child: _buildHistoryTrayOverlay(
                   displayMessages,
@@ -752,7 +752,7 @@ class _AIViewContentState extends State<_AIViewContent> {
                 Positioned(
                   top: 0, left: 0, right: 0,
                   child: Padding(
-                    padding: EdgeInsets.only(top: 18 * scale),
+                    padding: EdgeInsets.only(top: 9 * scale),
                     child: Center(child: _buildHistoryGrabHandle(isDark, scale)),
                   ),
                 ),
