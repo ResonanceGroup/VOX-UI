@@ -1,11 +1,14 @@
 import '../widgets/orb_widget.dart';
+import 'dart:async';
 import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
+// ignore: avoid_web_libraries_in_flutter
 import 'dart:js' as js;
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../debug/ui_tuning_values.dart';
 import '../Controllers/ai_controller.dart';
@@ -148,7 +151,6 @@ class _AIViewContentState extends State<_AIViewContent>
 
   final TextEditingController _textController = TextEditingController();
   final ScrollController _conversationScrollController = ScrollController();
-  final ImagePicker _imagePicker = ImagePicker();
   bool _isPickingImage = false;
   bool _isHistoryTrayOpen = false;
   late final AnimationController _trayController;
@@ -287,32 +289,64 @@ class _AIViewContentState extends State<_AIViewContent>
     _textController.clear();
   }
 
-  Future<void> _handlePickImage(
-    AIController controller,
-    ImageSource source,
-  ) async {
+  /// Web-native image picker — uses a hidden <input type="file" accept="image/*">
+  /// so the browser handles source selection (gallery / camera / files).
+  /// On iOS Safari this presents the system sheet; on desktop it opens a picker.
+  Future<void> _handlePickImage(AIController controller) async {
     if (!controller.isAIEnabled || _isPickingImage) return;
     setState(() => _isPickingImage = true);
     try {
-      final image = await _imagePicker.pickImage(
-        source: source,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
-      if (image == null) return;
+      final completer = Completer<void>();
+      Uint8List? bytes;
+      String? mimeType;
+      String? fileName;
 
-      final bytes = await image.readAsBytes();
-      final mimeType = image.mimeType ?? 'image/jpeg';
+      final uploadInput = html.FileUploadInputElement()
+        ..accept = 'image/*'
+        ..multiple = false;
+
+      final sub = uploadInput.onChange.listen((_) {
+        final file = uploadInput.files?.isNotEmpty == true
+            ? uploadInput.files!.first
+            : null;
+        if (file == null) {
+          completer.complete();
+          return;
+        }
+        fileName = file.name;
+        mimeType = file.type.isNotEmpty ? file.type : 'image/jpeg';
+        final reader = html.FileReader();
+        reader.readAsArrayBuffer(file);
+        reader.onLoadEnd.listen((_) {
+          final result = reader.result;
+          if (result is ByteBuffer) {
+            bytes = result.asUint8List();
+          }
+          completer.complete();
+        });
+      });
+
+      uploadInput.click();
+      // 60-second timeout in case the user cancels without selecting
+      await completer.future.timeout(
+        const Duration(seconds: 60),
+        onTimeout: () {},
+      );
+      await sub.cancel();
+
+      if (bytes == null) return;
+
+      final effectiveMime = mimeType ?? 'image/jpeg';
       final prompt = _textController.text.trim();
-      final previewDataUrl = 'data:$mimeType;base64,${base64Encode(bytes)}';
+      final previewDataUrl =
+          'data:$effectiveMime;base64,${base64Encode(bytes!)}';
 
       await controller.sendImageMessage(
-        bytes: bytes,
-        mimeType: mimeType,
+        bytes: bytes!,
+        mimeType: effectiveMime,
         prompt: prompt,
         previewDataUrl: previewDataUrl,
-        name: image.name,
+        name: fileName,
       );
       _textController.clear();
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
@@ -325,41 +359,6 @@ class _AIViewContentState extends State<_AIViewContent>
     } finally {
       if (mounted) setState(() => _isPickingImage = false);
     }
-  }
-
-  void _showImageSourceSheet(
-    AIController controller,
-    bool isDark,
-    double scale,
-  ) {
-    if (!controller.isAIEnabled) return;
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Choose from Photos'),
-              onTap: () {
-                Navigator.pop(context);
-                _handlePickImage(controller, ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera),
-              title: const Text('Take Photo'),
-              onTap: () {
-                Navigator.pop(context);
-                _handlePickImage(controller, ImageSource.camera);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   int _buildCount = 0;
@@ -986,9 +985,7 @@ class _AIViewContentState extends State<_AIViewContent>
                   ),
                   IconButton(
                     icon: Icon(
-                      _isPickingImage
-                          ? Icons.hourglass_empty
-                          : Icons.add_photo_alternate_outlined,
+                      _isPickingImage ? Icons.hourglass_empty : Icons.image,
                       color: controller.isAIEnabled
                           ? (isDark ? Colors.white70 : Colors.black87)
                           : (isDark ? Colors.white24 : Colors.black26),
@@ -996,8 +993,7 @@ class _AIViewContentState extends State<_AIViewContent>
                     ),
                     onPressed: (!controller.isAIEnabled || _isPickingImage)
                         ? null
-                        : () =>
-                              _showImageSourceSheet(controller, isDark, scale),
+                        : () => _handlePickImage(controller),
                     padding: EdgeInsets.symmetric(horizontal: 4 * scale),
                     constraints: const BoxConstraints(),
                     tooltip: 'Send image',
@@ -1201,28 +1197,78 @@ class _AIViewContentState extends State<_AIViewContent>
           final encoded = commaIndex >= 0
               ? imageUri.substring(commaIndex + 1)
               : '';
-          image = Image.memory(base64Decode(encoded), fit: BoxFit.cover);
+          image = Image.memory(
+            base64Decode(encoded),
+            fit: BoxFit.contain,
+            frameBuilder: (ctx, child, frame, _) => frame == null
+                ? const SizedBox(
+                    height: 60,
+                    child: Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : child,
+          );
         } else {
-          image = Image.network(
-            imageUri,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(
-              padding: EdgeInsets.all(10 * scale),
-              decoration: BoxDecoration(
-                color: codeBackground,
-                borderRadius: BorderRadius.circular(8 * scale),
-                border: Border.all(color: borderColor),
-              ),
-              child: Text(
-                alt ?? imageUri,
-                style: baseStyle.copyWith(fontSize: fontSize * 0.85),
+          // External URL — wrap in an InkWell so the user can tap to open
+          // it in a new tab if CORS blocks direct rendering.
+          image = InkWell(
+            onTap: () => html.window.open(imageUri, '_blank'),
+            child: Image.network(
+              imageUri,
+              fit: BoxFit.contain,
+              frameBuilder: (ctx, child, frame, _) => frame == null
+                  ? const SizedBox(
+                      height: 60,
+                      child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : child,
+              errorBuilder: (context, error, stackTrace) => Container(
+                padding: EdgeInsets.all(10 * scale),
+                decoration: BoxDecoration(
+                  color: codeBackground,
+                  borderRadius: BorderRadius.circular(8 * scale),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.broken_image,
+                      color: borderColor,
+                      size: 18 * scale,
+                    ),
+                    SizedBox(width: 6 * scale),
+                    Flexible(
+                      child: Text(
+                        alt != null && alt.isNotEmpty ? alt : imageUri,
+                        style: baseStyle.copyWith(
+                          fontSize: fontSize * 0.85,
+                          decoration: TextDecoration.underline,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
         }
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(12 * scale),
-          child: image,
+        return Padding(
+          padding: EdgeInsets.symmetric(vertical: 4 * scale),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 480 * scale,
+              maxHeight: 360 * scale,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12 * scale),
+              child: image,
+            ),
+          ),
         );
       },
     );
