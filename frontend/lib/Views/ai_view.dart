@@ -299,18 +299,23 @@ class _AIViewContentState extends State<_AIViewContent>
 
   /// Resize and compress an image for transmission. Keeps longest dimension <=
   /// maxDim and re-encodes as JPEG. Falls back to original bytes on any error.
-  /// Resize image to max 1024px. PNGs stay PNG (preserves transparency +
-  /// quality for screenshots/diagrams). JPEGs and everything else become
-  /// JPEG at 85% quality. Skips re-encode if already under 400 KB and within
-  /// dimension limits. Falls back to original on any error.
+  /// Normalise an image for transmission:
+  ///   PNG  → PNG  (preserves transparency; good for screenshots/diagrams)
+  ///   everything else (JPEG, WebP, GIF, …) → JPEG 85%
+  ///     WebP/GIF/BMP are not reliably handled by all vision backends;
+  ///     converting to JPEG guarantees compatibility.
+  ///   JPEG already ≤400 KB and ≤1024px → passes through untouched.
+  ///   All oversized images are resized to max 1024px longest side.
+  ///   Falls back to original bytes on any error.
   Future<(Uint8List, String)> _compressImageForSend(
     Uint8List bytes,
     String mimeType,
   ) async {
     const int maxDim = 1024;
     const double quality = 0.85;
-    const int smallThreshold = 400 * 1024; // 400 KB — skip re-encode
+    const int smallThreshold = 400 * 1024; // 400 KB
     final bool isPng = mimeType == 'image/png';
+    final bool isJpeg = mimeType == 'image/jpeg' || mimeType == 'image/jpg';
     final String outMime = isPng ? 'image/png' : 'image/jpeg';
     try {
       final blob = html.Blob([bytes], mimeType);
@@ -321,8 +326,9 @@ class _AIViewContentState extends State<_AIViewContent>
       int w = img.naturalWidth ?? 0;
       int h = img.naturalHeight ?? 0;
       if (w == 0 || h == 0) return (bytes, mimeType);
-      // Skip if already small enough — no reason to re-encode.
-      if (bytes.length <= smallThreshold && w <= maxDim && h <= maxDim) {
+      // Only skip re-encode for JPEG that is already small + within bounds.
+      // WebP/GIF/etc must always be converted even if small.
+      if (isJpeg && bytes.length <= smallThreshold && w <= maxDim && h <= maxDim) {
         return (bytes, mimeType);
       }
       if (w > maxDim || h > maxDim) {
@@ -330,8 +336,7 @@ class _AIViewContentState extends State<_AIViewContent>
         else { w = (w * maxDim / h).round(); h = maxDim; }
       }
       final canvas = html.CanvasElement(width: w, height: h);
-      // For PNG with transparency, leave background transparent.
-      // For JPEG we need an opaque background.
+      // Non-PNG needs an opaque white background (JPEG has no alpha channel).
       if (!isPng) {
         canvas.context2D
           ..fillStyle = '#ffffff'
