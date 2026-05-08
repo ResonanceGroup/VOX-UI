@@ -655,11 +655,15 @@
     }
 
     /* Container styling */
+    :root {
+      --orb-page-bg: #1e1e1e;
+    }
+
     body {
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: transparent; /* Flutter page provides the background */
+      background: var(--orb-page-bg) !important;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -673,7 +677,7 @@
       height: 100%;
       width: 100%;
       overflow: hidden;
-      background: transparent !important;
+      background: var(--orb-page-bg) !important;
     }
     
     .orb-container {
@@ -1061,6 +1065,10 @@
         
         // Handle theme
         if (payload.theme) {
+          var bg = payload.theme === 'dark' ? '#1e1e1e' : '#f9f9f9';
+          document.documentElement.style.setProperty('--orb-page-bg', bg);
+          document.documentElement.style.setProperty('background', bg, 'important');
+          document.body.style.setProperty('background', bg, 'important');
           if (payload.theme === 'dark') {
             document.body.classList.add('overlay-dark');
           } else {

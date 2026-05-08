@@ -37,12 +37,16 @@ class ThemeManager extends ChangeNotifier {
   /// Update <meta name="theme-color"> so the iOS Safari address bar
   /// and Chrome toolbar match the app's dark/light theme.
   void _updateBrowserThemeColor() {
-    final color = isDarkMode ? '#1e1e1e' : '#ffffff';
+    final color = isDarkMode ? '#1e1e1e' : '#f9f9f9';
     try {
-      final meta = html.document.querySelector('meta[name="theme-color"]');
-      if (meta != null) {
-        meta.setAttribute('content', color);
-      }
+      // iOS Safari often ignores a simple content attribute mutation on the
+      // bottom toolbar. Recreate the meta tag so WebKit re-evaluates it.
+      html.document.querySelectorAll('meta[name="theme-color"]').forEach((el) => el.remove());
+      final meta = html.MetaElement()
+        ..name = 'theme-color'
+        ..content = color
+        ..id = 'theme-color';
+      html.document.head?.append(meta);
       // Safari's bottom toolbar/overscroll area samples the actual page/
       // Flutter host background, not just the theme-color meta tag.
       final root = html.document.documentElement;

@@ -24,7 +24,7 @@ void _ensureFactory() {
     return html.IFrameElement()
       ..src = 'assets/assets/orb/orb.html?v=' + DateTime.now().millisecondsSinceEpoch.toString()
       ..setAttribute('allowtransparency', 'true')
-      ..style.cssText = 'border:none;width:100%;height:100%;display:block;background:transparent;';
+      ..style.cssText = 'border:none;width:100%;height:100%;display:block;background:#1e1e1e;';
   });
 }
 
@@ -349,7 +349,17 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   }
 
   void _updateTheme(String theme) {
-    if (theme == _currentTheme) return; // no-op if unchanged — prevents spurious sends on every build()
+    final color = theme == 'dark' ? '#1e1e1e' : '#f9f9f9';
+    // iOS Safari does not always composite transparent iframe backgrounds
+    // correctly, so explicitly keep the platform-view iframe background in sync.
+    _iframeElement?.style.backgroundColor = color;
+    _iframeElement?.style.setProperty('background', color, 'important');
+
+    if (theme == _currentTheme) {
+      // Even when unchanged, re-assert the iframe background because iOS can
+      // recreate/repaint platform views independently of Flutter rebuilds.
+      return;
+    }
     _currentTheme = theme;
     _send();
   }

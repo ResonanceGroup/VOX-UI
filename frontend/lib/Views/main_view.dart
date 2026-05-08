@@ -160,7 +160,11 @@ class _MainViewContentState extends State<_MainViewContent> {
           icon: Icon(
             isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
           ),
-          onPressed: () => ThemeManager().toggleTheme(),
+          onPressed: () {
+            final nextMode = ThemeManager().isDarkMode ? ThemeMode.light : ThemeMode.dark;
+            ThemeManager().setThemeMode(nextMode);
+            context.read<AppPreferencesNotifier>().setThemeMode(nextMode);
+          },
           tooltip: 'Toggle theme',
         ),
         SizedBox(width: 8 * scale),
