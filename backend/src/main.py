@@ -60,19 +60,7 @@ from livekit.plugins import openai, silero
 from api import BackendClient
 from config import config
 
-def _get_skip_greeting() -> bool:
-    """Read skip_greeting from config_override.json live so UI changes take effect."""
-    import json, os
-    try:
-        override_file = os.path.join(os.path.dirname(__file__), 'config_override.json')
-        if os.path.exists(override_file):
-            with open(override_file) as _f:
-                data = json.load(_f)
-            if 'skip_greeting' in data:
-                return bool(data['skip_greeting'])
-    except Exception:
-        pass
-    return config.skip_greeting
+
 try:
     from token_service import get_effective_config, load_config_override
     load_config_override()
@@ -428,30 +416,6 @@ async def entrypoint(ctx: JobContext) -> None:
             logger.debug("Skipping %s because agent session is unavailable: %s", reason, e)
         except Exception as e:
             logger.warning("%s failed (non-fatal): %s", reason, e)
-
-    # Greet participants when they connect (persistent agent â always in room).
-    # Cooldown: only greet once per 30s to avoid cascade during reconnect storms.
-    _last_greeting_time = [0.0]  # mutable container for closure
-
-    @ctx.room.on("participant_connected")
-    def on_participant_connected(participant) -> None:
-        logger.info("Participant connected: %s", participant.identity)
-        async def _greet() -> None:
-            await asyncio.sleep(0.5)
-            if _get_skip_greeting():
-                return
-            now = time.time()
-            elapsed = now - _last_greeting_time[0]
-            if elapsed < 30.0:
-                logger.info("Greeting suppressed (cooldown %.0fs)", elapsed)
-                return
-            _last_greeting_time[0] = now
-            _try_generate_reply(
-                instructions="A participant just joined. Greet them warmly.",
-                reason="Greeting",
-            )
-        asyncio.create_task(_greet())
-
     @ctx.room.on("participant_disconnected")
     def on_participant_disconnected(participant) -> None:
         identity = getattr(participant, "identity", "unknown")
@@ -459,17 +423,6 @@ async def entrypoint(ctx: JobContext) -> None:
             "Participant '%s' disconnected — keeping agent session alive for future reconnects",
             identity,
         )
-
-    # Greet any participants already in the room when the agent connects
-    existing = [p for p in ctx.room.remote_participants.values()]
-    if existing and not _get_skip_greeting():
-        async def _greet_existing() -> None:
-            await asyncio.sleep(0.5)
-            _try_generate_reply(
-                instructions="Greet the user and let them know you're ready.",
-                reason="Initial greeting",
-            )
-        asyncio.create_task(_greet_existing())
 
     # Keep job alive — agent is persistent, never exits while room exists
     await asyncio.Future()

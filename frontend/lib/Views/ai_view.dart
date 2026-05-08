@@ -9,6 +9,7 @@ import 'dart:js' as js;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
@@ -1362,20 +1363,67 @@ class _AIViewContentState extends State<_AIViewContent>
             ),
           );
         }
-        return Padding(
-          padding: EdgeInsets.symmetric(vertical: 4 * scale),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 480 * scale,
-              maxHeight: 360 * scale,
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12 * scale),
-              child: image,
+        return GestureDetector(
+          onTap: () => _openImageFullScreen(context, image),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 4 * scale),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 480 * scale,
+                maxHeight: 360 * scale,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12 * scale),
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    image,
+                    Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Icon(Icons.zoom_in,
+                        size: 18 * scale,
+                        color: Colors.white.withOpacity(0.75),
+                        shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         );
       },
+    );
+  }
+
+  void _openImageFullScreen(BuildContext context, Widget imageWidget) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Image viewer',
+      barrierColor: Colors.black87,
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (ctx, anim, _) => SafeArea(
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 8.0,
+                child: imageWidget,
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1691,12 +1739,13 @@ class _CodeBlockWidget extends StatelessWidget {
   final Color codeBackground;
   final Color borderColor;
 
-  TextStyle get _codeStyle => baseStyle.copyWith(
-    fontFamily: 'Courier New',
-    fontSize: (fontSize * 0.55).clamp(9.0, 13.0),
-    color: isDark ? Colors.white : Colors.black87,
-    backgroundColor: Colors.transparent,
-    height: 1.45,
+  TextStyle get _codeStyle => GoogleFonts.sourceCodePro(
+    textStyle: baseStyle.copyWith(
+      fontSize: (fontSize * 0.55).clamp(9.0, 13.0),
+      color: isDark ? Colors.white : Colors.black87,
+      backgroundColor: Colors.transparent,
+      height: 1.45,
+    ),
   );
 
   @override

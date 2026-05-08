@@ -47,9 +47,6 @@ class _SettingsBodyState extends State<_SettingsBody> {
   late final TextEditingController _llmApiKeyCtrl;
   late final TextEditingController _previewTextCtrl;
 
-  // ── Agent behavior ───────────────────────────────────────────────────────
-  bool _skipGreeting = false;
-
   // ── Voice dropdown ───────────────────────────────────────────────────────
   List<TtsVoice> _voices = [];
   bool _loadingVoices = false;
@@ -136,7 +133,6 @@ class _SettingsBodyState extends State<_SettingsBody> {
       if (cfg['llm_api_key']  != null) _llmApiKeyCtrl.text = (cfg['llm_api_key'] ?? '') as String;
       if (cfg['tts_voice']    != null) _selectedVoice = cfg['tts_voice'] as String;
       if (cfg['tts_speed']    != null) _ttsSpeed = (cfg['tts_speed'] as num).toDouble();
-      if (cfg['skip_greeting'] != null) _skipGreeting = cfg['skip_greeting'] as bool;
     });
   }
 
@@ -182,7 +178,6 @@ class _SettingsBodyState extends State<_SettingsBody> {
       'llm_base_url':  _llmUrlCtrl.text.trim(),
       'llm_model':     _llmModelCtrl.text.trim(),
       'llm_api_key':   _llmApiKeyCtrl.text.trim(),
-      'skip_greeting': _skipGreeting,
     });
 
     if (!mounted) return;
@@ -317,8 +312,6 @@ class _SettingsBodyState extends State<_SettingsBody> {
               children: [
                 _buildConnectionSection(isDark, scale),
                 SizedBox(height: 24 * scale),
-                _buildAgentBehaviorSection(isDark, scale),
-                SizedBox(height: 24 * scale),
                 _buildLlmSection(settings, isDark, scale),
                 SizedBox(height: 24 * scale),
                 _buildSttSection(isDark, scale),
@@ -375,39 +368,6 @@ class _SettingsBodyState extends State<_SettingsBody> {
   }
 
   // ── Agent Behavior ────────────────────────────────────────────────────────
-
-  Widget _buildAgentBehaviorSection(bool isDark, double scale) {
-    final labelStyle = TextStyle(
-      fontSize: 15 * scale, fontWeight: FontWeight.w500,
-      color: isDark ? Colors.white70 : Colors.black87,
-    );
-    final subtitleStyle = TextStyle(
-      fontSize: 12 * scale,
-      color: isDark ? Colors.white38 : Colors.black38,
-    );
-    return _Section(title: 'Agent Behavior', icon: Icons.smart_toy_outlined,
-        scale: scale, isDark: isDark,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 8 * scale),
-          child: Column(children: [
-            Row(children: [
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Skip greeting', style: labelStyle),
-                  Text('Agent stays silent when a participant joins',
-                      style: subtitleStyle),
-                ],
-              )),
-              Switch(
-                value: _skipGreeting,
-                onChanged: (v) => setState(() => _skipGreeting = v),
-                activeColor: AppColors.primaryBlue,
-              ),
-            ]),
-          ]),
-        ));
-  }
 
   // ── LLM ─────────────────────────────────────────────────────────────────
 

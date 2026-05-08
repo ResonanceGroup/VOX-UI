@@ -28,6 +28,7 @@ dependencies:
   connectivity_plus: ^7.0.0
   webview_flutter_web: ^0.2.3+4
   flutter_markdown: ^0.7.7+1
+  google_fonts: ^6.2.1
   image_picker: ^1.2.2
   markdown: ^7.3.1
 
