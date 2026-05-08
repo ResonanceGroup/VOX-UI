@@ -1,0 +1,10 @@
+{
+  "stt_url": "http://10.0.0.128:8090",
+  "stt_model": "Systran/faster-distil-whisper-medium.en",
+  "tts_url": "http://10.0.0.128:8880",
+  "tts_voice": "af_jadzia",
+  "tts_speed": 1,
+  "llm_base_url": "http://localhost:8001",
+  "llm_model": "Qwen3.6-35B-A3B-AWQ",
+  "llm_api_key": "dummy"
+}
