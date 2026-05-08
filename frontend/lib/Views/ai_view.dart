@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'dart:html' as html;
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:js' as js;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:ui_web' as ui_web;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +22,12 @@ import '../permissions_helper.dart';
 import 'theme_manager.dart';
 
 /// AI Voice Assistant View with animated orb visualization
+/// Tracks which view-type names have already been registered with
+/// platformViewRegistry for external image HtmlElementViews.
+/// Registration is permanent for the page lifetime — reuse the same name
+/// for the same URL hash so we don't leak registrations.
+final _registeredImageViewTypes = <String>{};
+
 class AIView extends StatefulWidget {
   final bool isDrawerOpen;
   const AIView({super.key, this.isDrawerOpen = false});
@@ -1225,50 +1233,31 @@ class _AIViewContentState extends State<_AIViewContent>
                 : child,
           );
         } else {
-          // External URL — wrap in an InkWell so the user can tap to open
-          // it in a new tab if CORS blocks direct rendering.
+          // External URL: use HtmlElementView (<img> element) to bypass
+          // CanvasKit CORS restrictions that block Image.network for most CDN
+          // image hosts.  The browser handles image CORS natively and far more
+          // permissively.  Tap to open in a new tab.
+          final viewTypeKey =
+              'voxui-ext-img-${imageUri.hashCode.toRadixString(36).replaceAll('-', 'n')}';
+          if (!_registeredImageViewTypes.contains(viewTypeKey)) {
+            _registeredImageViewTypes.add(viewTypeKey);
+            final capturedUri = imageUri;
+            ui_web.platformViewRegistry.registerViewFactory(
+              viewTypeKey,
+              (int viewId) => html.ImageElement()
+                ..src = capturedUri
+                ..style.width = '100%'
+                ..style.height = '100%'
+                ..style.objectFit = 'contain'
+                ..style.borderRadius = '${(12 * scale).toInt()}px',
+            );
+          }
           image = InkWell(
             onTap: () => html.window.open(imageUri, '_blank'),
-            child: Image.network(
-              imageUri,
-              fit: BoxFit.contain,
-              frameBuilder: (ctx, child, frame, _) => frame == null
-                  ? const SizedBox(
-                      height: 60,
-                      child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  : child,
-              errorBuilder: (context, error, stackTrace) => Container(
-                padding: EdgeInsets.all(10 * scale),
-                decoration: BoxDecoration(
-                  color: codeBackground,
-                  borderRadius: BorderRadius.circular(8 * scale),
-                  border: Border.all(color: borderColor),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.broken_image,
-                      color: borderColor,
-                      size: 18 * scale,
-                    ),
-                    SizedBox(width: 6 * scale),
-                    Flexible(
-                      child: Text(
-                        alt != null && alt.isNotEmpty ? alt : imageUri,
-                        style: baseStyle.copyWith(
-                          fontSize: fontSize * 0.85,
-                          decoration: TextDecoration.underline,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            child: SizedBox(
+              width: double.infinity,
+              height: 220 * scale,
+              child: HtmlElementView(viewType: viewTypeKey),
             ),
           );
         }
