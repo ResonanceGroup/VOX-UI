@@ -38,6 +38,43 @@ const server = http.createServer((req, res) => {
   // API proxy
   if (req.url.startsWith('/api/')) return proxyHttp(req, res, TOKEN_PORT, '/api');
 
+  // Image proxy — fetches external URLs server-side, bypassing browser CORS
+  // Usage: GET /img?url=<encodeURIComponent(externalImageUrl)>
+  if (req.url.startsWith('/img')) {
+    const parsed = new URL(req.url, 'http://localhost');
+    const target = parsed.searchParams.get('url');
+    if (!target || !target.match(/^https?:\/\//)) {
+      res.writeHead(400, {'Content-Type': 'text/plain'}).end('Bad url');
+      return;
+    }
+    function fetchImg(url, hops) {
+      if (hops > 5) { res.writeHead(502).end('Too many redirects'); return; }
+      const mod = url.startsWith('https') ? require('https') : http;
+      mod.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 VoxUI-ImageProxy/1.0',
+                                'Accept': 'image/*,*/*;q=0.8' } }, (imgRes) => {
+        if ((imgRes.statusCode === 301 || imgRes.statusCode === 302 ||
+             imgRes.statusCode === 303 || imgRes.statusCode === 307 ||
+             imgRes.statusCode === 308) && imgRes.headers.location) {
+          imgRes.resume();
+          fetchImg(imgRes.headers.location, hops + 1);
+          return;
+        }
+        const ct = imgRes.headers['content-type'] || 'image/jpeg';
+        res.writeHead(imgRes.statusCode === 200 ? 200 : imgRes.statusCode, {
+          'Content-Type': ct,
+          'Cache-Control': 'public, max-age=3600',
+          'Access-Control-Allow-Origin': '*',
+        });
+        imgRes.pipe(res);
+      }).on('error', (e) => {
+        console.error('[IMG] fetch error:', e.message);
+        if (!res.headersSent) res.writeHead(502).end();
+      });
+    }
+    fetchImg(target, 0);
+    return;
+  }
+
   // Static files
   let filePath = path.join(STATIC_DIR, req.url === '/' ? '/index.html' : req.url.split('?')[0]);
   if (!fs.existsSync(filePath)) filePath = path.join(STATIC_DIR, 'index.html');

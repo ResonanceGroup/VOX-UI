@@ -1323,11 +1323,13 @@ class _AIViewContentState extends State<_AIViewContent>
                 : child,
           );
         } else {
-          // External URL — use Image.network so Flutter/CanvasKit handles
-          // display naturally.  Most CDN/AI-generated image URLs allow CORS.
-          // On load failure fall back to a tappable link widget.
+          // External URL — route through the /img proxy to bypass CORS.
+          // Flutter/CanvasKit blocks cross-origin images; the proxy fetches
+          // server-side and serves from the same origin.
+          final backendBase = html.window.location.origin;
+          final proxiedUri = '$backendBase/img?url=${Uri.encodeComponent(imageUri)}';
           image = Image.network(
-            imageUri,
+            proxiedUri,
             fit: BoxFit.contain,
             loadingBuilder: (ctx, child, progress) => progress == null
                 ? child
