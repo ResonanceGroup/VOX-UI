@@ -440,6 +440,54 @@ class TokenHandler(BaseHTTPRequestHandler):
             except Exception as e:
                 self._send_json(500, {"error": str(e)})
 
+        elif parsed.path == "/test-stt":
+            # Server-side STT connectivity test — browser cannot reach LAN IPs directly
+            try:
+                eff = get_effective_config()
+                stt_base = eff.get("stt_url", "").rstrip("/")
+                req = urllib.request.Request(f"{stt_base}/v1/models",
+                                             headers={"Accept": "application/json"})
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    data = json.loads(resp.read())
+                models = [m["id"] for m in data.get("data", [])][:3]
+                self._send_json(200, {"ok": True, "models": models, "url": stt_base})
+            except urllib.error.HTTPError as e:
+                self._send_json(200, {"ok": False, "error": f"HTTP {e.code}: {e.reason}"})
+            except Exception as e:
+                self._send_json(200, {"ok": False, "error": str(e)})
+
+        elif parsed.path == "/test-llm":
+            # Server-side LLM connectivity test — browser cannot reach localhost:8001 directly
+            try:
+                eff = get_effective_config()
+                import re as _re; llm_base = _re.sub(r"(/v1/?)+$", "", eff.get("llm_base_url", "").rstrip("/"))
+                api_key = eff.get("llm_api_key") or "not-needed"
+                model = eff.get("llm_model", "")
+                payload = json.dumps({
+                    "model": model,
+                    "messages": [{"role": "user", "content": "Say: pong"}],
+                    "max_tokens": 8,
+                    "stream": False,
+                }).encode()
+                req = urllib.request.Request(
+                    f"{llm_base}/v1/chat/completions",
+                    data=payload,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {api_key}",
+                    },
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=20) as resp:
+                    data = json.loads(resp.read())
+                reply = data["choices"][0]["message"]["content"].strip()
+                self._send_json(200, {"ok": True, "reply": reply[:80], "model": model})
+            except urllib.error.HTTPError as e:
+                body = e.read().decode("utf-8", errors="replace")[:120]
+                self._send_json(200, {"ok": False, "error": f"HTTP {e.code}: {body}"})
+            except Exception as e:
+                self._send_json(200, {"ok": False, "error": str(e)})
+
         else:
             self._send_json(404, {"error": "Not found"})
 

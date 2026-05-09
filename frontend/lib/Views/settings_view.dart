@@ -232,30 +232,22 @@ class _SettingsBodyState extends State<_SettingsBody> {
   // ── LLM test ─────────────────────────────────────────────────────────────
 
   Future<void> _testLlm() async {
+    // Routes through backend proxy (/api/test-llm) — browser cannot reach
+    // localhost:8001 or LAN IPs directly from iPhone/Safari.
     setState(() { _llmTesting = true; _llmTestResult = null; });
     try {
-      final baseUrl = _llmUrlCtrl.text.trim().replaceAll(RegExp(r'/v1/*$'), '');
-      final uri = Uri.parse('$baseUrl/v1/chat/completions');
-      final headers = <String, String>{'Content-Type': 'application/json'};
-      if (_llmApiKeyCtrl.text.isNotEmpty) {
-        headers['Authorization'] = 'Bearer ${_llmApiKeyCtrl.text.trim()}';
-      }
-      final resp = await http.post(
-        uri,
-        headers: headers,
-        body: jsonEncode({
-          'model': _llmModelCtrl.text.trim(),
-          'messages': [{'role': 'user', 'content': 'Say: pong'}],
-          'max_tokens': 10,
-          'stream': false,
-        }),
-      ).timeout(const Duration(seconds: 20));
-
+      final tokenBase = _tokenServiceUrlCtrl.text.trim();
+      final uri = Uri.parse('$tokenBase/test-llm');
+      final resp = await http.get(uri).timeout(const Duration(seconds: 25));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        final reply = (data['choices'] as List)[0]['message']['content'] as String;
-        final preview = reply.trim();
-        setState(() => _llmTestResult = '✓ ${preview.length > 60 ? preview.substring(0, 60) : preview}');
+        if (data['ok'] == true) {
+          final reply = (data['reply'] as String? ?? '').trim();
+          setState(() => _llmTestResult = '✓ ${reply.isEmpty ? "OK" : reply}');
+        } else {
+          final err = data['error'] as String? ?? 'unknown error';
+          setState(() => _llmTestResult = '✗ ${err.length > 70 ? err.substring(0, 70) : err}');
+        }
       } else {
         setState(() => _llmTestResult = '✗ HTTP ${resp.statusCode}');
       }
@@ -270,18 +262,22 @@ class _SettingsBodyState extends State<_SettingsBody> {
   // ── STT test ─────────────────────────────────────────────────────────────
 
   Future<void> _testStt() async {
+    // Routes through backend proxy (/api/test-stt) — browser cannot reach
+    // 10.0.0.128 directly from iPhone/Safari outside the LAN.
     setState(() { _sttTesting = true; _sttTestResult = null; });
     try {
-      final baseUrl = _sttUrlCtrl.text.trim();
-      final uri = Uri.parse('$baseUrl/v1/models');
-      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      final tokenBase = _tokenServiceUrlCtrl.text.trim();
+      final uri = Uri.parse('$tokenBase/test-stt');
+      final resp = await http.get(uri).timeout(const Duration(seconds: 12));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        final models = (data['data'] as List?)
-            ?.map((m) => (m as Map)['id'] as String)
-            .take(2)
-            .join(', ') ?? 'OK';
-        setState(() => _sttTestResult = '✓ $models');
+        if (data['ok'] == true) {
+          final models = (data['models'] as List?)?.join(', ') ?? 'OK';
+          setState(() => _sttTestResult = '✓ $models');
+        } else {
+          final err = data['error'] as String? ?? 'unknown error';
+          setState(() => _sttTestResult = '✗ ${err.length > 70 ? err.substring(0, 70) : err}');
+        }
       } else {
         setState(() => _sttTestResult = '✗ HTTP ${resp.statusCode}');
       }
