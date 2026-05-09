@@ -461,10 +461,10 @@ class _SettingsBodyState extends State<_SettingsBody> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _field(label: 'STT Base URL', ctrl: _sttUrlCtrl, scale: scale, isDark: isDark,
-                  hint: 'https://jetson-whisper.resonancegroupusa.com'),
+                  hint: 'http://10.0.0.128:8090'),
               SizedBox(height: 16 * scale),
               _field(label: 'STT Model', ctrl: _sttModelCtrl, scale: scale, isDark: isDark,
-                  hint: 'Systran/faster-distil-whisper-small.en'),
+                  hint: 'Systran/faster-distil-whisper-medium.en'),
               SizedBox(height: 16 * scale),
 
               // Test button + result

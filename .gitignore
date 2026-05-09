@@ -52,3 +52,29 @@ frontend/ios/Pods/
 
 backend/config_override.json
 backend/.env
+
+# Root-level Flutter web build artifacts (served from frontend/build/web)
+/assets/
+/canvaskit/
+/icons/
+/index.html
+/main.dart.js
+/flutter.js
+/flutter_bootstrap.js
+/flutter_service_worker.js
+/favicon.png
+/manifest.json
+/version.json
+/AssetManifest.bin
+/AssetManifest.bin.json
+/FontManifest.json
+/NOTICES
+/frontend/pubspec.yaml.bak
+
+# Test/scratch HTML files
+/orb-rv2.html
+/orb-test.html
+/orb-voxui.html
+
+# Python venv
+backend/.venv/
