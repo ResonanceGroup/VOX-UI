@@ -160,6 +160,8 @@ class _AIViewContentState extends State<_AIViewContent>
   final ScrollController _conversationScrollController = ScrollController();
   bool _isPickingImage = false;
   bool _isHistoryTrayOpen = false;
+  bool _trayAutoOpened = false; // true when tray was opened by a pending approval
+  Map<String, dynamic>? _prevPendingApproval; // detect approval arrival/clearance
   late final AnimationController _trayController;
   String? _debugOrbState; // null = driven by LiveKit
   int _lastMessageCount = 0;
@@ -225,7 +227,25 @@ class _AIViewContentState extends State<_AIViewContent>
   }
 
   void _onAIControllerChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    final ctrl = context.read<AIController>();
+
+    // Approval arrived — auto-open tray if it was closed
+    if (_prevPendingApproval == null && ctrl.pendingToolApproval != null) {
+      if (!_isHistoryTrayOpen) {
+        _trayAutoOpened = true;
+        _openHistoryTray();
+      }
+    }
+
+    // Approval cleared (approve or deny tapped) — auto-close if we auto-opened
+    if (_prevPendingApproval != null && ctrl.pendingToolApproval == null && _trayAutoOpened) {
+      _trayAutoOpened = false;
+      _closeHistoryTray();
+    }
+
+    _prevPendingApproval = ctrl.pendingToolApproval;
+    setState(() {});
   }
 
   void _ensureConnected() {
@@ -840,37 +860,32 @@ class _AIViewContentState extends State<_AIViewContent>
             ),
           ),
 
-        // Tool approval banner — slides in at the top when a tool call needs approval
-        if (controller.pendingToolApproval != null)
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 8 * scale,
-            left: 16 * scale,
-            right: 16 * scale,
-            child: _buildToolApprovalBanner(controller, isDark, scale),
-          ),
+        // Tool approval is handled inline inside the chat tray (no overlay banner)
       ],
     );
   }
 
-  /// Banner shown when the agent wants to call a tool and needs user approval.
-  Widget _buildToolApprovalBanner(
+  /// Inline approval card rendered inside the chat tray as the last item.
+  /// Mirrors Telegram's bot confirmation pattern — no separate overlay.
+  Widget _buildApprovalCard(
+    Map<String, dynamic> approval,
     AIController controller,
     bool isDark,
     double scale,
   ) {
-    final approval = controller.pendingToolApproval!;
     final toolName = (approval['tool_name'] as String? ?? 'unknown').replaceAll('_', ' ');
     final description = approval['description'] as String? ?? '';
-    final toolArgs = approval['tool_args'] as Map<String, dynamic>? ?? {};
 
-    return Material(
-      elevation: 8,
-      borderRadius: BorderRadius.circular(14 * scale),
-      color: isDark ? const Color(0xFF2A2A3A) : const Color(0xFFF0F0FF),
+    return Align(
+      alignment: Alignment.centerLeft,
       child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.85,
+        ),
         padding: EdgeInsets.all(14 * scale),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14 * scale),
+          color: isDark ? const Color(0xFF252535) : const Color(0xFFEEEEFF),
+          borderRadius: BorderRadius.circular(16 * scale),
           border: Border.all(
             color: isDark ? const Color(0xFF5555BB) : const Color(0xFF7070DD),
             width: 1.5,
@@ -884,16 +899,16 @@ class _AIViewContentState extends State<_AIViewContent>
               children: [
                 Icon(
                   Icons.extension_rounded,
-                  size: 18 * scale,
+                  size: 16 * scale,
                   color: isDark ? const Color(0xFFAAAAEE) : const Color(0xFF5555BB),
                 ),
-                SizedBox(width: 8 * scale),
+                SizedBox(width: 7 * scale),
                 Expanded(
                   child: Text(
-                    'Allow: $toolName',
+                    toolName,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 15 * scale,
+                      fontSize: 14 * scale,
                       color: isDark ? Colors.white : const Color(0xFF1A1A2E),
                     ),
                   ),
@@ -901,49 +916,52 @@ class _AIViewContentState extends State<_AIViewContent>
               ],
             ),
             if (description.isNotEmpty) ...[
-              SizedBox(height: 6 * scale),
+              SizedBox(height: 5 * scale),
               Text(
                 description,
                 style: TextStyle(
                   fontSize: 13 * scale,
-                  color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF444444),
+                  color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF555555),
                 ),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-            SizedBox(height: 12 * scale),
+            SizedBox(height: 11 * scale),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                OutlinedButton(
-                  onPressed: controller.rejectToolCall,
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(
-                      color: isDark ? const Color(0xFF888888) : const Color(0xFFAAAAAA),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: controller.rejectToolCall,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: isDark ? const Color(0xFF666688) : const Color(0xFFAAAAAA),
+                      ),
+                      foregroundColor: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF666666),
+                      padding: EdgeInsets.symmetric(vertical: 8 * scale),
+                      textStyle: TextStyle(fontSize: 13 * scale),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8 * scale),
+                      ),
                     ),
-                    foregroundColor: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF666666),
-                    padding: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 8 * scale),
-                    textStyle: TextStyle(fontSize: 13 * scale),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8 * scale),
-                    ),
+                    child: const Text('Deny'),
                   ),
-                  child: const Text('Deny'),
                 ),
-                SizedBox(width: 10 * scale),
-                ElevatedButton(
-                  onPressed: controller.approveToolCall,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isDark ? const Color(0xFF5555BB) : const Color(0xFF6060CC),
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 20 * scale, vertical: 8 * scale),
-                    textStyle: TextStyle(fontSize: 13 * scale, fontWeight: FontWeight.w600),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8 * scale),
+                SizedBox(width: 8 * scale),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: controller.approveToolCall,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark ? const Color(0xFF5555BB) : const Color(0xFF6060CC),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 8 * scale),
+                      textStyle: TextStyle(fontSize: 13 * scale, fontWeight: FontWeight.w600),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8 * scale),
+                      ),
                     ),
+                    child: const Text('Allow'),
                   ),
-                  child: const Text('Allow'),
                 ),
               ],
             ),
@@ -1063,11 +1081,20 @@ class _AIViewContentState extends State<_AIViewContent>
                         top: 56 * scale,
                         bottom: UiTuningValues.trayMessageSpacing * scale,
                       ),
-                      itemCount: messages.length,
+                      itemCount: messages.length + (controller.pendingToolApproval != null ? 1 : 0),
                       separatorBuilder: (_, __) => SizedBox(
                         height: UiTuningValues.trayMessageSpacing * scale,
                       ),
                       itemBuilder: (context, index) {
+                        // Approval card is appended after all chat messages
+                        if (index == messages.length && controller.pendingToolApproval != null) {
+                          return _buildApprovalCard(
+                            controller.pendingToolApproval!,
+                            controller,
+                            isDark,
+                            scale,
+                          );
+                        }
                         debugPrint(
                           '[CHAT-DEBUG] itemBuilder: index=$index of ${messages.length}',
                         );
