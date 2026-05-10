@@ -51,6 +51,7 @@ from livekit.agents import (
     JobContext,
     JobProcess,
     cli,
+    function_tool,
     get_job_context,
 )
 from livekit.agents.voice import room_io
@@ -118,13 +119,119 @@ def run_mcp_server(backend: BackendClient, port: int) -> None:
 class RVAgent(Agent):
     """RV voice agent - Milo, conversational assistant for RV systems."""
 
+    # Tracks pending approval futures keyed by approval_id.
+    # Class-level so the on_data_received handler can resolve them.
+    _pending_approvals: dict[str, asyncio.Future] = {}
+
     def __init__(self) -> None:
         self._image_tasks: list = []  # keep tasks alive (prevent GC)
         super().__init__(
-            instructions="",  # Letta manages its own system prompt via memory blocks
-            tools=[],         # Empty - MCP handles tool calling
+            instructions="",  # Hermes manages its own system prompt
         )
-        logger.info("RVAgent ready (tools via MCP)")
+        logger.info("RVAgent ready (tool calling enabled)")
+
+    # ------------------------------------------------------------------
+    # Tool approval gating
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def resolve_approval(cls, approval_id: str, approved: bool) -> None:
+        """Called by on_data_received when the user approves/rejects a tool call."""
+        fut = cls._pending_approvals.pop(approval_id, None)
+        if fut and not fut.done():
+            fut.set_result(approved)
+        else:
+            logger.warning("resolve_approval: unknown or already-resolved id=%s", approval_id)
+
+    async def _require_approval(
+        self, tool_name: str, args: dict, description: str
+    ) -> bool:
+        """Publish an approval request to the Flutter client and wait up to 60 s."""
+        approval_id = f"appr_{int(time.time() * 1000)}"
+        loop = asyncio.get_event_loop()
+        fut: asyncio.Future = loop.create_future()
+        RVAgent._pending_approvals[approval_id] = fut
+
+        room = get_job_context().room
+        try:
+            await room.local_participant.publish_data(
+                json.dumps({
+                    "type": "tool_approval_request",
+                    "approval_id": approval_id,
+                    "tool_name": tool_name,
+                    "tool_args": args,
+                    "description": description,
+                }).encode(),
+                reliable=True,
+            )
+        except Exception as e:
+            logger.error("Failed to publish tool_approval_request: %s", e)
+            RVAgent._pending_approvals.pop(approval_id, None)
+            return False
+
+        try:
+            result: bool = await asyncio.wait_for(asyncio.shield(fut), timeout=60.0)
+            return result
+        except asyncio.TimeoutError:
+            RVAgent._pending_approvals.pop(approval_id, None)
+            logger.info("Tool approval timed out for %s (id=%s)", tool_name, approval_id)
+            return False
+
+    # ------------------------------------------------------------------
+    # Built-in tools
+    # ------------------------------------------------------------------
+
+    @function_tool
+    async def get_current_time(self) -> str:
+        """Return the current date and time in the user's local timezone (Eastern)."""
+        from datetime import datetime, timezone
+        from zoneinfo import ZoneInfo
+        et = ZoneInfo("America/New_York")
+        now = datetime.now(et)
+        return now.strftime("It is %A, %B %d, %Y at %I:%M %p Eastern Time.")
+
+    @function_tool
+    async def web_search(self, query: str) -> str:
+        """Search the web for current information and return a concise summary.
+
+        Args:
+            query: The search query string.
+        """
+        approved = await self._require_approval(
+            "web_search",
+            {"query": query},
+            f'Search the web for: "{query}"',
+        )
+        if not approved:
+            return "The user did not approve this web search."
+
+        import requests as _req
+        try:
+            # DuckDuckGo instant-answer JSON API (no key required)
+            resp = _req.get(
+                "https://api.duckduckgo.com/",
+                params={"q": query, "format": "json", "no_html": "1", "skip_disambig": "1"},
+                headers={"User-Agent": "VoxUI/1.0"},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            parts: list[str] = []
+            if data.get("AbstractText"):
+                parts.append(data["AbstractText"])
+            for topic in (data.get("RelatedTopics") or [])[:3]:
+                if isinstance(topic, dict) and topic.get("Text"):
+                    parts.append(topic["Text"])
+            if parts:
+                return "\n\n".join(parts[:3])
+            return f"No instant answer found for '{query}'. I can try a more specific search if you'd like."
+        except Exception as e:
+            logger.error("web_search failed: %s", e)
+            return f"Web search failed: {e}"
+
+    # ------------------------------------------------------------------
+    # Room setup
+    # ------------------------------------------------------------------
 
     async def on_enter(self) -> None:
         """Register byte-stream handler for images when agent enters the room."""
@@ -298,7 +405,6 @@ async def entrypoint(ctx: JobContext) -> None:
             model=eff.get("llm_model", config.llm_model),
             temperature=float(eff.get("llm_temperature", config.llm_temperature)),
             max_completion_tokens=int(eff.get("llm_max_completion_tokens", config.llm_max_completion_tokens)),
-            tool_choice="none",
             timeout=httpx.Timeout(connect=30.0, read=120.0, write=30.0, pool=30.0),
             extra_body={"think": False} if eff.get("llm_disable_thinking", config.llm_disable_thinking) else None,
         ),
@@ -326,14 +432,16 @@ async def entrypoint(ctx: JobContext) -> None:
     @session.on("agent_state_changed")
     def on_agent_state_changed(ev) -> None:
         """Publish agent state as data message so Flutter orb can update."""
+        logger.info("Agent state changed → %s", ev.new_state)
         async def _pub():
             try:
                 await ctx.room.local_participant.publish_data(
                     json.dumps({"type": "state", "state": ev.new_state}).encode(),
                     reliable=True,
                 )
+                logger.debug("Published state '%s' to room", ev.new_state)
             except Exception as e:
-                logger.debug("Failed to publish agent state: %s", e)
+                logger.warning("Failed to publish agent state: %s", e)
         asyncio.create_task(_pub())
 
     @session.on("conversation_item_added")
@@ -391,7 +499,19 @@ async def entrypoint(ctx: JobContext) -> None:
             )
             try:
                 payload = json.loads(packet.data.decode("utf-8"))
-                if payload.get("type") != "text_input":
+                msg_type = payload.get("type")
+
+                if msg_type == "tool_approval_response":
+                    approval_id = payload.get("approval_id", "")
+                    approved = bool(payload.get("approved", False))
+                    logger.info(
+                        "Tool approval response from %s: id=%s approved=%s",
+                        participant_identity, approval_id, approved,
+                    )
+                    RVAgent.resolve_approval(approval_id, approved)
+                    return
+
+                if msg_type != "text_input":
                     return
 
                 text = (payload.get("text") or "").strip()

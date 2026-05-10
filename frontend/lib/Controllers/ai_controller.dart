@@ -19,6 +19,7 @@ class AIController extends ChangeNotifier {
   StreamSubscription<String>? _responseSubscription;
   StreamSubscription<String>? _streamingResponseSubscription;
   StreamSubscription<double>? _audioLevelSubscription;
+  StreamSubscription<Map<String, dynamic>>? _toolApprovalSubscription;
   Timer? _audioLevelLogTimer;
   Timer? _reconnectTimer;
 
@@ -32,6 +33,9 @@ class AIController extends ChangeNotifier {
   bool _isRecording = false;
   String? _errorMessage;
   double _currentAudioLevel = 0.0;
+
+  // Tool approval gating — non-null when a tool call is pending user approval
+  Map<String, dynamic>? _pendingToolApproval;
 
   // Device info
   bool _isTablet = false;
@@ -57,6 +61,7 @@ class AIController extends ChangeNotifier {
   bool get isMuted => _livekitService.isMuted;
   bool get isSpeakerMuted => _livekitService.isSpeakerMuted;
   double get currentAudioLevel => _currentAudioLevel;
+  Map<String, dynamic>? get pendingToolApproval => _pendingToolApproval;
 
   /// Check if AI is available
   bool get isAIAvailable {
@@ -185,6 +190,11 @@ class AIController extends ChangeNotifier {
       // (OrbWebViewWidget → _updateTheme → _send) every frame, which makes the
       // status text CSS color transition restart continuously and appear to flicker.
       // The orb widget subscribes directly to livekitService.audioLevel instead.
+    });
+
+    _toolApprovalSubscription = _livekitService.toolApprovalRequests.listen((request) {
+      _pendingToolApproval = request;
+      notifyListeners();
     });
 
     if (AppConstants.aiEnableDebugLogs) {
@@ -409,6 +419,30 @@ class AIController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Approve the pending tool call and send the response to the agent.
+  Future<void> approveToolCall() async {
+    final approval = _pendingToolApproval;
+    if (approval == null) return;
+    _pendingToolApproval = null;
+    notifyListeners();
+    await _livekitService.sendToolApprovalResponse(
+      approvalId: approval['approval_id'] as String? ?? '',
+      approved: true,
+    );
+  }
+
+  /// Reject the pending tool call and send the response to the agent.
+  Future<void> rejectToolCall() async {
+    final approval = _pendingToolApproval;
+    if (approval == null) return;
+    _pendingToolApproval = null;
+    notifyListeners();
+    await _livekitService.sendToolApprovalResponse(
+      approvalId: approval['approval_id'] as String? ?? '',
+      approved: false,
+    );
+  }
+
   void clearHistory() {
     _conversationHistory.clear();
     _currentTranscript = '';
@@ -466,6 +500,8 @@ class AIController extends ChangeNotifier {
     _streamingResponseSubscription = null;
     _audioLevelSubscription?.cancel();
     _audioLevelSubscription = null;
+    _toolApprovalSubscription?.cancel();
+    _toolApprovalSubscription = null;
 
     _livekitService.dispose();
     super.dispose();

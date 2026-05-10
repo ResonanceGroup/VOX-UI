@@ -839,7 +839,117 @@ class _AIViewContentState extends State<_AIViewContent>
               ),
             ),
           ),
+
+        // Tool approval banner — slides in at the top when a tool call needs approval
+        if (controller.pendingToolApproval != null)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8 * scale,
+            left: 16 * scale,
+            right: 16 * scale,
+            child: _buildToolApprovalBanner(controller, isDark, scale),
+          ),
       ],
+    );
+  }
+
+  /// Banner shown when the agent wants to call a tool and needs user approval.
+  Widget _buildToolApprovalBanner(
+    AIController controller,
+    bool isDark,
+    double scale,
+  ) {
+    final approval = controller.pendingToolApproval!;
+    final toolName = (approval['tool_name'] as String? ?? 'unknown').replaceAll('_', ' ');
+    final description = approval['description'] as String? ?? '';
+    final toolArgs = approval['tool_args'] as Map<String, dynamic>? ?? {};
+
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(14 * scale),
+      color: isDark ? const Color(0xFF2A2A3A) : const Color(0xFFF0F0FF),
+      child: Container(
+        padding: EdgeInsets.all(14 * scale),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14 * scale),
+          border: Border.all(
+            color: isDark ? const Color(0xFF5555BB) : const Color(0xFF7070DD),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.extension_rounded,
+                  size: 18 * scale,
+                  color: isDark ? const Color(0xFFAAAAEE) : const Color(0xFF5555BB),
+                ),
+                SizedBox(width: 8 * scale),
+                Expanded(
+                  child: Text(
+                    'Allow: $toolName',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15 * scale,
+                      color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (description.isNotEmpty) ...[
+              SizedBox(height: 6 * scale),
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 13 * scale,
+                  color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF444444),
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            SizedBox(height: 12 * scale),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                OutlinedButton(
+                  onPressed: controller.rejectToolCall,
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(
+                      color: isDark ? const Color(0xFF888888) : const Color(0xFFAAAAAA),
+                    ),
+                    foregroundColor: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF666666),
+                    padding: EdgeInsets.symmetric(horizontal: 16 * scale, vertical: 8 * scale),
+                    textStyle: TextStyle(fontSize: 13 * scale),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8 * scale),
+                    ),
+                  ),
+                  child: const Text('Deny'),
+                ),
+                SizedBox(width: 10 * scale),
+                ElevatedButton(
+                  onPressed: controller.approveToolCall,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDark ? const Color(0xFF5555BB) : const Color(0xFF6060CC),
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 20 * scale, vertical: 8 * scale),
+                    textStyle: TextStyle(fontSize: 13 * scale, fontWeight: FontWeight.w600),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8 * scale),
+                    ),
+                  ),
+                  child: const Text('Allow'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 

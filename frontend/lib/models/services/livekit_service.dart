@@ -100,6 +100,10 @@ class LiveKitService {
       StreamController<AIAgentState>.broadcast();
   final StreamController<double> _audioLevelController =
       StreamController<double>.broadcast();
+  // Tool approval requests emitted when the agent wants to run a tool
+  // and needs user confirmation. Payload: {approval_id, tool_name, tool_args, description}
+  final StreamController<Map<String, dynamic>> _toolApprovalController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   Stream<AIConnectionState> get connectionState =>
       _connectionStateController.stream;
@@ -110,6 +114,8 @@ class LiveKitService {
   Stream<String> get streamingResponse => _streamingResponseController.stream;
   Stream<AIAgentState> get agentState => _agentStateController.stream;
   Stream<double> get audioLevel => _audioLevelController.stream;
+  Stream<Map<String, dynamic>> get toolApprovalRequests =>
+      _toolApprovalController.stream;
 
   AIConnectionState _currentConnectionState = AIConnectionState.disconnected;
   AIAgentState _currentAgentState = AIAgentState.idle;
@@ -443,6 +449,11 @@ class LiveKitService {
   void _handleDataMessage(Map<String, dynamic> json) {
     final type = json['type'] as String?;
     switch (type) {
+      case 'tool_approval_request':
+        if (!_toolApprovalController.isClosed) {
+          _toolApprovalController.add(Map<String, dynamic>.from(json));
+        }
+        break;
       case 'response':
         // The Python agent fires this via `on_conversation_item_added` when the
         // LLM finishes generating — BEFORE TTS finishes playing. This gives
@@ -509,6 +520,29 @@ class LiveKitService {
     } catch (e) {
       if (AppConstants.aiEnableDebugLogs) {
         debugPrint('LiveKitService: Failed to send message: $e');
+      }
+    }
+  }
+
+  /// Publish a tool approval or rejection to the agent.
+  Future<void> sendToolApprovalResponse({
+    required String approvalId,
+    required bool approved,
+  }) async {
+    if (_currentConnectionState != AIConnectionState.connected) return;
+    try {
+      final payload = jsonEncode({
+        'type': 'tool_approval_response',
+        'approval_id': approvalId,
+        'approved': approved,
+      });
+      await _room!.localParticipant?.publishData(
+        Uint8List.fromList(payload.codeUnits),
+        reliable: true,
+      );
+    } catch (e) {
+      if (AppConstants.aiEnableDebugLogs) {
+        debugPrint('LiveKitService: Failed to send tool approval response: $e');
       }
     }
   }
