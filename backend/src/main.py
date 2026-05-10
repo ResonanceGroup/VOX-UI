@@ -432,17 +432,24 @@ async def entrypoint(ctx: JobContext) -> None:
     @session.on("agent_state_changed")
     def on_agent_state_changed(ev) -> None:
         """Publish agent state as data message so Flutter orb can update."""
-        logger.info("Agent state changed → %s", ev.new_state)
+        state_val = ev.new_state
+        logger.info("Agent state changed → %s", state_val)
+        state_msg = json.dumps({"type": "state", "state": state_val}).encode()
+
         async def _pub():
+            logger.debug("_pub() starting for state '%s'", state_val)
             try:
-                await ctx.room.local_participant.publish_data(
-                    json.dumps({"type": "state", "state": ev.new_state}).encode(),
-                    reliable=True,
-                )
-                logger.debug("Published state '%s' to room", ev.new_state)
+                await ctx.room.local_participant.publish_data(state_msg, reliable=True)
+                logger.info("Published state '%s' to room ✓", state_val)
             except Exception as e:
-                logger.warning("Failed to publish agent state: %s", e)
-        asyncio.create_task(_pub())
+                logger.warning("Failed to publish agent state '%s': %s", state_val, e)
+
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(_pub())
+            logger.debug("Scheduled publish task for state '%s'", state_val)
+        except RuntimeError:
+            logger.warning("No running event loop for state '%s'", state_val)
 
     @session.on("conversation_item_added")
     def on_conversation_item_added(ev) -> None:
@@ -509,6 +516,33 @@ async def entrypoint(ctx: JobContext) -> None:
                         participant_identity, approval_id, approved,
                     )
                     RVAgent.resolve_approval(approval_id, approved)
+                    return
+
+                # Debug-only: trigger a fake approval request to test the
+                # client-side approval banner without LLM tool calling.
+                if msg_type == "debug_trigger_approval":
+                    query = payload.get("query", "test query")
+                    approval_id = f"debug_{int(time.time() * 1000)}"
+                    loop = asyncio.get_running_loop()
+                    fut: asyncio.Future = loop.create_future()
+                    RVAgent._pending_approvals[approval_id] = fut
+                    await ctx.room.local_participant.publish_data(
+                        json.dumps({
+                            "type": "tool_approval_request",
+                            "approval_id": approval_id,
+                            "tool_name": "web_search",
+                            "tool_args": {"query": query},
+                            "description": f'Search the web for: "{query}"',
+                        }).encode(),
+                        reliable=True,
+                    )
+                    logger.info("Debug approval request sent: id=%s query=%r", approval_id, query)
+                    try:
+                        approved: bool = await asyncio.wait_for(asyncio.shield(fut), timeout=60.0)
+                        logger.info("Debug approval result: id=%s approved=%s", approval_id, approved)
+                    except asyncio.TimeoutError:
+                        logger.info("Debug approval timed out: id=%s", approval_id)
+                        RVAgent._pending_approvals.pop(approval_id, None)
                     return
 
                 if msg_type != "text_input":

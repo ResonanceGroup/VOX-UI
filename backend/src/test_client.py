@@ -170,8 +170,13 @@ async def main() -> None:
     # Brief settle time after agent joins
     await asyncio.sleep(1.5)
 
-    # Send text message via data channel (matches backend on_data_received handler)
-    msg_bytes = json.dumps({"type": "text_input", "text": args.message}).encode()
+    # Check for debug trigger mode
+    if args.message.startswith("DEBUG:"):
+        query = args.message[6:].strip()
+        msg_bytes = json.dumps({"type": "debug_trigger_approval", "query": query}).encode()
+        print(f"\n[test-client] Sending debug approval trigger: query={query!r}")
+    else:
+        msg_bytes = json.dumps({"type": "text_input", "text": args.message}).encode()
     await room.local_participant.publish_data(msg_bytes, reliable=True)
     _message_sent = True
     print(f"\n[test-client] Sent: {args.message!r}")
