@@ -257,26 +257,39 @@ async def entrypoint(ctx: JobContext) -> None:
         logger.info(f"Backend status: connected={backend.connected}, devices={len(backend.cache.device_ids())}")
 
     # Build the voice pipeline.
-    # Read live config each session so settings changed via PUT /config
-    # take effect immediately on the next connection without restart.
+    # Re-read config_override.json each session so PUT /config changes
+    # (voice, LLM endpoint, etc.) take effect without restarting the agent.
+    load_config_override()
     eff = get_effective_config()
+    logger.info("[CONFIG] tts_voice=%s llm_base_url=%s", eff.get("tts_voice"), eff.get("llm_base_url"))
 
     def _v1(url: str) -> str:
         """Ensure URL ends with /v1."""
         url = url.rstrip("/")
         return url if url.endswith("/v1") else url + "/v1"
 
+    stt_plugin = openai.STT(
+        base_url=_v1(eff.get("stt_url", config.stt_url)),
+        api_key="dummy",
+        model=eff.get("stt_model", config.stt_model),
+        language="en",
+    )
+
+    # Create TTS plugin separately so we can update its voice at runtime
+    tts_plugin = openai.TTS(
+        base_url=_v1(eff.get("tts_url", config.tts_url)),
+        api_key="dummy",
+        model="tts-1",
+        voice=eff.get("tts_voice", config.tts_voice),
+        speed=float(eff.get("tts_speed", config.tts_speed)),
+    )
+
     session = AgentSession(
         # VAD: Silero (pre-loaded in prewarm)
         vad=ctx.proc.userdata["vad"],
 
-        # STT — reads live config
-        stt=openai.STT(
-            base_url=_v1(eff.get("stt_url", config.stt_url)),
-            api_key="dummy",
-            model=eff.get("stt_model", config.stt_model),
-            language="en",
-        ),
+        # STT — reads live config (held as stt_plugin for runtime updates)
+        stt=stt_plugin,
 
         # LLM — reads live config
         llm=openai.LLM(
@@ -424,8 +437,57 @@ async def entrypoint(ctx: JobContext) -> None:
             identity,
         )
 
-    # Keep job alive — agent is persistent, never exits while room exists
-    await asyncio.Future()
+
+    # Watch config_override.json via inotify -- updates TTS/STT instantly on save.
+    # LLM endpoint/model changes still need an agent restart.
+    async def _config_watcher() -> None:
+        import os
+        from watchfiles import awatch
+        _cfg = os.path.abspath("config_override.json")
+        _cur_voice = eff.get("tts_voice", config.tts_voice)
+        _cur_speed = float(eff.get("tts_speed", config.tts_speed))
+        _cur_stt   = eff.get("stt_model", config.stt_model)
+        async for _ in awatch(_cfg):
+            try:
+                load_config_override()
+                _new = get_effective_config()
+                tts_kw = {}
+                _v = _new.get("tts_voice", config.tts_voice)
+                _s = float(_new.get("tts_speed", config.tts_speed))
+                _m = _new.get("stt_model", config.stt_model)
+                if _v != _cur_voice:
+                    tts_kw["voice"] = _v
+                    _cur_voice = _v
+                if _s != _cur_speed:
+                    tts_kw["speed"] = _s
+                    _cur_speed = _s
+                if tts_kw:
+                    tts_plugin.update_options(**tts_kw)
+                    logger.info("[CONFIG] TTS updated: %s", tts_kw)
+                if _m != _cur_stt:
+                    stt_plugin.update_options(model=_m)
+                    logger.info("[CONFIG] STT model: %s -> %s", _cur_stt, _m)
+                    _cur_stt = _m
+            except Exception as _e:
+                logger.debug("Config watcher: %s", _e)
+
+    asyncio.create_task(_config_watcher())
+
+    # Keep job alive; exit cleanly if session crashes so watchdog redispatches
+    _session_dead = asyncio.Event()
+
+    @session.on("close")
+    def _on_session_close(_ev=None):
+        if not _session_dead.is_set():
+            logger.warning("[RECOVERY] AgentSession closed -- exiting worker in 2s for auto-redispatch")
+            async def _do_exit():
+                await asyncio.sleep(2)
+                _session_dead.set()
+            asyncio.create_task(_do_exit())
+
+    await _session_dead.wait()
+    import os as _os
+    _os._exit(1)
 
 
 # ---------------------------------------------------------------------------
