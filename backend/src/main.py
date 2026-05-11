@@ -409,14 +409,8 @@ async def entrypoint(ctx: JobContext) -> None:
             extra_body={"think": False} if eff.get("llm_disable_thinking", config.llm_disable_thinking) else None,
         ),
 
-        # TTS — reads live config
-        tts=openai.TTS(
-            base_url=_v1(eff.get("tts_url", config.tts_url)),
-            api_key="dummy",
-            model="tts-1",
-            voice=eff.get("tts_voice", config.tts_voice),
-            speed=float(eff.get("tts_speed", config.tts_speed)),
-        ),
+        # TTS — reads live config (use named ref so config watcher updates take effect)
+        tts=tts_plugin,
     )
 
     # Start session with persistent room IO.
