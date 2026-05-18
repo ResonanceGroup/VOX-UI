@@ -68,20 +68,8 @@ try:
 except Exception:
     def get_effective_config(): return {}
 
-# Conditional import for Letta LLM (only needed when using Letta)
-if config.llm_provider == "letta" and config.tools_enabled:
-    from letta import LettaLLM, LettaLLMConfig
-    print(f"[DEBUG] Using LettaLLM with agent_id={config.letta_agent_id}")
-else:
-    print(f"[DEBUG] Using Ollama LLM (llm_provider={config.llm_provider}, tools_enabled={config.tools_enabled})")
-
-# Conditional import for MCP server
-if config.mcp_enabled:
-    from mcp_server import RVMCPServer
-    print(f"[DEBUG] MCP server enabled on port {config.mcp_port}")
-
 # ---------------------------------------------------------------------------
-# Logging
+# Logging (moved before conditional imports so logger is available)
 # ---------------------------------------------------------------------------
 
 logging.basicConfig(
@@ -89,6 +77,15 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# LettaLLM plugin — always available; used when profile points to a Lettabot API
+from letta import LettaLLM, LettaLLMConfig
+logger.info("LettaLLM plugin available (used when profile LLM URL matches Lettabot)")
+
+# Conditional import for MCP server
+if config.mcp_enabled:
+    from mcp_server import RVMCPServer
+    logger.info("MCP server enabled on port %s", config.mcp_port)
 
 
 def _session_can_generate_reply(session: AgentSession) -> bool:
@@ -125,10 +122,39 @@ class RVAgent(Agent):
 
     def __init__(self) -> None:
         self._image_tasks: list = []  # keep tasks alive (prevent GC)
+        self._max_ctx_items = 10  # keep last N turns (system prompt preserved)
         super().__init__(
             instructions="",  # Hermes manages its own system prompt
         )
         logger.info("RVAgent ready (tool calling enabled)")
+
+    def llm_node(self, chat_ctx, tools, model_settings):
+        # Override to truncate chat context before LLM call.
+        # Prevents unbounded context growth which causes:
+        # - Response cutoff (max_completion_tokens squeezed out)
+        # - Slow LLM inference (processing old history)
+        # - API errors (context exceeds model limit)
+        eff = get_effective_config()
+        max_items = int(eff.get("max_context_items", self._max_ctx_items))
+
+        # For Milo (Lettabot) profile: slim context to system + latest user msg
+        # The Lettabot agent handles its own full conversation state internally
+        # Slim context for agents that manage their own conversation state
+        # (Lettabot agents, etc.) - set max_context_items=1 in profile
+        slim_ctx = max_items <= 1
+
+        if slim_ctx and len(chat_ctx.items) > 3:
+            # Keep only: system prompt + latest user message
+            system_msgs = [i for i in chat_ctx.items if i.type == "message" and getattr(i, "role", None) in ("system", "developer")]
+            user_msgs = [i for i in chat_ctx.items if i.type == "message" and getattr(i, "role", None) == "user"]
+            if user_msgs:
+                chat_ctx.items[:] = system_msgs + [user_msgs[-1]]
+                logger.info("[CTX] Slim context: reduced to %d items (system + latest user)", len(chat_ctx.items))
+        elif len(chat_ctx.items) > max_items:
+            chat_ctx.truncate(max_items=max_items)
+            logger.info("[CTX] Truncated context to %d items", max_items)
+
+        return super().llm_node(chat_ctx, tools, model_settings)
 
     # ------------------------------------------------------------------
     # Tool approval gating
@@ -205,15 +231,15 @@ class RVAgent(Agent):
         if not approved:
             return "The user did not approve this web search."
 
-        import requests as _req
         try:
             # DuckDuckGo instant-answer JSON API (no key required)
-            resp = _req.get(
-                "https://api.duckduckgo.com/",
-                params={"q": query, "format": "json", "no_html": "1", "skip_disambig": "1"},
-                headers={"User-Agent": "VoxUI/1.0"},
-                timeout=10,
-            )
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    "https://api.duckduckgo.com/",
+                    params={"q": query, "format": "json", "no_html": "1", "skip_disambig": "1"},
+                    headers={"User-Agent": "VoxUI/1.0"},
+                    timeout=10,
+                )
             resp.raise_for_status()
             data = resp.json()
             parts: list[str] = []
@@ -297,7 +323,7 @@ class RVAgent(Agent):
 # Agent server
 # ---------------------------------------------------------------------------
 
-server = AgentServer(num_idle_processes=1)
+server = AgentServer(num_idle_processes=1, port=0)
 
 
 # ---------------------------------------------------------------------------
@@ -306,13 +332,13 @@ server = AgentServer(num_idle_processes=1)
 
 def prewarm(proc: JobProcess) -> None:
     """Load Silero VAD and optionally create BackendClient before any job runs."""
-    print(f"[PREWARM] Starting prewarm - backend_enabled={config.backend_enabled}")
+    logger.info("[PREWARM] Starting prewarm - backend_enabled=%s", config.backend_enabled)
     proc.userdata["vad"] = silero.VAD.load()
     logger.info("Silero VAD loaded.")
-    print(f"[PREWARM] Silero VAD loaded")
+    logger.info("[PREWARM] Silero VAD loaded")
 
     if config.backend_enabled:
-        print(f"[PREWARM] Creating BackendClient - host={config.backend_host}, port={config.backend_port}")
+        logger.info("[PREWARM] Creating BackendClient - host=%s, port=%s", config.backend_host, config.backend_port)
         backend = BackendClient(
             host=config.backend_host,
             port=config.backend_port,
@@ -330,14 +356,14 @@ def prewarm(proc: JobProcess) -> None:
         time.sleep(3)
         if backend.connected:
             logger.info("Backend connected in prewarm.")
-            print(f"[PREWARM] Backend connected — {len(backend.cache.device_ids())} devices cached")
+            logger.info("[PREWARM] Backend connected — %d devices cached", len(backend.cache.device_ids()))
         else:
             logger.warning("Backend still connecting (will keep trying in background)")
-            print(f"[PREWARM] Backend still connecting (will retry automatically)")
+            logger.info("[PREWARM] Backend still connecting (will retry automatically)")
         
     else:
         logger.info("Backend disabled (BACKEND_ENABLED=false).")
-        print(f"[PREWARM] Backend disabled")
+        logger.info("[PREWARM] Backend disabled")
 
 
 server.setup_fnc = prewarm
@@ -370,6 +396,36 @@ async def entrypoint(ctx: JobContext) -> None:
     eff = get_effective_config()
     logger.info("[CONFIG] tts_voice=%s llm_base_url=%s", eff.get("tts_voice"), eff.get("llm_base_url"))
 
+    # Pre-flight LLM health check — catch unreachable endpoints early
+    _llm_ok = False
+    try:
+        import httpx as _hx
+        _check_url = eff.get("llm_base_url", config.llm_base_url).rstrip("/") + "/v1/models"
+        _check_key = eff.get("llm_api_key", config.llm_api_key) or "sk-no-key-required"
+        async with _hx.AsyncClient(timeout=_hx.Timeout(connect=10.0, read=10.0, write=5.0, pool=5.0)) as _c:
+            _r = await _c.get(_check_url, headers={"Authorization": f"Bearer {_check_key}"})
+            _llm_ok = _r.status_code < 500
+    except Exception as _e:
+        logger.warning("[HEALTH] LLM endpoint unreachable: %s", _e)
+        _llm_ok = False
+
+    if not _llm_ok:
+        logger.error("[HEALTH] LLM endpoint %s is down — session will fail", eff.get("llm_base_url"))
+        # Still proceed — the session will handle the error, but at least
+        # the user gets a clear signal via the data channel
+        # Send a data message to the room about the failure
+        @ctx.room.on("participant_connected")
+        def _warn_participant(p):
+            async def _send():
+                try:
+                    await p.publish_data(
+                        json.dumps({"type": "llm_health_error", "message": f"LLM endpoint is unreachable: {eff.get('llm_base_url')}. Please switch to a different profile."}).encode(),
+                        reliable=True,
+                    )
+                except Exception:
+                    pass
+            asyncio.create_task(_send())
+
     def _v1(url: str) -> str:
         """Ensure URL ends with /v1."""
         url = url.rstrip("/")
@@ -377,19 +433,94 @@ async def entrypoint(ctx: JobContext) -> None:
 
     stt_plugin = openai.STT(
         base_url=_v1(eff.get("stt_url", config.stt_url)),
-        api_key="dummy",
+        api_key="sk-no-key-required",
         model=eff.get("stt_model", config.stt_model),
         language="en",
     )
 
     # Create TTS plugin separately so we can update its voice at runtime
+    tts_model = eff.get("tts_model", "tts-1")
+    # Piper returns WAV; OpenAI TTS returns MP3. Match the response format.
+    tts_response_format = "wav" if tts_model == "piper" else "mp3"
     tts_plugin = openai.TTS(
         base_url=_v1(eff.get("tts_url", config.tts_url)),
-        api_key="dummy",
-        model="tts-1",
+        api_key="sk-no-key-required",
+        model=tts_model,
         voice=eff.get("tts_voice", config.tts_voice),
         speed=float(eff.get("tts_speed", config.tts_speed)),
+        response_format=tts_response_format,
     )
+
+    # Profile-level LLM settings (timeout, retries, preemption)
+    _llm_url = eff.get("llm_base_url", config.llm_base_url)
+    _llm_model = eff.get("llm_model", config.llm_model)
+    _llm_api_key = eff.get("llm_api_key", config.llm_api_key) or "sk-no-key-required"
+    _llm_read_timeout = int(eff.get("llm_read_timeout", 120))
+    _llm_max_retries = int(eff.get("llm_max_retries", 3))
+    _llm_timeout = httpx.Timeout(
+        connect=30.0,
+        read=float(_llm_read_timeout),
+        write=30.0,
+        pool=30.0,
+    )
+
+    # ── Detect Lettabot profile and use LettaLLM ──
+    # When the LLM URL points to a Lettabot API (OpenAI-compatible wrapper
+    # around Letta agents), use the native LettaLLM plugin instead of
+    # openai.LLM. This gives us tool call visibility (status messages
+    # to Flutter) and timeout keepalive on tool call events.
+    _is_lettabot = _llm_url and ":8080" in _llm_url and "192.168.122" in _llm_url
+
+    # Shared publish_data callback — both LettaLLM and the agent state
+    # handler use this to send data messages to the Flutter client.
+    async def _publish_data(data: dict) -> None:
+        """Publish a data message to the LiveKit room."""
+        try:
+            await ctx.room.local_participant.publish_data(
+                json.dumps(data).encode(), reliable=True,
+            )
+        except Exception as e:
+            logger.debug("Failed to publish data message: %s", e)
+
+    # Timeout reset callback — resets the httpx read timeout deadline.
+    # Called by LettaLLM on each tool call event to prevent premature
+    # timeout during long tool call chains (keepalive).
+    _timeout_reset_time = time.monotonic()
+
+    def _reset_timeout() -> None:
+        """Reset the read timeout by updating the deadline tracker."""
+        nonlocal _timeout_reset_time
+        _timeout_reset_time = time.monotonic()
+
+    if _is_lettabot:
+        # Use LettaLLM — gets tool call events from Lettabot SSE stream
+        _letta_url = _llm_url.rstrip("/")
+        if _letta_url.endswith("/v1"):
+            _letta_url = _letta_url[:-3]  # strip /v1 — OpenAI client adds it
+        logger.info("[LLM] Using LettaLLM (agent=%s, url=%s)", _llm_model, _letta_url)
+        _llm_instance = LettaLLM(
+            LettaLLMConfig(
+                agent_name=_llm_model,
+                api_url=_letta_url,
+                api_key=_llm_api_key,
+                timeout=float(_llm_read_timeout),
+                publish_data=_publish_data,
+                reset_timeout=_reset_timeout,
+            )
+        )
+    else:
+        # Standard OpenAI-compatible LLM (Hermes, vLLM, etc.)
+        logger.info("[LLM] Using openai.LLM (url=%s, model=%s)", _llm_url, _llm_model)
+        _llm_instance = openai.LLM(
+            base_url=_v1(_llm_url),
+            api_key=_llm_api_key,
+            model=_llm_model,
+            temperature=float(eff.get("llm_temperature", config.llm_temperature)),
+            max_completion_tokens=int(eff.get("llm_max_completion_tokens", config.llm_max_completion_tokens)),
+            timeout=_llm_timeout,
+            max_retries=_llm_max_retries,
+            extra_body={"think": False} if eff.get("llm_disable_thinking", config.llm_disable_thinking) else None,
+        )
 
     session = AgentSession(
         # VAD: Silero (pre-loaded in prewarm)
@@ -398,19 +529,14 @@ async def entrypoint(ctx: JobContext) -> None:
         # STT — reads live config (held as stt_plugin for runtime updates)
         stt=stt_plugin,
 
-        # LLM — reads live config
-        llm=openai.LLM(
-            base_url=_v1(eff.get("llm_base_url", config.llm_base_url)),
-            api_key=eff.get("llm_api_key", config.llm_api_key),
-            model=eff.get("llm_model", config.llm_model),
-            temperature=float(eff.get("llm_temperature", config.llm_temperature)),
-            max_completion_tokens=int(eff.get("llm_max_completion_tokens", config.llm_max_completion_tokens)),
-            timeout=httpx.Timeout(connect=30.0, read=120.0, write=30.0, pool=30.0),
-            extra_body={"think": False} if eff.get("llm_disable_thinking", config.llm_disable_thinking) else None,
-        ),
+        # LLM — LettaLLM for Lettabot, openai.LLM for others
+        llm=_llm_instance,
 
         # TTS — reads live config (use named ref so config watcher updates take effect)
         tts=tts_plugin,
+
+        # Preemptive generation: let user interrupt mid-processing
+        preemptive_generation=bool(eff.get("preemptive_generation", False)),
     )
 
     # Start session with persistent room IO.
@@ -422,7 +548,9 @@ async def entrypoint(ctx: JobContext) -> None:
             close_on_disconnect=False,
         ),
     )
+
     # ── Forward agent state + responses back to Flutter client ──────────────
+
     @session.on("agent_state_changed")
     def on_agent_state_changed(ev) -> None:
         """Publish agent state as data message so Flutter orb can update."""
@@ -539,29 +667,11 @@ async def entrypoint(ctx: JobContext) -> None:
                         RVAgent._pending_approvals.pop(approval_id, None)
                     return
 
-                if msg_type != "text_input":
-                    return
 
-                text = (payload.get("text") or "").strip()
-                if not text:
-                    return
-
-                logger.info("Received text input from %s: %s", participant_identity, text[:100])
-                if not _session_can_generate_reply(session):
-                    logger.debug(
-                        "Ignoring text input from %s because agent session is not running",
-                        participant_identity,
-                    )
-                    return
-                session.generate_reply(
-                    user_input=text,
-                    instructions="Respond naturally to the user's text message.",
-                    input_modality="text",
-                )
             except json.JSONDecodeError:
                 logger.warning("Invalid JSON in data message from %s", participant_identity)
             except RuntimeError as e:
-                logger.debug("Skipping text input because agent session is unavailable: %s", e)
+                logger.debug("Skipping data message because agent session is unavailable: %s", e)
             except Exception as e:
                 logger.error("Error processing data message: %s", e)
 
@@ -586,23 +696,29 @@ async def entrypoint(ctx: JobContext) -> None:
         )
 
 
-    # Watch config_override.json via inotify -- updates TTS/STT instantly on save.
-    # LLM endpoint/model changes still need an agent restart.
+    # Watch config_override.json via inotify — hot-swaps LLM/STT/TTS on profile change.
     async def _config_watcher() -> None:
         import os
         from watchfiles import awatch
         _cfg = os.path.abspath("config_override.json")
         _cur_voice = eff.get("tts_voice", config.tts_voice)
         _cur_speed = float(eff.get("tts_speed", config.tts_speed))
-        _cur_stt   = eff.get("stt_model", config.stt_model)
+        _cur_stt_model = eff.get("stt_model", config.stt_model)
+        _cur_stt_url = eff.get("stt_url", config.stt_url)
+        _cur_tts_url = eff.get("tts_url", config.tts_url)
+        _cur_tts_model = eff.get("tts_model", "tts-1")
+        _cur_llm_url = eff.get("llm_base_url", config.llm_base_url)
+        _cur_llm_model = eff.get("llm_model", config.llm_model)
+        _cur_llm_key = eff.get("llm_api_key", config.llm_api_key)
         async for _ in awatch(_cfg):
             try:
                 load_config_override()
                 _new = get_effective_config()
+
+                # --- TTS voice/speed hot-reload (in-place update_options) ---
                 tts_kw = {}
                 _v = _new.get("tts_voice", config.tts_voice)
                 _s = float(_new.get("tts_speed", config.tts_speed))
-                _m = _new.get("stt_model", config.stt_model)
                 if _v != _cur_voice:
                     tts_kw["voice"] = _v
                     _cur_voice = _v
@@ -611,13 +727,62 @@ async def entrypoint(ctx: JobContext) -> None:
                     _cur_speed = _s
                 if tts_kw:
                     tts_plugin.update_options(**tts_kw)
-                    logger.info("[CONFIG] TTS updated: %s", tts_kw)
-                if _m != _cur_stt:
+                    logger.info("[CONFIG] TTS voice/speed updated: %s", tts_kw)
+
+                # --- STT model hot-reload (in-place update_options) ---
+                _m = _new.get("stt_model", config.stt_model)
+                _new_stt_url = _new.get("stt_url", config.stt_url)
+                stt_changed = False
+                if _m != _cur_stt_model:
                     stt_plugin.update_options(model=_m)
-                    logger.info("[CONFIG] STT model: %s -> %s", _cur_stt, _m)
-                    _cur_stt = _m
+                    logger.info("[CONFIG] STT model: %s -> %s", _cur_stt_model, _m)
+                    _cur_stt_model = _m
+                    stt_changed = True
+                if _new_stt_url != _cur_stt_url:
+                    # STT URL changed — SDK update_options doesn't support base_url,
+                    # so create a new STT instance and swap on the session.
+                    new_stt = openai.STT(
+                        base_url=_v1(_new_stt_url),
+                        model=_m,
+                        api_key="sk-no-key-required",
+                    )
+                    session._stt = new_stt
+                    logger.info("[CONFIG] STT hot-swapped: url=%s", _new_stt_url)
+                    _cur_stt_url = _new_stt_url
+                    stt_changed = True
+
+                # --- TTS URL/model hot-reload — rebuild TTS when endpoint or model changes ---
+                _new_tts_url = _new.get("tts_url", config.tts_url)
+                _new_tts_model = _new.get("tts_model", "tts-1")
+                if _new_tts_url != _cur_tts_url or _new_tts_model != _cur_tts_model:
+                    _new_tts_fmt = "wav" if _new_tts_model == "piper" else "mp3"
+                    new_tts = openai.TTS(
+                        base_url=_v1(_new_tts_url),
+                        api_key="sk-no-key-required",
+                        model=_new_tts_model,
+                        voice=_cur_voice,
+                        speed=_cur_speed,
+                        response_format=_new_tts_fmt,
+                    )
+                    session._tts = new_tts
+                    _cur_tts_url = _new_tts_url
+                    _cur_tts_model = _new_tts_model
+                    logger.info("[CONFIG] TTS hot-swapped: url=%s model=%s fmt=%s", _new_tts_url, _new_tts_model, _new_tts_fmt)
+
+                # --- LLM config change (log only, applied on next session) ---
+                # LLM cannot be safely hot-swapped mid-session (stateful, fragile).
+                # Client reconnects on profile switch, which starts a fresh session
+                # with the new config.
+                _new_url = _new.get("llm_base_url", config.llm_base_url)
+                _new_model = _new.get("llm_model", config.llm_model)
+                _new_key = _new.get("llm_api_key", config.llm_api_key)
+                if _new_url != _cur_llm_url or _new_model != _cur_llm_model or _new_key != _cur_llm_key:
+                    logger.info("[CONFIG] LLM config changed: url=%s model=%s (applied on next session)", _new_url, _new_model)
+                    _cur_llm_url = _new_url
+                    _cur_llm_model = _new_model
+                    _cur_llm_key = _new_key
             except Exception as _e:
-                logger.debug("Config watcher: %s", _e)
+                logger.warning("[CONFIG] Watcher error: %s", _e)
 
     asyncio.create_task(_config_watcher())
 
