@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:vox_ui/models/services/build_report_geometry.dart';
 import 'package:vox_ui/Views/main_view.dart';
 import 'package:vox_ui/Views/theme_manager.dart';
 import 'package:vox_ui/models/services/preferences_service.dart';
@@ -89,6 +90,7 @@ Future<void> _reportClientBuild(String apiBase) async {
       body: jsonEncode({
         'build': kVoxUiBuildId,
         'ts': DateTime.now().toIso8601String(),
+        'geometry': readClientGeometry(),
       }),
     ).timeout(const Duration(seconds: 4));
   } catch (_) {

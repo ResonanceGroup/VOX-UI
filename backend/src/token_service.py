@@ -707,7 +707,11 @@ class TokenHandler(BaseHTTPRequestHandler):
                 return
             build = params.get("build", "?")
             ua = self.headers.get("User-Agent", "?")
-            logger.info(f"[CLIENT-REPORT] build={build} platform={params.get('platform', '?')} ua={ua}")
+            geo = params.get("geometry") or {}
+            logger.info(
+                f"[CLIENT-REPORT] build={build} platform={params.get('platform', '?')} ua={ua} "
+                f"geo={geo}"
+            )
             self._send_json(200, {"ok": True})
             return
         if parsed.path != "/preview":

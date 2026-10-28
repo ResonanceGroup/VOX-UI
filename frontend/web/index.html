@@ -54,6 +54,13 @@
       min-height: 100%;
       background: var(--vox-page-bg) !important;
       overscroll-behavior: none;
+      /* The orb platform-view slot is wider than a phone screen; without
+         overflow:hidden the page becomes side-scrollable and any horizontal
+         swipe shifts Flutter's touch coordinate space away from the painted
+         canvas (taps land offset). Lock the page. */
+      overflow: hidden;
+      /* No browser pan/zoom — Flutter owns all gestures. */
+      touch-action: none;
     }
     body::before {
       content: '';
@@ -79,6 +86,12 @@
         navigator.serviceWorker.register("flutter_service_worker.js");
       });
     }
+    // Hard-lock the page viewport: any residual scroll (orb slot overflow on
+    // narrow screens) shifts touch coordinates vs painted content on iOS.
+    window.addEventListener("scroll", function () { window.scrollTo(0, 0); }, { passive: true });
+    // iOS Safari (non-PWA tab) ignores user-scalable=no — block pinch zoom.
+    document.addEventListener("gesturestart", function (e) { e.preventDefault(); });
+    document.addEventListener("gesturechange", function (e) { e.preventDefault(); });
   </script>
 </body>
 </html>
