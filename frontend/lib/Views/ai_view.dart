@@ -1154,31 +1154,91 @@ class _AIViewContentState extends State<_AIViewContent>
     );
   }
 
-  /// Build orb visualization widget
+  /// Build orb visualization widget.
+  ///
+  /// The orb iframe is pointer-transparent (see orb_widget_web_impl.dart), so
+  /// the HTML mic/speaker buttons can no longer receive taps. This overlays
+  /// PointerInterceptor hit targets at the exact screen positions where
+  /// orb.html renders those buttons, calling the same handlers. Positions
+  /// are computed from the same UiTuningValues that get passed into the
+  /// iframe as CSS variables, mirroring orb.html layout math:
+  ///   body (flex column, centered) > orb-container (gap) > [orb 300px,
+  ///   controls-row (margin-top), status (margin-top)]
   Widget _buildOrbVisualization(
     AIController controller,
     bool isDark,
     double scale,
   ) {
-    // Use WebView-based orb for exact visual fidelity
-    return OrbWebViewWidget(
-      size: UiTuningValues.orbSize * scale,
-      livekitService: controller.livekitService,
-      onOpenTray: _openHistoryTray,
-      isTrayOpen: _isHistoryTrayOpen,
-      onToggleMute: () => controller.toggleMute(),
-      onToggleSpeakerMute: () => controller.toggleSpeakerMute(),
-      isMuted: controller.isMuted,
-      isSpeakerMuted: controller.isSpeakerMuted,
-      debugOrbState: _debugOrbState,
-      orbScale: UiTuningValues.orbScale,
-      orbContainerGap: UiTuningValues.orbContainerGap,
-      micMarginTop: UiTuningValues.micMarginTop,
-      statusMarginTop: UiTuningValues.statusMarginTop,
-      statusFontSize: UiTuningValues.statusFontSize,
-      micButtonSize: UiTuningValues.micButtonSize,
-      isDrawerOpen: widget.isDrawerOpen,
-      statusTextOverride: controller.toolCallStatusText,
+    final orbSize = UiTuningValues.orbSize * scale;
+    const orbContent = 300.0; // orb-wrapper fixed size in orb.html
+    final gap = UiTuningValues.orbContainerGap;
+    final micMargin = UiTuningValues.micMarginTop;
+    final micSize = UiTuningValues.micButtonSize;
+    const buttonGap = 16.0; // controls-row gap in orb.html
+    final statusMargin = UiTuningValues.statusMarginTop;
+    const statusHeight = 22.0; // approx status-display rendered height
+    final contentH =
+        orbContent + gap + micMargin + micSize + gap + statusMargin + statusHeight;
+    // orb.html centers content vertically in the iframe (justify-content:center)
+    final top = (orbSize - contentH) / 2;
+    final rowTop = top + orbContent + gap + micMargin;
+    final rowW = micSize * 2 + buttonGap;
+    final micLeft = orbSize / 2 - rowW / 2;
+    final spkLeft = micLeft + micSize + buttonGap;
+    const pad = 6.0; // generous finger margin around the visible button
+
+    Widget hitTarget(Rect r, VoidCallback onTap) {
+      return Positioned(
+        left: r.left - pad,
+        top: r.top - pad,
+        width: r.width + pad * 2,
+        height: r.height + pad * 2,
+        child: PointerInterceptor(
+          child: Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerUp: (_) => onTap(),
+            child: const SizedBox.expand(),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: orbSize,
+      height: orbSize,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Use WebView-based orb for exact visual fidelity
+          OrbWebViewWidget(
+            size: orbSize,
+            livekitService: controller.livekitService,
+            onOpenTray: _openHistoryTray,
+            isTrayOpen: _isHistoryTrayOpen,
+            onToggleMute: () => controller.toggleMute(),
+            onToggleSpeakerMute: () => controller.toggleSpeakerMute(),
+            isMuted: controller.isMuted,
+            isSpeakerMuted: controller.isSpeakerMuted,
+            debugOrbState: _debugOrbState,
+            orbScale: UiTuningValues.orbScale,
+            orbContainerGap: UiTuningValues.orbContainerGap,
+            micMarginTop: UiTuningValues.micMarginTop,
+            statusMarginTop: UiTuningValues.statusMarginTop,
+            statusFontSize: UiTuningValues.statusFontSize,
+            micButtonSize: UiTuningValues.micButtonSize,
+            isDrawerOpen: widget.isDrawerOpen,
+            statusTextOverride: controller.toolCallStatusText,
+          ),
+          hitTarget(
+            Rect.fromLTWH(micLeft, rowTop, micSize, micSize),
+            () => controller.toggleMute(),
+          ),
+          hitTarget(
+            Rect.fromLTWH(spkLeft, rowTop, micSize, micSize),
+            () => controller.toggleSpeakerMute(),
+          ),
+        ],
+      ),
     );
   }
 

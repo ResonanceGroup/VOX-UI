@@ -26,7 +26,7 @@ void _ensureFactory() {
       ..setAttribute('allowtransparency', 'true')
       // iOS Safari paints a white platform-view backing surface when this is
       // transparent. Start dark; runtime theme sync updates this immediately.
-      ..style.cssText = 'border:none;width:100%;height:100%;display:block;background:#1e1e1e;transition:background-color 260ms ease-in-out, background 260ms ease-in-out;';
+      ..style.cssText = 'border:none;width:100%;height:100%;display:block;pointer-events:none;background:#1e1e1e;transition:background-color 260ms ease-in-out, background 260ms ease-in-out;';
   });
 }
 
@@ -144,14 +144,14 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
   @override
   void didUpdateWidget(OrbWebViewWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Toggle iframe pointer-events so Flutter tray overlay can receive touches
-    // when open. Without this the iframe captures all browser touch events
-    // regardless of Flutter's z-ordering.
-    if (widget.isTrayOpen != oldWidget.isTrayOpen ||
-        widget.isDrawerOpen != oldWidget.isDrawerOpen) {
-      final block = widget.isTrayOpen || widget.isDrawerOpen;
-      _iframeElement?.style.pointerEvents = block ? 'none' : 'auto';
-    }
+    // The iframe is now PERMANENTLY pointer-transparent. Platform views sit
+    // above Flutter's canvas in the DOM, so any pointer-events:auto region of
+    // the iframe swallows every mobile touch inside its rect — including the
+    // ~100px invisible margin around the 300px orb inside a 500px view. With
+    // pointer-events:none, touches fall through to Flutter everywhere; the
+    // mic/speaker buttons get Flutter-side PointerInterceptor hit targets
+    // (see ai_view.dart _buildOrbVisualization).
+    _iframeElement?.style.pointerEvents = 'none';
     // Mic mute is now an overlay modifier — no state change needed here.
     // _send() below always includes micMuted in payload, which orb.html handles
     // by toggling orb-mic-muted class without interrupting the state machine.
@@ -195,7 +195,7 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
                 _iframeElement = iframe;  // store for pointer-events toggling
                 _applyIframeBacking(_currentTheme);
                 // Apply current tray/drawer block state immediately
-                iframe.style.pointerEvents = (widget.isTrayOpen || widget.isDrawerOpen) ? 'none' : 'auto';
+                iframe.style.pointerEvents = 'none'; // permanent — see didUpdateWidget note
               }
               break;
             }
