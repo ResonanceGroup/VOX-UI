@@ -149,6 +149,7 @@ CONFIGURABLE_KEYS = {
     "stt_url", "stt_model",
     "tts_url", "tts_voice", "tts_speed", "tts_model",
     "llm_base_url", "llm_model", "llm_api_key",
+    "llm_type", "llm_chat_key",
     "llm_temperature", "llm_max_completion_tokens", "llm_disable_thinking",
     "max_context_items",
     "llm_read_timeout",
@@ -176,7 +177,7 @@ def _normalize_url(url: str) -> str:
     return url
 
 
-_LLM_KEYS = {"llm_base_url", "llm_model", "llm_api_key"}
+_LLM_KEYS = {"llm_base_url", "llm_model", "llm_api_key", "llm_type", "llm_chat_key"}
 
 def _delete_current_room() -> bool:
     """Delete the LiveKit room so the next client connection creates a fresh one.
@@ -246,6 +247,8 @@ def get_effective_config() -> dict:
         "llm_base_url":                ov("llm_base_url",                config.llm_base_url),
         "llm_model":                   ov("llm_model",                   config.llm_model),
         "llm_api_key":                 ov("llm_api_key",                 config.llm_api_key),
+        "llm_type":                    ov("llm_type",                     None),
+        "llm_chat_key":                ov("llm_chat_key",                 None),
         "llm_temperature":             ov("llm_temperature",             config.llm_temperature),
         "llm_max_completion_tokens":   ov("llm_max_completion_tokens",   config.llm_max_completion_tokens),
     "max_context_items":            ov("max_context_items",            10),

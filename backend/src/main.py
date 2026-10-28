@@ -469,7 +469,12 @@ async def entrypoint(ctx: JobContext) -> None:
     # around Letta agents), use the native LettaLLM plugin instead of
     # openai.LLM. This gives us tool call visibility (status messages
     # to Flutter) and timeout keepalive on tool call events.
-    _is_lettabot = _llm_url and ":8080" in _llm_url and "192.168.122" in _llm_url
+    _llm_type = eff.get("llm_type")
+    _is_lettabot = (
+        (_llm_type == "letta")
+        or (_llm_url and ":8080" in _llm_url and "192.168.122" in _llm_url)
+        or (_llm_url and ":4610" in _llm_url)  # Letta app-server bridge
+    )
 
     # Shared publish_data callback — both LettaLLM and the agent state
     # handler use this to send data messages to the Flutter client.
@@ -506,6 +511,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 timeout=float(_llm_read_timeout),
                 publish_data=_publish_data,
                 reset_timeout=_reset_timeout,
+                chat_key=eff.get("llm_chat_key"),
             )
         )
     else:
@@ -627,6 +633,10 @@ async def entrypoint(ctx: JobContext) -> None:
     # LiveKit event emitter expects sync callbacks; schedule async work inside.
     @ctx.room.on("data_received")
     def on_data_received(packet):
+        logger.info("DATA_RECEIVED: from=%s topic=%s len=%d",
+                    getattr(getattr(packet, "participant", None), "identity", "?"),
+                    getattr(packet, "topic", "?"),
+                    len(packet.data) if packet.data else 0)
         async def _handle() -> None:
             participant_identity = (
                 packet.participant.identity if packet.participant else "unknown"
@@ -643,6 +653,20 @@ async def entrypoint(ctx: JobContext) -> None:
                         participant_identity, approval_id, approved,
                     )
                     RVAgent.resolve_approval(approval_id, approved)
+                    return
+
+                # Text input (chat-style) — inject as a user turn into the
+                # agent session. Used by the test client and available to the
+                # UI for a text chat box alongside voice.
+                if msg_type == "text_input":
+                    text = (payload.get("text") or "").strip()
+                    if not text:
+                        return
+                    logger.info("Text input from %s: %r", participant_identity, text[:100])
+                    _try_generate_reply(
+                        instructions=text,
+                        reason=f"text_input from {participant_identity}",
+                    )
                     return
 
                 # Debug-only: trigger a fake approval request to test the

@@ -43,6 +43,9 @@ class LettaLLMConfig:
     publish_data: Optional[Callable[[dict], Any]] = None
     # Callback to reset the read timeout (keepalive on tool calls)
     reset_timeout: Optional[Callable[[], None]] = None
+    # Persistent conversation key (sent as x-letta-chat-key header) — keeps
+    # one server-side conversation across turns (continuity + warm cache)
+    chat_key: Optional[str] = None
 
 
 # Friendly display names for common tool names
@@ -257,10 +260,14 @@ class LettaLLM(llm.LLM):
         try:
             from openai import AsyncOpenAI
 
+            _headers = {}
+            if self.config.chat_key:
+                _headers["x-letta-chat-key"] = self.config.chat_key
             self._client = AsyncOpenAI(
                 base_url=f"{self.config.api_url}/v1",
                 api_key=self.config.api_key or "sk-placeholder",
                 timeout=self.config.timeout,
+                default_headers=_headers or None,
             )
             self._initialized = True
             logger.info("LettaLLM initialized (agent=%s, url=%s)",
