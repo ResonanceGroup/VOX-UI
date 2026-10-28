@@ -1,18 +1,21 @@
 """
-letta.py — Letta LLM Plugin for LiveKit Agents v1.4.5
+letta.py — Lettabot LLM Plugin for LiveKit Agents v1.4.5
 
-MCP tool calling pattern:
-- Letta server = brain (memory + reasoning + tool calling via MCP)
-- Client harness = voice interface (just streams text)
+Uses the Lettabot OpenAI-compatible API (/v1/chat/completions) to stream
+responses from a Letta agent. Tool call events in the SSE stream are
+captured and published as data messages to the Flutter client for UI
+display (chat tiles + status text). Each tool call event also resets
+the read timeout (keepalive).
 
-Tools are called via MCP server (mcp_server.py), not through LiveKit.
-The plugin just streams text responses from Letta.
-
-Flow with LiveKit:
+Flow:
 1. chat() returns LLMStream instance
-2. LLMStream._run() calls Letta streaming API
-3. For AssistantMessage: emit text chunk
-4. Tool calls are handled by Letta directly via MCP
+2. LLMStream._run() calls Lettabot /v1/chat/completions (streaming)
+3. Text deltas → emit as ChatChunk
+4. Tool call deltas → publish tool_call_status data message + reset timeout
+5. Finish → done
+
+The Lettabot API already emits tool_call chunks in the SSE stream
+(server.ts line 657-664), so we parse them here.
 """
 
 from __future__ import annotations
@@ -20,10 +23,10 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Any, Callable, List, Optional
 
 from livekit.agents import llm
-from livekit.agents.llm import ChatContext, ChatChunk, ChoiceDelta
+from livekit.agents.llm import ChatContext, ChatChunk, ChoiceDelta, FunctionToolCall
 from livekit.agents.llm.llm import DEFAULT_API_CONNECT_OPTIONS, APIConnectOptions
 
 logger = logging.getLogger(__name__)
@@ -31,19 +34,46 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class LettaLLMConfig:
-    """Configuration for Letta LLM plugin."""
-    agent_id: str
-    letta_url: str = "http://localhost:8283"
-    letta_api_key: Optional[str] = None
-    timeout: float = 60.0
+    """Configuration for Lettabot LLM plugin."""
+    agent_name: str  # e.g., "Milo"
+    api_url: str = "http://192.168.122.116:8080"
+    api_key: str = ""
+    timeout: float = 300.0
+    # Callback to publish data messages to the LiveKit room
+    publish_data: Optional[Callable[[dict], Any]] = None
+    # Callback to reset the read timeout (keepalive on tool calls)
+    reset_timeout: Optional[Callable[[], None]] = None
+
+
+# Friendly display names for common tool names
+_TOOL_DISPLAY_NAMES = {
+    "web_search": "Searching the web",
+    "get_current_time": "Getting the time",
+    "fetch_webpage": "Fetching webpage",
+    "run_python": "Running code",
+    "Bash": "Running a command",
+    "memory": "Updating memory",
+    "archival_memory_insert": "Saving to memory",
+    "archival_memory_search": "Searching memory",
+    "core_memory_append": "Updating context",
+    "core_memory_replace": "Updating context",
+    "send_message": "Sending message",
+}
+
+
+def _tool_display_name(tool_name: str) -> str:
+    """Return a short, human-readable phrase for a tool call."""
+    if tool_name in _TOOL_DISPLAY_NAMES:
+        return _TOOL_DISPLAY_NAMES[tool_name]
+    # Fallback: convert snake_case to title case
+    return tool_name.replace("_", " ").title()
 
 
 class LettaLLMStream(llm.LLMStream):
     """
-    LLMStream implementation for Letta with MCP tool calling.
-    
-    Just streams text responses from Letta. Tool calls are handled
-    by Letta directly via MCP server.
+    LLMStream implementation for Lettabot OpenAI-compatible API.
+
+    Streams text responses and publishes tool call status as data messages.
     """
 
     def __init__(
@@ -53,228 +83,156 @@ class LettaLLMStream(llm.LLMStream):
         chat_ctx: ChatContext,
         conn_options: APIConnectOptions,
         client: Any,
-        agent_id: str,
+        agent_name: str,
     ) -> None:
         super().__init__(llm, chat_ctx=chat_ctx, tools=[], conn_options=conn_options)
-        self._client = client
-        self._agent_id = agent_id
+        self._client = client  # openai.AsyncOpenAI instance
+        self._agent_name = agent_name
         self._parent_llm = llm
         self._prompt_preview = ""
-        self._chunk_types: list[str] = []
-        self._tool_names: set[str] = set()
-        self._tool_returns: list[dict[str, str]] = []
-        self._saw_tool_call = False
-        self._saw_tool_return = False
+        self._tool_call_count = 0
+        # Track tool calls by index to match call/return
+        self._active_tool_calls: dict[int, str] = {}  # index → tool_name
+
+    async def _publish_tool_status(self, tool_name: str, status: str) -> None:
+        """Publish a tool_call_status data message to the Flutter client."""
+        publish_fn = self._parent_llm.config.publish_data
+        if publish_fn is None:
+            return
+        try:
+            await publish_fn({
+                "type": "tool_call_status",
+                "tool_name": tool_name,
+                "display_name": _tool_display_name(tool_name),
+                "status": status,  # "calling" or "completed"
+                "count": self._tool_call_count,
+            })
+        except Exception as e:
+            logger.debug("Failed to publish tool_call_status: %s", e)
+
+    def _reset_timeout(self) -> None:
+        """Reset the read timeout (keepalive)."""
+        reset_fn = self._parent_llm.config.reset_timeout
+        if reset_fn is not None:
+            try:
+                reset_fn()
+            except Exception as e:
+                logger.debug("Failed to reset timeout: %s", e)
 
     async def _run(self) -> None:
         """Main execution loop - called by LLMStream base class."""
         try:
-            # Ensure client is initialized (lazy init from parent LLM)
+            # Lazy init — ensure the OpenAI client is ready
             if self._client is None:
                 await self._parent_llm._ensure_initialized()
                 self._client = self._parent_llm._client
 
-            # Build Letta messages - only latest user message
-            letta_messages = self._build_letta_messages()
-
-            if not letta_messages:
-                logger.warning("No messages to send to Letta — aborting stream call")
+            # Build messages - only latest user message (slim context)
+            user_message = self._extract_user_message()
+            if not user_message:
+                logger.warning("No user message to send to Lettabot — aborting stream call")
                 return
 
-            logger.debug(f"Sending {len(letta_messages)} messages to Letta agent {self._agent_id}")
-            
-            # Use streaming API
-            stream = await self._client.agents.messages.stream(
-                agent_id=self._agent_id,
-                messages=letta_messages,
-                streaming=True,
-                include_return_message_types=[
-                    "assistant_message",
-                    "tool_call_message",
-                    "tool_return_message",
-                ],
+            self._prompt_preview = user_message[:200]
+            logger.info("LettaLLM: sending to %s (model=%s): %s...",
+                        self._parent_llm.config.api_url,
+                        self._agent_name,
+                        user_message[:100])
+
+            # Call Lettabot OpenAI-compatible streaming API
+            response = await self._client.chat.completions.create(
+                model=self._agent_name,
+                messages=[{"role": "user", "content": user_message}],
+                stream=True,
+                timeout=self._parent_llm.config.timeout,
             )
-            
+
             # Process the stream
             chunk_count = 0
-            async for chunk in stream:
+            async for chunk in response:
                 chunk_count += 1
-                await self._process_chunk(chunk)
+                if not chunk.choices:
+                    continue
 
-            logger.info(
-                "LETTA_TURN_SUMMARY prompt=%r saw_tool_call=%s saw_tool_return=%s tool_names=%s tool_returns=%s chunk_types=%s",
-                self._prompt_preview,
-                self._saw_tool_call,
-                self._saw_tool_return,
-                sorted(self._tool_names),
-                self._tool_returns,
-                self._chunk_types,
-            )
-            logger.info(
-                "LETTA_TURN_SUMMARY_JSON %s",
-                json.dumps(
-                    {
-                        "prompt": self._prompt_preview,
-                        "saw_tool_call": self._saw_tool_call,
-                        "saw_tool_return": self._saw_tool_return,
-                        "tool_names": sorted(self._tool_names),
-                        "tool_returns": self._tool_returns,
-                        "chunk_types": self._chunk_types,
-                    },
-                    ensure_ascii=False,
-                ),
-            )
-            logger.info(f"Letta stream completed: {chunk_count} chunks processed")
-                
-        except Exception as e:
-            logger.error(f"LettaLLM stream error: {e}", exc_info=True)
+                choice = chunk.choices[0]
+                delta = choice.delta
 
-    async def _process_chunk(self, chunk: Any) -> None:
-        """Process a single chunk from the Letta stream."""
-        msg_type = getattr(chunk, 'message_type', None)
-        self._chunk_types.append(msg_type or chunk.__class__.__name__)
-        logger.debug(f"Letta chunk: {msg_type}")
-
-        if msg_type == "assistant_message":
-            # Text response from agent - emit as-is
-            raw_content = getattr(chunk, 'content', '')
-            if isinstance(raw_content, list):
-                content = " ".join(
-                    item.text for item in raw_content
-                    if hasattr(item, 'text') and item.text
-                ).strip()
-            else:
-                content = raw_content or ''
-            
-            if content:
-                logger.debug(f"assistant_message: {content[:120]}")
-                self._event_ch.send_nowait(
-                    ChatChunk(
-                        id="response",
-                        delta=ChoiceDelta(
-                            role="assistant",
-                            content=content,
-                        ),
+                # Text content
+                if delta.content:
+                    self._event_ch.send_nowait(
+                        ChatChunk(
+                            id="response",
+                            delta=ChoiceDelta(
+                                role="assistant",
+                                content=delta.content,
+                            ),
+                        )
                     )
-                )
-        
-        elif msg_type == "tool_call_message":
-            # Tool called via MCP - just log it
-            self._saw_tool_call = True
-            tool_call = getattr(chunk, 'tool_call', None)
-            if tool_call:
-                tool_name = getattr(tool_call, 'name', '')
-                if tool_name:
-                    self._tool_names.add(tool_name)
-                logger.info(f"MCP tool called: {tool_name}")
-        
-        elif msg_type == "tool_return_message":
-            # Tool return result - log it
-            self._saw_tool_return = True
-            tool_name = getattr(chunk, 'name', '')
-            if tool_name:
-                self._tool_names.add(tool_name)
-            tool_return = getattr(chunk, 'tool_return', '')
-            tool_return_text = str(tool_return or '')
-            self._tool_returns.append(
-                {
-                    "name": tool_name,
-                    "output": tool_return_text,
-                }
-            )
-            logger.debug(f"Tool return: {tool_return_text[:100] if tool_return_text else '(empty)'}")
-        
-        elif msg_type == "reasoning_message":
-            reasoning = getattr(chunk, 'reasoning', '')
-            if reasoning:
-                logger.debug(f"Reasoning: {reasoning[:200]}...")
-        
-        elif msg_type == "stop_reason":
-            reason = getattr(chunk, 'reason', None)
-            logger.debug(f"Stop reason: {reason}")
 
-    def _build_letta_messages(self) -> List[Any]:
-        """
-        Build Letta message format from chat context.
-        
-        Sends only the latest user message.
-        Let Letta server manage its own message history.
-        """
-        messages = []
+                # Tool call events — the Lettabot API emits these in the SSE stream
+                if delta.tool_calls:
+                    for tc_delta in delta.tool_calls:
+                        tc_index = getattr(tc_delta, 'index', 0)
+                        tc_id = getattr(tc_delta, 'id', None) or f"call_{tc_index}"
+                        func = getattr(tc_delta, 'function', None)
+                        tool_name = getattr(func, 'name', None) or 'unknown'
+                        tool_args = getattr(func, 'arguments', None) or '{}'
 
-        # Find latest user message
+                        if tool_name and tool_name != 'unknown':
+                            self._tool_call_count += 1
+                            self._active_tool_calls[tc_index] = tool_name
+                            logger.info("Lettabot tool_call: %s (index=%d)", tool_name, tc_index)
+
+                            # Publish tool call status to Flutter
+                            await self._publish_tool_status(tool_name, "calling")
+                            # Reset timeout (keepalive)
+                            self._reset_timeout()
+
+                # Finish reason
+                if choice.finish_reason in ("tool_calls", "stop"):
+                    # Lettabot executes tools internally — by the time we get
+                    # finish_reason, tools are done. Publish completed for any
+                    # active tool calls we saw during the stream.
+                    for idx, name in self._active_tool_calls.items():
+                        await self._publish_tool_status(name, "completed")
+                        self._reset_timeout()
+                    self._active_tool_calls.clear()
+
+            logger.info("LettaLLM stream completed: %d chunks, %d tool calls",
+                        chunk_count, self._tool_call_count)
+
+        except Exception as e:
+            logger.error("LettaLLM stream error: %s", e, exc_info=True)
+
+    def _extract_user_message(self) -> str:
+        """Extract the latest user message from chat context."""
         for item in reversed(self._chat_ctx.items):
             if hasattr(item, 'role') and item.role == 'user':
                 content = item.content
-
                 if isinstance(content, str):
-                    letta_content = content
+                    return content
                 elif isinstance(content, list):
-                    letta_content_parts = []
+                    parts = []
                     for c in content:
                         if isinstance(c, str):
-                            letta_content_parts.append(c)
+                            parts.append(c)
                         elif hasattr(c, 'type') and c.type == 'text':
-                            letta_content_parts.append(c.text)
+                            parts.append(c.text)
                         else:
-                            letta_content_parts.append(str(c))
-                    letta_content = " ".join(letta_content_parts)
+                            parts.append(str(c))
+                    return " ".join(parts)
                 else:
-                    letta_content = str(content)
-
-                messages.append({
-                    "role": "user",
-                    "content": letta_content
-                })
-                self._prompt_preview = letta_content[:200]
-                logger.debug(f"User message: {letta_content[:100]}...")
-                break
-
-        if not messages:
-            # Check for instruction-only turn (e.g., greeting)
-            for item in reversed(self._chat_ctx.items):
-                if hasattr(item, 'role') and item.role in ('developer', 'system'):
-                    content = item.content
-                    if isinstance(content, str):
-                        letta_content = content
-                    elif isinstance(content, list):
-                        parts = []
-                        for c in content:
-                            if isinstance(c, str):
-                                parts.append(c)
-                            elif hasattr(c, 'type') and c.type == 'text':
-                                parts.append(c.text)
-                            else:
-                                parts.append(str(c))
-                        letta_content = " ".join(parts)
-                    else:
-                        letta_content = str(content)
-
-                    letta_content = letta_content.strip()
-                    if not letta_content:
-                        continue
-
-                    # Skip long developer messages (base instructions)
-                    if len(letta_content) > 500:
-                        logger.debug(f"Skipping long developer message ({len(letta_content)} chars)")
-                        continue
-
-                    messages.append({
-                        "role": "user",
-                        "content": f"SYSTEM: {letta_content}",
-                    })
-                    self._prompt_preview = f"SYSTEM: {letta_content}"[:200]
-                    logger.debug(f"Instruction: {letta_content[:100]}")
-                    break
-
-        return messages
+                    return str(content)
+        return ""
 
 
 class LettaLLM(llm.LLM):
     """
-    OpenAI-compatible LLM interface for Letta agents.
-    
-    Tools are handled by Letta directly via MCP server.
+    OpenAI-compatible LLM interface for Lettabot agents.
+
+    Uses the Lettabot /v1/chat/completions endpoint.
+    Tool call events in the SSE stream are published as data messages
+    for UI display.
     """
 
     def __init__(self, config: LettaLLMConfig) -> None:
@@ -285,28 +243,30 @@ class LettaLLM(llm.LLM):
 
     @property
     def model(self) -> str:
-        return f"letta/{self.config.agent_id}"
+        return f"lettabot/{self.config.agent_name}"
 
     @property
     def provider(self) -> str:
-        return "letta"
+        return "lettabot"
 
     async def _ensure_initialized(self) -> None:
-        """Lazy initialization of Letta client."""
+        """Lazy initialization of OpenAI client pointed at Lettabot."""
         if self._initialized:
             return
-        
+
         try:
-            from letta_client import AsyncLetta
-            
-            self._client = AsyncLetta(
-                base_url=self.config.letta_url,
-                **({'api_key': self.config.letta_api_key} if self.config.letta_api_key else {})
+            from openai import AsyncOpenAI
+
+            self._client = AsyncOpenAI(
+                base_url=f"{self.config.api_url}/v1",
+                api_key=self.config.api_key or "sk-placeholder",
+                timeout=self.config.timeout,
             )
             self._initialized = True
-            logger.info(f"LettaLLM initialized (agent: {self.config.agent_id})")
+            logger.info("LettaLLM initialized (agent=%s, url=%s)",
+                        self.config.agent_name, self.config.api_url)
         except Exception as e:
-            logger.error(f"Failed to initialize Letta client: {e}")
+            logger.error("Failed to initialize Lettabot client: %s", e)
             raise
 
     def chat(
@@ -317,19 +277,18 @@ class LettaLLM(llm.LLM):
         conn_options: APIConnectOptions = DEFAULT_API_CONNECT_OPTIONS,
         **kwargs,
     ) -> llm.LLMStream:
-        """
-        Main entry point for chat completions.
-        
-        Tools are ignored - they're handled by Letta via MCP.
-        """
-        logger.info(f"LettaLLM.chat called (tools handled by MCP)")
-        
+        """Main entry point for chat completions."""
+        logger.info("LettaLLM.chat called (model=%s)", self.config.agent_name)
+
+        # Lazy init is handled in LettaLLMStream._run() — don't call
+        # run_until_complete() here, the event loop is already running.
+
         stream = LettaLLMStream(
             self,
             chat_ctx=chat_ctx,
             conn_options=conn_options,
             client=self._client,
-            agent_id=self.config.agent_id,
+            agent_name=self.config.agent_name,
         )
         return stream
 

@@ -50,6 +50,7 @@ class OrbWebViewWidget extends StatefulWidget {
   final double statusMarginTop;
   final double statusFontSize;
   final double micButtonSize;
+  final String? statusTextOverride; // Override status text (e.g., tool call status)
 
   const OrbWebViewWidget({
     super.key,
@@ -69,6 +70,7 @@ class OrbWebViewWidget extends StatefulWidget {
     this.statusMarginTop = 12.0,
     this.statusFontSize = 27.0,
     this.micButtonSize = 62.0,
+    this.statusTextOverride,
   });
 
   @override
@@ -420,7 +422,7 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
             if (!audioOnly) 'state':        effectiveState,
             'level':        _currentLevel,
             if (!audioOnly) 'theme':        _currentTheme,
-            if (!audioOnly) 'status':      widget.debugOrbState ?? _currentStatus,
+            if (!audioOnly) 'status':      widget.statusTextOverride ?? (widget.debugOrbState ?? _currentStatus),
             if (!audioOnly) 'micMuted':    svcMuted,
             if (!audioOnly) 'speakerMuted': svcSpeakerMuted,
           },

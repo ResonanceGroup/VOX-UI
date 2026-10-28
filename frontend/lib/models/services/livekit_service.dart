@@ -15,6 +15,21 @@ class LiveKitService {
   factory LiveKitService() => _instance;
   LiveKitService._internal();
 
+  /// Strip LettaBot action tags (e.g., <actions><react emoji="..."></actions>)
+  /// from agent text so they don't appear as raw XML in the chat UI.
+  static String _stripAgentTags(String text) {
+    // Remove <actions>...</actions> blocks (including nested tags)
+    text = text.replaceAllMapped(
+      RegExp(r'<actions>[\s\S]*?</actions>', multiLine: true),
+      (_) => '',
+    );
+    // Remove any standalone <no-reply/> tags
+    text = text.replaceAll('<no-reply/>', '');
+    // Clean up leftover whitespace
+    text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
+    return text;
+  }
+
   /// Fetch a LiveKit access token from the token service.
   /// [tokenServiceUrl] overrides the default URL from AppConstants.
   /// Returns a map with 'token' and 'url' keys.
@@ -104,6 +119,10 @@ class LiveKitService {
   // and needs user confirmation. Payload: {approval_id, tool_name, tool_args, description}
   final StreamController<Map<String, dynamic>> _toolApprovalController =
       StreamController<Map<String, dynamic>>.broadcast();
+  // Tool call status updates from the agent (e.g., "Searching the web", "Getting the time").
+  // Payload: {tool_name, display_name, status, count}
+  final StreamController<Map<String, dynamic>> _toolCallStatusController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   Stream<AIConnectionState> get connectionState =>
       _connectionStateController.stream;
@@ -116,6 +135,8 @@ class LiveKitService {
   Stream<double> get audioLevel => _audioLevelController.stream;
   Stream<Map<String, dynamic>> get toolApprovalRequests =>
       _toolApprovalController.stream;
+  Stream<Map<String, dynamic>> get toolCallStatus =>
+      _toolCallStatusController.stream;
 
   AIConnectionState _currentConnectionState = AIConnectionState.disconnected;
   AIAgentState _currentAgentState = AIAgentState.idle;
@@ -444,6 +465,64 @@ class LiveKitService {
           debugPrint("[STATE] SPKR: " + (_ha ? "audible" : "empty"));
         _updateActiveSpeakers(event.speakers);
       });
+
+    // Register handler for lk.agent.events — the SDK sends conversation_item_added
+    // events on this topic. This is how text responses reach the client when the
+    // agent responds to a typed chat message (no audio transcription for text-only).
+    _room?.registerTextStreamHandler('lk.agent.events', _handleAgentEventStream);
+  }
+
+  /// Handle incoming text streams on the lk.agent.events topic.
+  /// The LiveKit Agents SDK sends conversation_item_added events here,
+  /// including the assistant's text responses.
+  void _handleAgentEventStream(TextStreamReader reader, String participantIdentity) async {
+    try {
+      final raw = await reader.readAll();
+      if (raw.isEmpty) return;
+      final event = jsonDecode(raw) as Map<String, dynamic>;
+      final type = event['type'] as String?;
+
+      if (type == 'conversation_item_added') {
+        final item = event['item'] as Map<String, dynamic>?;
+        if (item == null) return;
+        final role = item['role'] as String?;
+        final content = item['content'];
+        if (role == 'assistant' && content != null) {
+          String text;
+          if (content is List) {
+            text = content.whereType<String>().join(' ');
+          } else if (content is String) {
+            text = content;
+          } else {
+            text = content.toString();
+          }
+          if (text.isNotEmpty) {
+            text = _stripAgentTags(text);
+            if (text.isNotEmpty) {
+              _streamingResponseController.add(''); // clear streaming preview
+              _responseController.add(text);
+            }
+          }
+        }
+      } else if (type == 'agent_state_changed') {
+        final newState = event['new_state'] as String?;
+        if (newState != null) {
+          _updateAgentState(_parseAgentState(newState), source: "agent_event");
+        }
+      } else if (type == 'user_input_transcribed') {
+        final transcript = event['transcript'] as String?;
+        if (transcript != null && transcript.isNotEmpty) {
+          final isFinal = event['is_final'] as bool? ?? true;
+          if (isFinal) {
+            _transcriptController.add(transcript);
+          }
+        }
+      }
+    } catch (e) {
+      if (AppConstants.aiEnableDebugLogs) {
+        debugPrint('LiveKitService: Failed to handle agent event stream: $e');
+      }
+    }
   }
 
   void _handleDataMessage(Map<String, dynamic> json) {
@@ -452,6 +531,11 @@ class LiveKitService {
       case 'tool_approval_request':
         if (!_toolApprovalController.isClosed) {
           _toolApprovalController.add(Map<String, dynamic>.from(json));
+        }
+        break;
+      case 'tool_call_status':
+        if (!_toolCallStatusController.isClosed) {
+          _toolCallStatusController.add(Map<String, dynamic>.from(json));
         }
         break;
       case 'response':
@@ -821,6 +905,8 @@ class LiveKitService {
       _streamingResponseController.close();
     if (!_agentStateController.isClosed) _agentStateController.close();
     if (!_audioLevelController.isClosed) _audioLevelController.close();
+    if (!_toolApprovalController.isClosed) _toolApprovalController.close();
+    if (!_toolCallStatusController.isClosed) _toolCallStatusController.close();
 
     _localAudioTrack?.stop();
     _localAudioTrack?.dispose();

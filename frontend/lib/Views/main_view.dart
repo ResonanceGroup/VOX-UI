@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'ai_view.dart';
 import 'settings_view.dart';
-import 'profile_view.dart';
 import 'theme_manager.dart';
 import '../models/app_preferences_notifier.dart';
 import '../Controllers/ai_controller.dart';
@@ -22,7 +21,7 @@ class NavDestination {
   });
 }
 
-/// Main view with hamburger drawer navigation
+/// Main view — drawer for nav + bottom bar on mobile
 class MainView extends StatelessWidget {
   const MainView({super.key});
 
@@ -47,8 +46,9 @@ class _MainViewContent extends StatefulWidget {
 }
 
 class _MainViewContentState extends State<_MainViewContent> {
-  int _selectedIndex = 0; // Default to Voice
+  int _selectedIndex = 0;
   bool _isDrawerOpen = false;
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   List<NavDestination> _buildDestinations() => [
     NavDestination(
@@ -63,62 +63,87 @@ class _MainViewContentState extends State<_MainViewContent> {
       selectedIcon: Icons.settings,
       view: SettingsView(onSaved: () => setState(() => _selectedIndex = 0)),
     ),
-    NavDestination(
-      label: 'Profiles',
-      icon: Icons.psychology_outlined,
-      selectedIcon: Icons.psychology,
-      view: const ProfileView(),
-    ),
   ];
+
+  void _switchTo(int i) {
+    setState(() => _selectedIndex = i);
+  }
 
   @override
   Widget build(BuildContext context) {
     final destinations = _buildDestinations();
     final settings = context.watch<AppPreferencesNotifier>();
     final scale = settings.uiScale;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: _buildAppBar(scale, destinations),
-      onDrawerChanged: (isOpen) => setState(() => _isDrawerOpen = isOpen),
-      drawer: _buildDrawer(context, scale, destinations),
+      key: _scaffoldKey,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          tooltip: 'Open menu',
+        ),
+        title: Text(
+          destinations[_selectedIndex].label,
+          style: TextStyle(fontSize: 20 * scale),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              ThemeManager().isDarkMode ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+            ),
+            onPressed: () {
+              final next = ThemeManager().isDarkMode ? ThemeMode.light : ThemeMode.dark;
+              ThemeManager().setThemeMode(next);
+              context.read<AppPreferencesNotifier>().setThemeMode(next);
+            },
+            tooltip: 'Toggle theme',
+          ),
+          SizedBox(width: 8 * scale),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            height: 1,
+            color: ThemeManager().isDarkMode
+                ? const Color(0xFF333333)
+                : const Color(0xFFEEEEEE),
+          ),
+        ),
+      ),
+      drawer: _buildDrawer(theme, scale, destinations),
+      onDrawerChanged: (open) => setState(() => _isDrawerOpen = open),
       body: IndexedStack(
         index: _selectedIndex,
         children: destinations.map((d) => d.view).toList(),
       ),
+
     );
   }
 
-  /// Side drawer with navigation items + blur/dark overlay (provided by Flutter)
-  Widget _buildDrawer(BuildContext context, double scale, List<NavDestination> destinations) {
-    final theme = Theme.of(context);
-    // Keep the drawer just wider than the widest item so the dimmed orb
-    // remains visible behind it.
-    final drawerWidth = 200.0 * scale;
+  Widget _buildDrawer(ThemeData theme, double scale, List<NavDestination> destinations) {
+    final drawerWidth = (200.0 * scale).clamp(190.0, 232.0);
     return Drawer(
-      width: drawerWidth.clamp(190.0, 232.0),
+      width: drawerWidth,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
               padding: EdgeInsets.fromLTRB(20 * scale, 24 * scale, 20 * scale, 16 * scale),
-              child: Text(
-                'VoxUI',
-                style: TextStyle(
-                  fontSize: 22 * scale,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
+              child: Text('VoxUI', style: TextStyle(
+                fontSize: 22 * scale,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+              )),
             ),
             Divider(height: 1),
             SizedBox(height: 8 * scale),
             for (int i = 0; i < destinations.length; i++)
               ListTile(
                 leading: Icon(
-                  _selectedIndex == i
-                      ? destinations[i].selectedIcon
-                      : destinations[i].icon,
+                  _selectedIndex == i ? destinations[i].selectedIcon : destinations[i].icon,
                   color: _selectedIndex == i
                       ? theme.colorScheme.primary
                       : theme.colorScheme.onSurfaceVariant,
@@ -127,9 +152,7 @@ class _MainViewContentState extends State<_MainViewContent> {
                   destinations[i].label,
                   style: TextStyle(
                     fontSize: 16 * scale,
-                    fontWeight: _selectedIndex == i
-                        ? FontWeight.w600
-                        : FontWeight.normal,
+                    fontWeight: _selectedIndex == i ? FontWeight.w600 : FontWeight.normal,
                     color: _selectedIndex == i
                         ? theme.colorScheme.primary
                         : theme.colorScheme.onSurface,
@@ -146,39 +169,6 @@ class _MainViewContentState extends State<_MainViewContent> {
                 },
               ),
           ],
-        ),
-      ),
-    );
-  }
-
-  /// Build the app bar — hamburger auto-added by Scaffold when drawer is set
-  PreferredSizeWidget _buildAppBar(double scale, List<NavDestination> destinations) {
-    final isDark = ThemeManager().isDarkMode;
-    return AppBar(
-      title: Text(
-        destinations[_selectedIndex].label,
-        style: TextStyle(fontSize: 20 * scale),
-      ),
-      actions: [
-        IconButton(
-          icon: Icon(
-            isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
-          ),
-          onPressed: () {
-            final nextMode = ThemeManager().isDarkMode ? ThemeMode.light : ThemeMode.dark;
-            ThemeManager().setThemeMode(nextMode);
-            context.read<AppPreferencesNotifier>().setThemeMode(nextMode);
-          },
-          tooltip: 'Toggle theme',
-        ),
-        SizedBox(width: 8 * scale),
-      ],
-      // 1px separator matching original VoxUI header border-bottom
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(
-          height: 1,
-          color: isDark ? const Color(0xFF333333) : const Color(0xFFEEEEEE),
         ),
       ),
     );

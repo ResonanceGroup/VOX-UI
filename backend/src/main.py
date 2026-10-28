@@ -537,6 +537,11 @@ async def entrypoint(ctx: JobContext) -> None:
 
         # Preemptive generation: let user interrupt mid-processing
         preemptive_generation=bool(eff.get("preemptive_generation", False)),
+
+        # Discard while generating: when True, drop new VAD input while a
+        # response is already in-flight (prevents echo/noise triggering new turns)
+        allow_interruptions=not bool(eff.get("discard_while_generating", False)),
+        discard_audio_if_uninterruptible=True,
     )
 
     # Start session with persistent room IO.

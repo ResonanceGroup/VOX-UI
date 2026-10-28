@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../debug/ui_tuning_values.dart';
 import '../Controllers/ai_controller.dart';
 import '../models/services/livekit_service.dart';
@@ -166,6 +167,7 @@ class _AIViewContentState extends State<_AIViewContent>
   String? _debugOrbState; // null = driven by LiveKit
   int _lastMessageCount = 0;
   String? _lastStreamingMessage;
+  final Set<String> _expandedToolCalls = {};
 
   // Direct listener reference — bypasses context.watch re-registration bug on Flutter Web.
   // context.watch<AIController>() fails to re-register after a Provider-triggered rebuild,
@@ -789,6 +791,43 @@ class _AIViewContentState extends State<_AIViewContent>
           ),
         ),
 
+        // Connecting/warming overlay — shown while switching profiles or agent warming up
+        if (controller.connectionState == AIConnectionState.connecting || controller.isWarmingUp)
+          Positioned.fill(
+            child: Container(
+              color: (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9F9F9))
+                  .withOpacity(0.7),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 48 * scale,
+                      height: 48 * scale,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.primaryBlue,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16 * scale),
+                    Text(
+                      controller.connectionState == AIConnectionState.connecting
+                          ? 'Switching profiles...'
+                          : 'Agent warming up...',
+                      style: TextStyle(
+                        fontSize: 16 * scale,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? Colors.white70 : Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
         // Bottom-half swipe target — gives a natural open gesture without
         // requiring a precise tap on the small visible handle.
         if (!_isHistoryTrayOpen)
@@ -852,16 +891,160 @@ class _AIViewContentState extends State<_AIViewContent>
             // tray's top spacing.
             bottom: _closedTrayHandleBottomGap * scale,
             child: Center(
-              child: _buildHistoryGrabHandle(
-                isDark,
-                scale,
-                pillAlignment: Alignment.bottomCenter,
+              child: PointerInterceptor(
+                child: _buildHistoryGrabHandle(
+                  isDark,
+                  scale,
+                  pillAlignment: Alignment.bottomCenter,
+                ),
               ),
             ),
           ),
 
         // Tool approval is handled inline inside the chat tray (no overlay banner)
       ],
+    );
+  }
+
+  /// Tool call status tile — compact inline indicator showing what the agent is doing.
+  /// Appears as a small left-aligned card with a spinning/completed icon.
+  Widget _buildToolCallTile(
+    ConversationMessage message,
+    bool isDark,
+    double scale,
+  ) {
+    final isCalling = message.toolStatus == 'calling';
+    final iconColor = isCalling
+        ? (isDark ? Colors.white54 : Colors.black45)
+        : (isDark ? Colors.white24 : Colors.black12);
+    final textColor = isDark ? Colors.white60 : Colors.black45;
+    final tileKey = '${message.toolName}_${message.timestamp.millisecondsSinceEpoch}';
+    final isExpanded = _expandedToolCalls.contains(tileKey);
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            if (isExpanded) {
+              _expandedToolCalls.remove(tileKey);
+            } else {
+              _expandedToolCalls.add(tileKey);
+            }
+          });
+        },
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.7,
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: 12 * scale,
+            vertical: 8 * scale,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(10 * scale),
+            border: Border.all(
+              color: (isDark ? Colors.white : Colors.black).withOpacity(0.06),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: EdgeInsets.only(top: 2 * scale),
+                child: isCalling
+                    ? SizedBox(
+                        width: 12 * scale,
+                        height: 12 * scale,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          color: iconColor,
+                        ),
+                      )
+                    : Icon(
+                        Icons.check_circle_outline,
+                        size: 12 * scale,
+                        color: iconColor,
+                      ),
+              ),
+              SizedBox(width: 6 * scale),
+              Flexible(
+                child: Text(
+                  message.text,
+                  style: TextStyle(
+                    fontSize: 14 * scale,
+                    color: textColor,
+                    fontWeight: FontWeight.w400,
+                    height: 1.3,
+                  ),
+                  maxLines: isExpanded ? null : 2,
+                  overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                ),
+              ),
+              if (!isExpanded)
+                Padding(
+                  padding: EdgeInsets.only(top: 2 * scale),
+                  child: Icon(
+                    Icons.unfold_more,
+                    size: 12 * scale,
+                    color: textColor.withOpacity(0.5),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Detect if text is a single emoji (with optional skin-tone modifier).
+  static final RegExp _emojiRegex = RegExp(
+    r'^[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{FE0F}\u{1F3FB}-\u{1F3FF}\u{200D}]+$',
+    unicode: true,
+  );
+  bool _isSingleEmoji(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return false;
+    // Must match emoji pattern and be 1-2 characters (emoji + optional modifier)
+    if (!_emojiRegex.hasMatch(trimmed)) return false;
+    // Count grapheme clusters — must be exactly 1
+    final clusters = trimmed.runes.length;
+    return clusters <= 8; // accounts for ZWJ sequences like 👨‍👩‍👧
+  }
+
+  /// Floating emoji reaction — appears in chat as a large emoji with a subtle pop animation.
+  Widget _buildEmojiReaction(
+    ConversationMessage message,
+    bool isDark,
+    double scale,
+  ) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 4 * scale),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.5, end: 1.0),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.elasticOut,
+          builder: (context, value, child) {
+            return Transform.scale(
+              scale: value,
+              child: Opacity(
+                opacity: 0.5 + (value * 0.5),
+                child: child,
+              ),
+            );
+          },
+          child: Text(
+            message.text.trim(),
+            style: TextStyle(
+              fontSize: 36 * scale,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -981,10 +1164,10 @@ class _AIViewContentState extends State<_AIViewContent>
     return OrbWebViewWidget(
       size: UiTuningValues.orbSize * scale,
       livekitService: controller.livekitService,
-      onToggleMute: () => controller.toggleMute(),
-      onToggleSpeakerMute: () => controller.toggleSpeakerMute(),
       onOpenTray: _openHistoryTray,
       isTrayOpen: _isHistoryTrayOpen,
+      onToggleMute: () => controller.toggleMute(),
+      onToggleSpeakerMute: () => controller.toggleSpeakerMute(),
       isMuted: controller.isMuted,
       isSpeakerMuted: controller.isSpeakerMuted,
       debugOrbState: _debugOrbState,
@@ -995,6 +1178,7 @@ class _AIViewContentState extends State<_AIViewContent>
       statusFontSize: UiTuningValues.statusFontSize,
       micButtonSize: UiTuningValues.micButtonSize,
       isDrawerOpen: widget.isDrawerOpen,
+      statusTextOverride: controller.toolCallStatusText,
     );
   }
 
@@ -1099,6 +1283,14 @@ class _AIViewContentState extends State<_AIViewContent>
                           '[CHAT-DEBUG] itemBuilder: index=$index of ${messages.length}',
                         );
                         final message = messages[index];
+                        // Tool call status tile — compact inline indicator
+                        if (message.isToolCall) {
+                          return _buildToolCallTile(message, isDark, scale);
+                        }
+                        // Emoji reaction — show as floating emoji instead of chat bubble
+                        if (!message.isUser && _isSingleEmoji(message.text)) {
+                          return _buildEmojiReaction(message, isDark, scale);
+                        }
                         return Align(
                           alignment: message.isUser
                               ? Alignment.centerRight

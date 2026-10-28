@@ -51,6 +51,7 @@ from livekit.api import AccessToken, LiveKitAPI, VideoGrants
 from livekit.protocol.agent_dispatch import CreateAgentDispatchRequest
 from livekit.protocol.room import (
     CreateRoomRequest,
+    DeleteRoomRequest,
     ListParticipantsRequest,
     RoomConfiguration,
     RoomParticipantIdentity,
@@ -146,9 +147,14 @@ def _fetch_ice_servers() -> list:
 # Keys that are allowed to be overridden via PUT /config
 CONFIGURABLE_KEYS = {
     "stt_url", "stt_model",
-    "tts_url", "tts_voice", "tts_speed",
+    "tts_url", "tts_voice", "tts_speed", "tts_model",
     "llm_base_url", "llm_model", "llm_api_key",
     "llm_temperature", "llm_max_completion_tokens", "llm_disable_thinking",
+    "max_context_items",
+    "llm_read_timeout",
+    "llm_max_retries",
+    "preemptive_generation",
+    "discard_while_generating",
     "livekit_url",
     "livekit_public_url",
     "skip_greeting",
@@ -168,6 +174,33 @@ def _normalize_url(url: str) -> str:
     if url.endswith("/v1"):
         url = url[:-3]
     return url
+
+
+_LLM_KEYS = {"llm_base_url", "llm_model", "llm_api_key"}
+
+def _delete_current_room() -> bool:
+    """Delete the LiveKit room so the next client connection creates a fresh one.
+    Returns True if a room was deleted, False otherwise."""
+    try:
+        async def _do_delete():
+            lk = LiveKitAPI(
+                config.livekit_url.replace("ws://", "http://").replace("wss://", "https://"),
+                config.livekit_api_key,
+                config.livekit_api_secret,
+            )
+            # Delete the configured room name
+            room_name = os.environ.get("LIVEKIT_ROOM", "vox-ui-room")
+            await lk.room.delete_room(DeleteRoomRequest(room=room_name))
+            logger.info("[ROOM] Deleted room %s for profile switch", room_name)
+            await lk.aclose()
+            return True
+        loop = asyncio.new_event_loop()
+        result = loop.run_until_complete(_do_delete())
+        loop.close()
+        return result
+    except Exception as e:
+        logger.warning("[ROOM] Failed to delete room: %s", e)
+        return False
 
 
 def load_config_override() -> None:
@@ -209,11 +242,17 @@ def get_effective_config() -> dict:
         "tts_url":                     ov("tts_url",                     config.tts_url),
         "tts_voice":                   ov("tts_voice",                   config.tts_voice),
         "tts_speed":                   ov("tts_speed",                   config.tts_speed),
+        "tts_model":                  ov("tts_model",                  "tts-1"),
         "llm_base_url":                ov("llm_base_url",                config.llm_base_url),
         "llm_model":                   ov("llm_model",                   config.llm_model),
         "llm_api_key":                 ov("llm_api_key",                 config.llm_api_key),
         "llm_temperature":             ov("llm_temperature",             config.llm_temperature),
         "llm_max_completion_tokens":   ov("llm_max_completion_tokens",   config.llm_max_completion_tokens),
+    "max_context_items":            ov("max_context_items",            10),
+        "llm_read_timeout":          ov("llm_read_timeout",          120),
+        "llm_max_retries":           ov("llm_max_retries",           3),
+        "preemptive_generation":     ov("preemptive_generation",     False),
+        "discard_while_generating":  ov("discard_while_generating",  False),
         "llm_disable_thinking":        ov("llm_disable_thinking",        config.llm_disable_thinking),
         "livekit_url":                 ov("livekit_url",                 config.livekit_url),
         "livekit_public_url":          ov("livekit_public_url",          config.livekit_public_url),
@@ -354,12 +393,13 @@ def _tts_base_url() -> str:
     return get_effective_config()["tts_url"].rstrip("/")
 
 
-def fetch_voices() -> list[dict]:
+def fetch_voices(base_url: str | None = None) -> list[dict]:
     """
     Try to fetch the voice list from the TTS endpoint.
+    If base_url is provided, query that endpoint; otherwise use the active config.
     Falls back to the built-in Kokoro list on any error.
     """
-    base = _tts_base_url()
+    base = (base_url.rstrip("/") if base_url else _tts_base_url())
     url  = f"{base}/v1/audio/voices"
     try:
         req  = urllib.request.Request(url, headers={"Accept": "application/json"})
@@ -375,15 +415,16 @@ def fetch_voices() -> list[dict]:
         return KOKORO_DEFAULT_VOICES
 
 
-def synthesise_preview(text: str, voice: str, speed: float) -> tuple[bytes, str]:
+def synthesise_preview(text: str, voice: str, speed: float,
+                       base_url: str | None = None, model: str | None = None) -> tuple[bytes, str]:
     """
     Call the TTS endpoint and return (audio_bytes, content_type).
     Raises on failure.
     """
-    base = _tts_base_url()
+    base = (base_url.rstrip("/") if base_url else _tts_base_url())
     url  = f"{base}/v1/audio/speech"
     body = json.dumps({
-        "model":  "tts-1",
+        "model":  model or "tts-1",
         "input":  text,
         "voice":  voice,
         "speed":  speed,
@@ -405,6 +446,80 @@ def synthesise_preview(text: str, voice: str, speed: float) -> tuple[bytes, str]
 
 # ---------------------------------------------------------------------------
 # HTTP handler
+# ── Profile persistence ─────────────────────────────────────────────────
+
+PROFILES_FILE = "profiles.json"
+
+def _load_json(path):
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+
+def _save_json(path, data):
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+
+def _load_profiles():
+    data = _load_json(PROFILES_FILE)
+    if data is None:
+        return {"profiles": _default_profiles(), "activeProfileId": None}
+    profiles = data.get("profiles", [])
+    if not profiles:
+        return {"profiles": _default_profiles(), "activeProfileId": None}
+    return {"profiles": profiles, "activeProfileId": data.get("activeProfileId")}
+
+def _save_profiles(profiles, active_profile_id=None):
+    data = _load_json(PROFILES_FILE) or {}
+    data.update({
+        "profiles": profiles,
+        "updated": datetime.datetime.now().isoformat(),
+    })
+    if active_profile_id is not None:
+        data["activeProfileId"] = active_profile_id
+    _save_json(PROFILES_FILE, data)
+
+def _default_profiles():
+    return [
+        {
+            "id": "milo-jetson",
+            "name": "Milo Jetson",
+            "llmBaseUrl": "https://jetson-milo.resonancegroupusa.com",
+            "llmModelName": "Qwen3.6-35B-A3B-AWQ",
+            "llmApiKey": "milo-jetson-key",
+            "sttUrl": "http://jetson-whisper.resonancegroupusa.com:8090",
+            "sttModel": "Systran/faster-distil-whisper-medium.en",
+            "ttsUrl": "http://jetson-whisper.resonancegroupusa.com:8880",
+            "ttsVoice": "bm_george",
+            "ttsSpeed": 1.0,
+        },
+        {
+            "id": "hermes",
+            "name": "Hermes",
+            "llmBaseUrl": "http://localhost:8642/v1",
+            "llmModelName": "Qwen3.6-35B-A3B-AWQ",
+            "llmApiKey": "rghermes-local-key",
+            "sttUrl": "http://10.0.0.128:8090",
+            "sttModel": "Systran/faster-distil-whisper-medium.en",
+            "ttsUrl": "http://10.0.0.128:8880",
+            "ttsVoice": "af_jadzia",
+            "ttsSpeed": 1.0,
+        },
+        {
+            "id": "jetson-nano",
+            "name": "Jetson Nano",
+            "llmBaseUrl": "https://jetson-nano-llm.resonancegroupusa.com",
+            "llmModelName": "",
+            "llmApiKey": "",
+            "sttUrl": "https://jetson-nano-stt.resonancegroupusa.com",
+            "sttModel": "Systran/faster-distil-whisper-medium.en",
+            "ttsUrl": "https://jetson-nano-tts.resonancegroupusa.com",
+            "ttsVoice": "af_heart",
+            "ttsSpeed": 1.0,
+        },
+    ]
+
 # ---------------------------------------------------------------------------
 
 class ReuseAddrHTTPServer(HTTPServer):
@@ -435,10 +550,16 @@ class TokenHandler(BaseHTTPRequestHandler):
 
         elif parsed.path == "/voices":
             try:
-                voices = fetch_voices()
+                params = parse_qs(parsed.query)
+                tts_url = params.get("tts_url", [None])[0]
+                voices = fetch_voices(base_url=tts_url)
                 self._send_json(200, {"voices": voices})
             except Exception as e:
                 self._send_json(500, {"error": str(e)})
+
+        elif parsed.path == "/profiles":
+            result = _load_profiles()
+            self._send_json(200, result)
 
         elif parsed.path == "/test-stt":
             # Server-side STT connectivity test — browser cannot reach LAN IPs directly
@@ -510,10 +631,28 @@ class TokenHandler(BaseHTTPRequestHandler):
             logger.error(f"Token generation failed: {e}", exc_info=True)
             self._send_json(500, {"error": str(e)})
 
-    # ── PUT /config ─────────────────────────────────────────────────────────
+    # ── PUT /profiles ──────────────────────────────────────────────────────
 
     def do_PUT(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == "/profiles":
+            body = self._read_body()
+            if body is None:
+                return
+            try:
+                data = json.loads(body)
+                profiles = data.get("profiles", [])
+                active_id = data.get("activeProfileId")
+                if not isinstance(profiles, list):
+                    self._send_json(400, {"error": "profiles must be a list"})
+                    return
+                _save_profiles(profiles, active_profile_id=active_id)
+                self._send_json(200, {"ok": True, "saved": len(profiles)})
+                logger.info(f"Profiles saved: {len(profiles)} profiles")
+            except json.JSONDecodeError:
+                self._send_json(400, {"error": "Invalid JSON"})
+            return
+
         if parsed.path != "/config":
             self._send_json(404, {"error": "Not found"})
             return
@@ -536,8 +675,19 @@ class TokenHandler(BaseHTTPRequestHandler):
         response = {"config": new_config}
         if rejected:
             response["rejected_keys"] = rejected
+
+        # If LLM endpoint changed, delete the LiveKit room so the next
+        # client connection triggers a fresh agent dispatch with new config
+        llm_changed = bool(_LLM_KEYS & set(updates.keys()))
+        if llm_changed:
+            room_deleted = _delete_current_room()
+            response["room_reset"] = room_deleted
+            response["reconnect_required"] = True
+            logger.info("Config updated (LLM changed, room reset=%s): %s", room_deleted, list(updates.keys()))
+        else:
+            logger.info("Config updated: %s", list(updates.keys()))
+
         self._send_json(200, response)
-        logger.info(f"Config updated: {list(updates.keys())}")
 
     # ── POST /preview ────────────────────────────────────────────────────────
 
@@ -557,13 +707,16 @@ class TokenHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"error": "Invalid JSON"})
             return
 
-        text  = params.get("text", "Hello! This is a voice preview.")
-        eff   = get_effective_config()
-        voice = params.get("voice", eff["tts_voice"])
-        speed = float(params.get("speed", eff["tts_speed"]))
+        text      = params.get("text", "Hello! This is a voice preview.")
+        eff       = get_effective_config()
+        voice     = params.get("voice", eff["tts_voice"])
+        speed     = float(params.get("speed", eff["tts_speed"]))
+        tts_url   = params.get("tts_url") or None
+        tts_model = params.get("tts_model") or None
 
         try:
-            audio_bytes, content_type = synthesise_preview(text, voice, speed)
+            audio_bytes, content_type = synthesise_preview(text, voice, speed,
+                                                           base_url=tts_url, model=tts_model)
             self.send_response(200)
             self.send_header("Content-Type",   content_type)
             self.send_header("Content-Length", str(len(audio_bytes)))
@@ -624,6 +777,8 @@ if __name__ == "__main__":
     logger.info(f"  PUT  /config   — update config (JSON body)")
     logger.info(f"  GET  /voices   — available TTS voices")
     logger.info(f"  POST /preview  — TTS preview (returns audio/mpeg)")
+    logger.info(f"  GET  /profiles — all saved profiles")
+    logger.info(f"  PUT  /profiles — save profile list (JSON body)")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

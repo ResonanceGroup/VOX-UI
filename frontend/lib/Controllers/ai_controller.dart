@@ -20,6 +20,7 @@ class AIController extends ChangeNotifier {
   StreamSubscription<String>? _streamingResponseSubscription;
   StreamSubscription<double>? _audioLevelSubscription;
   StreamSubscription<Map<String, dynamic>>? _toolApprovalSubscription;
+  StreamSubscription<Map<String, dynamic>>? _toolCallStatusSubscription;
   Timer? _audioLevelLogTimer;
   Timer? _reconnectTimer;
 
@@ -31,11 +32,16 @@ class AIController extends ChangeNotifier {
   String? _streamingAgentMessage;
   List<ConversationMessage> _conversationHistory = [];
   bool _isRecording = false;
+  bool _warmingUp = false;
   String? _errorMessage;
   double _currentAudioLevel = 0.0;
 
   // Tool approval gating — non-null when a tool call is pending user approval
   Map<String, dynamic>? _pendingToolApproval;
+
+  // Tool call status — latest tool call display name for status text
+  String? _toolCallStatusText;
+  int _toolCallCount = 0;
 
   // Device info
   bool _isTablet = false;
@@ -57,11 +63,14 @@ class AIController extends ChangeNotifier {
   String? get streamingAgentMessage => _streamingAgentMessage;
   List<ConversationMessage> get conversationHistory => _conversationHistory;
   bool get isRecording => _isRecording;
+  bool get isWarmingUp => _warmingUp;
   String? get errorMessage => _errorMessage;
   bool get isMuted => _livekitService.isMuted;
   bool get isSpeakerMuted => _livekitService.isSpeakerMuted;
   double get currentAudioLevel => _currentAudioLevel;
   Map<String, dynamic>? get pendingToolApproval => _pendingToolApproval;
+  String? get toolCallStatusText => _toolCallStatusText;
+  int get toolCallCount => _toolCallCount;
 
   /// Check if AI is available
   bool get isAIAvailable {
@@ -82,12 +91,18 @@ class AIController extends ChangeNotifier {
       case AIConnectionState.connecting:
         return 'Connecting to AI...';
       case AIConnectionState.connected:
+        if (_warmingUp) {
+          return 'Agent warming up...';
+        }
         switch (_agentState) {
           case AIAgentState.idle:
             return 'AI Ready';
           case AIAgentState.listening:
             return 'Listening...';
           case AIAgentState.processing:
+            if (_toolCallStatusText != null) {
+              return _toolCallStatusText!;
+            }
             return 'Thinking...';
           case AIAgentState.speaking:
             return 'Speaking...';
@@ -139,6 +154,15 @@ class AIController extends ChangeNotifier {
 
     _agentStateSubscription = _livekitService.agentState.listen((state) {
       _agentState = state;
+      // Agent is active — no longer warming up
+      if (_warmingUp && state != AIAgentState.idle && state != AIAgentState.error) {
+        _warmingUp = false;
+      }
+      // Clear tool call status when agent goes idle or speaking
+      if (state == AIAgentState.idle || state == AIAgentState.speaking) {
+        _toolCallStatusText = null;
+        _toolCallCount = 0;
+      }
       notifyListeners();
     });
 
@@ -197,6 +221,45 @@ class AIController extends ChangeNotifier {
       notifyListeners();
     });
 
+    _toolCallStatusSubscription = _livekitService.toolCallStatus.listen((status) {
+      final displayName = status['display_name'] as String? ?? '';
+      final toolStatus = status['status'] as String? ?? '';
+      final count = status['count'] as int? ?? 0;
+      _toolCallCount = count;
+
+      if (toolStatus == 'calling' && displayName.isNotEmpty) {
+        _toolCallStatusText = displayName;
+        // Add tool call tile to chat history
+        _addToHistory(ConversationMessage(
+          text: displayName,
+          isUser: false,
+          timestamp: DateTime.now(),
+          isToolCall: true,
+          toolName: status['tool_name'] as String? ?? '',
+          toolStatus: toolStatus,
+        ));
+      } else if (toolStatus == 'completed' && displayName.isNotEmpty) {
+        // Update the last matching tool call tile to "completed"
+        for (int i = _conversationHistory.length - 1; i >= 0; i--) {
+          final msg = _conversationHistory[i];
+          if (msg.isToolCall && msg.toolName == (status['tool_name'] as String?) && msg.toolStatus == 'calling') {
+            _conversationHistory[i] = ConversationMessage(
+              text: displayName,
+              isUser: false,
+              timestamp: msg.timestamp,
+              isToolCall: true,
+              toolName: msg.toolName,
+              toolStatus: 'completed',
+            );
+            break;
+          }
+        }
+        // Clear status text if this was the last active tool call
+        _toolCallStatusText = null;
+      }
+      notifyListeners();
+    });
+
     if (AppConstants.aiEnableDebugLogs) {
       _audioLevelLogTimer = Timer.periodic(const Duration(seconds: 2), (_) {
         if (_currentAudioLevel > 0.0) {
@@ -246,6 +309,8 @@ class AIController extends ChangeNotifier {
       return false;
     }
 
+    _warmingUp = true;
+    notifyListeners();
     try {
       if (AppConstants.aiEnableDebugLogs) {
         debugPrint('AIController: Connecting to AI service...');
@@ -291,6 +356,7 @@ class AIController extends ChangeNotifier {
   /// Disconnect from AI service
   Future<void> disconnect() async {
     if (kDebugMode && AppConstants.isDemoMode) {
+      _warmingUp = false;
       _connectionState = AIConnectionState.disconnected;
       _agentState = AIAgentState.idle;
       notifyListeners();
@@ -502,6 +568,8 @@ class AIController extends ChangeNotifier {
     _audioLevelSubscription = null;
     _toolApprovalSubscription?.cancel();
     _toolApprovalSubscription = null;
+    _toolCallStatusSubscription?.cancel();
+    _toolCallStatusSubscription = null;
 
     _livekitService.dispose();
     super.dispose();
@@ -513,10 +581,16 @@ class ConversationMessage {
   final String text;
   final bool isUser;
   final DateTime timestamp;
+  final bool isToolCall;
+  final String toolName;
+  final String toolStatus; // "calling" or "completed"
 
   ConversationMessage({
     required this.text,
     required this.isUser,
     required this.timestamp,
+    this.isToolCall = false,
+    this.toolName = '',
+    this.toolStatus = '',
   });
 }

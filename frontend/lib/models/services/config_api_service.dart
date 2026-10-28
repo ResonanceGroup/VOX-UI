@@ -56,11 +56,52 @@ class ConfigApiService {
     return false;
   }
 
+  /// GET /profiles — returns {profiles, activeProfileId} from backend.
+  /// Returns null on error (caller falls back to local defaults).
+  Future<({List<Map<String, dynamic>> profiles, String? activeProfileId})?> fetchProfiles() async {
+    try {
+      final resp = await http.get(_uri('/profiles')).timeout(_timeout);
+      if (resp.statusCode == 200) {
+        final data = json.decode(resp.body) as Map<String, dynamic>;
+        final profiles = (data['profiles'] as List<dynamic>).cast<Map<String, dynamic>>();
+        final activeId = data['activeProfileId'] as String?;
+        return (profiles: profiles, activeProfileId: activeId);
+      }
+    } catch (e) {
+      debugPrint('ConfigApiService: GET /profiles failed: $e');
+    }
+    return null;
+  }
+
+  /// PUT /profiles — saves the full profile list to the backend JSON file.
+  /// Returns true on success.
+  Future<bool> saveProfiles(List<Map<String, dynamic>> profiles, {String? activeProfileId}) async {
+    try {
+      final body = <String, dynamic>{'profiles': profiles};
+      if (activeProfileId != null) body['activeProfileId'] = activeProfileId;
+      final resp = await http
+          .put(
+            _uri('/profiles'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(body),
+          )
+          .timeout(_timeout);
+      if (resp.statusCode == 200) return true;
+      debugPrint('ConfigApiService: PUT /profiles → ${resp.statusCode}');
+    } catch (e) {
+      debugPrint('ConfigApiService: PUT /profiles failed: $e');
+    }
+    return false;
+  }
+
   /// GET /voices — returns list of available TTS voices.
   /// Falls back to built-in Kokoro defaults if the endpoint is unreachable.
-  Future<List<TtsVoice>> fetchVoices() async {
+  Future<List<TtsVoice>> fetchVoices({String? ttsUrl}) async {
     try {
-      final resp = await http.get(_uri('/voices')).timeout(_timeout);
+      final uri = ttsUrl != null
+          ? Uri.parse(tokenServiceUrl() + '/voices?tts_url=' + Uri.encodeComponent(ttsUrl))
+          : _uri('/voices');
+      final resp = await http.get(uri).timeout(_timeout);
       if (resp.statusCode == 200) {
         final data = json.decode(resp.body) as Map<String, dynamic>;
         final voices = data['voices'] as List<dynamic>;
@@ -94,13 +135,18 @@ class ConfigApiService {
     required String text,
     required String voice,
     required double speed,
+    String? ttsUrl,
+    String? ttsModel,
   }) async {
     try {
+      final body = <String, dynamic>{'text': text, 'voice': voice, 'speed': speed};
+      if (ttsUrl != null && ttsUrl.isNotEmpty) body['tts_url'] = ttsUrl;
+      if (ttsModel != null && ttsModel.isNotEmpty) body['tts_model'] = ttsModel;
       final resp = await http
           .post(
             _uri('/preview'),
             headers: {'Content-Type': 'application/json'},
-            body: json.encode({'text': text, 'voice': voice, 'speed': speed}),
+            body: json.encode(body),
           )
           .timeout(_previewTimeout);
       if (resp.statusCode == 200) return resp.bodyBytes;

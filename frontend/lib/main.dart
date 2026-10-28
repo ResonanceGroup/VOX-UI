@@ -4,12 +4,19 @@ import 'package:provider/provider.dart';
 import 'package:vox_ui/Views/main_view.dart';
 import 'package:vox_ui/Views/theme_manager.dart';
 import 'package:vox_ui/models/services/preferences_service.dart';
+import 'package:vox_ui/models/services/config_api_service.dart';
 import 'package:vox_ui/models/app_preferences_notifier.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefsService = PreferencesService();
   await prefsService.init();
+
+  // Build ConfigApiService with lazy URL (reads from prefs on each call)
+  final configApi = ConfigApiService(
+    tokenServiceUrl: () => '${prefsService.backendBaseUrl}/api',
+  );
+
   // Apply persisted theme to ThemeManager at startup
   final savedTheme = prefsService.themeModeName;
   ThemeManager().setThemeMode(
@@ -17,15 +24,21 @@ void main() async {
     : savedTheme == 'system' ? ThemeMode.system
     : ThemeMode.dark,
   );
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => ThemeManager(),
-        ),
+        ChangeNotifierProvider(create: (_) => ThemeManager()),
         Provider<PreferencesService>.value(value: prefsService),
+        Provider<ConfigApiService>.value(value: configApi),
         ChangeNotifierProvider(
-          create: (context) => AppPreferencesNotifier(prefsService),
+          create: (context) {
+            final notifier = AppPreferencesNotifier(prefsService);
+            notifier.setConfigApi(configApi);
+            // Try to load profiles from the backend first
+            notifier.syncFromBackend();
+            return notifier;
+          },
         ),
       ],
       child: const VoxUIApp(),
