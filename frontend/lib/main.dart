@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:vox_ui/Views/main_view.dart';
 import 'package:vox_ui/Views/theme_manager.dart';
 import 'package:vox_ui/models/services/preferences_service.dart';
@@ -44,6 +46,11 @@ void main() async {
       child: const VoxUIApp(),
     ),
   );
+
+  // Report build ID to the backend (fire-and-forget). The backend logs
+  // build + User-Agent so we can verify exactly which build a client is
+  // running — kills the stale-PWA ambiguity for good.
+  _reportClientBuild('${prefsService.backendBaseUrl}/api');
 }
 
 class VoxUIApp extends StatelessWidget {
@@ -72,3 +79,19 @@ final _router = GoRouter(
     ),
   ],
 );
+
+
+Future<void> _reportClientBuild(String apiBase) async {
+  try {
+    await http.post(
+      Uri.parse('$apiBase/client-report'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'build': kVoxUiBuildId,
+        'ts': DateTime.now().toIso8601String(),
+      }),
+    ).timeout(const Duration(seconds: 4));
+  } catch (_) {
+    // Never block startup on the report.
+  }
+}

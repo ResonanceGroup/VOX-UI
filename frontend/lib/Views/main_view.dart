@@ -46,10 +46,11 @@ class _MainViewContent extends StatefulWidget {
   State<_MainViewContent> createState() => _MainViewContentState();
 }
 
+const String kVoxUiBuildId = '2026-10-28.3';
+
 class _MainViewContentState extends State<_MainViewContent> {
   int _selectedIndex = 0;
   bool _isDrawerOpen = false;
-  static const String kVoxUiBuildId = '2026-10-28.2';
 
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -181,8 +182,9 @@ class _MainViewContentState extends State<_MainViewContent> {
               child: Text(
                 'Build $kVoxUiBuildId',
                 style: TextStyle(
-                  fontSize: 11 * scale,
-                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                  fontSize: 12 * scale,
+                  fontWeight: FontWeight.w500,
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.85),
                 ),
               ),
             ),

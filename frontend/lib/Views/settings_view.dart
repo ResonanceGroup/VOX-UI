@@ -10,6 +10,7 @@ import '../models/agent_profile.dart';
 import '../models/services/config_api_service.dart';
 import '../models/services/preferences_service.dart';
 import '../Controllers/ai_controller.dart';
+import '../Views/main_view.dart';
 import 'theme_manager.dart';
 
 /// Settings View with per-agent profile support.
@@ -479,6 +480,15 @@ class _SettingsBodyState extends State<_SettingsBody> {
             _buildResetButton(context, settings, scale),
             SizedBox(height: 16 * scale),
             _buildSaveButton(scale),
+            SizedBox(height: 24 * scale),
+            Text(
+              'Build $kVoxUiBuildId',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12 * scale,
+                color: isDark ? Colors.white.withOpacity(0.45) : Colors.black.withOpacity(0.45),
+              ),
+            ),
             SizedBox(height: 32 * scale),
           ],
         ),

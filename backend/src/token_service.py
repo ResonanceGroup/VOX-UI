@@ -696,6 +696,20 @@ class TokenHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == "/client-report":
+            body = self._read_body()
+            if body is None:
+                return
+            try:
+                params = json.loads(body)
+            except json.JSONDecodeError:
+                self._send_json(400, {"error": "Invalid JSON"})
+                return
+            build = params.get("build", "?")
+            ua = self.headers.get("User-Agent", "?")
+            logger.info(f"[CLIENT-REPORT] build={build} platform={params.get('platform', '?')} ua={ua}")
+            self._send_json(200, {"ok": True})
+            return
         if parsed.path != "/preview":
             self._send_json(404, {"error": "Not found"})
             return
