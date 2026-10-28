@@ -152,6 +152,9 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
     // mic/speaker buttons get Flutter-side PointerInterceptor hit targets
     // (see ai_view.dart _buildOrbVisualization).
     _iframeElement?.style.pointerEvents = 'none';
+    if (_iframeElement != null) {
+      _neutralizePlatformViewHitTesting(_iframeElement!);
+    }
     // Mic mute is now an overlay modifier — no state change needed here.
     // _send() below always includes micMuted in payload, which orb.html handles
     // by toggling orb-mic-muted class without interrupting the state machine.
@@ -178,6 +181,27 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
 
   // ── Polling for iframe contentWindow ─────────────────────────────────────
 
+
+  // iOS Safari can route touches to the ENGINE's platform-view slot elements
+  // (flt-platform-view / flt-platform-view-slot) that wrap the iframe, even
+  // when the iframe itself is pointer-transparent. Walk the parent chain and
+  // make every engine wrapper pointer-transparent too. Touches then fall
+  // through to the Flutter canvas everywhere.
+  void _neutralizePlatformViewHitTesting(html.IFrameElement iframe) {
+    try {
+      html.Element? el = iframe.parent;
+      int guard = 0;
+      while (el != null && guard++ < 8) {
+        final tag = el.tagName.toLowerCase();
+        if (tag == 'body' || tag == 'html' || tag == 'flt-glass-pane') break;
+        if (tag.startsWith('flt-')) {
+          el.style.pointerEvents = 'none';
+        }
+        el = el.parent;
+      }
+    } catch (_) {}
+  }
+
   void _startPolling() {
     if (!mounted) return;
     _poll = Timer.periodic(const Duration(milliseconds: 300), (t) {
@@ -196,6 +220,7 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
                 _applyIframeBacking(_currentTheme);
                 // Apply current tray/drawer block state immediately
                 iframe.style.pointerEvents = 'none'; // permanent — see didUpdateWidget note
+                _neutralizePlatformViewHitTesting(iframe);
               }
               break;
             }

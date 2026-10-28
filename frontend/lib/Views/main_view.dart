@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:provider/provider.dart';
 import 'ai_view.dart';
 import 'settings_view.dart';
@@ -48,6 +49,8 @@ class _MainViewContent extends StatefulWidget {
 class _MainViewContentState extends State<_MainViewContent> {
   int _selectedIndex = 0;
   bool _isDrawerOpen = false;
+  static const String kVoxUiBuildId = '2026-10-28.2';
+
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   List<NavDestination> _buildDestinations() => [
@@ -79,26 +82,30 @@ class _MainViewContentState extends State<_MainViewContent> {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-          tooltip: 'Open menu',
+        leading: PointerInterceptor(
+          child: IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+            tooltip: 'Open menu',
+          ),
         ),
         title: Text(
           destinations[_selectedIndex].label,
           style: TextStyle(fontSize: 20 * scale),
         ),
         actions: [
-          IconButton(
-            icon: Icon(
-              ThemeManager().isDarkMode ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+          PointerInterceptor(
+            child: IconButton(
+              icon: Icon(
+                ThemeManager().isDarkMode ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+              ),
+              onPressed: () {
+                final next = ThemeManager().isDarkMode ? ThemeMode.light : ThemeMode.dark;
+                ThemeManager().setThemeMode(next);
+                context.read<AppPreferencesNotifier>().setThemeMode(next);
+              },
+              tooltip: 'Toggle theme',
             ),
-            onPressed: () {
-              final next = ThemeManager().isDarkMode ? ThemeMode.light : ThemeMode.dark;
-              ThemeManager().setThemeMode(next);
-              context.read<AppPreferencesNotifier>().setThemeMode(next);
-            },
-            tooltip: 'Toggle theme',
           ),
           SizedBox(width: 8 * scale),
         ],
@@ -168,6 +175,17 @@ class _MainViewContentState extends State<_MainViewContent> {
                   Navigator.pop(context);
                 },
               ),
+            const Spacer(),
+            Padding(
+              padding: EdgeInsets.fromLTRB(20 * scale, 8 * scale, 20 * scale, 12 * scale),
+              child: Text(
+                'Build $kVoxUiBuildId',
+                style: TextStyle(
+                  fontSize: 11 * scale,
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                ),
+              ),
+            ),
           ],
         ),
       ),
