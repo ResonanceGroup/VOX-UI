@@ -12,6 +12,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:http/http.dart' as http;
+import '../models/constants.dart';
+import '../Views/main_view.dart';
 import 'package:provider/provider.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../debug/ui_tuning_values.dart';
@@ -166,6 +169,9 @@ class _AIViewContentState extends State<_AIViewContent>
   late final AnimationController _trayController;
   String? _debugOrbState; // null = driven by LiveKit
   int _lastMessageCount = 0;
+  // Measured mic/speaker rects from orb.html (self-aligning tap zones).
+  Map<String, dynamic>? _orbButtonRects;
+  bool _orbRectsReported = false;
   String? _lastStreamingMessage;
   final Set<String> _expandedToolCalls = {};
 
@@ -1154,6 +1160,67 @@ class _AIViewContentState extends State<_AIViewContent>
     );
   }
 
+
+
+  /// UI scale used by the orb widget (matches _buildOrbVisualization's
+  /// `scale` param, which comes from AppPreferencesNotifier).
+  double get scaleForOrb {
+    final settings = context.read<AppPreferencesNotifier>();
+    return settings.uiScale;
+  }
+
+  /// Convert an orb.html-reported button rect into this Stack's coordinate
+  /// space. The iframe's internal layout width can differ from the widget
+  /// size (iOS iframe viewport quirks) — scale + offset accordingly.
+  Rect? _measuredRect(String key) {
+    final m = _orbButtonRects;
+    if (m == null) return null;
+    final b = m[key];
+    if (b is! Map) return null;
+    final orbSize = UiTuningValues.orbSize * scaleForOrb;
+    final lw = (m['layoutWidth'] as num?)?.toDouble() ?? orbSize;
+    var sf = (m['vvScale'] as num?)?.toDouble() ?? 0;
+    if (sf <= 0 || sf > 10) sf = orbSize / lw;
+    final offX = ((m['vvOX'] as num?)?.toDouble() ?? 0) * sf;
+    final offY = ((m['vvOY'] as num?)?.toDouble() ?? 0) * sf;
+    final x = (b['x'] as num?)?.toDouble();
+    final y = (b['y'] as num?)?.toDouble();
+    final w = (b['w'] as num?)?.toDouble();
+    final h = (b['h'] as num?)?.toDouble();
+    if (x == null || y == null || w == null || h == null) return null;
+    return Rect.fromLTWH(x * sf + offX, y * sf + offY, w * sf, h * sf);
+  }
+
+  Rect? get _measuredMicRect => _measuredRect('mic');
+  Rect? get _measuredSpkRect => _measuredRect('spk');
+
+  /// orb.html measured its own buttons — rebuild tap zones at the EXACT
+  /// rendered positions (self-aligning; no mirrored layout math).
+  void _onOrbButtonRects(Map<String, dynamic> rects) {
+    if (!mounted) return;
+    setState(() => _orbButtonRects = rects);
+    if (!_orbRectsReported) {
+      _orbRectsReported = true;
+      _reportOrbRects(rects);
+    }
+  }
+
+  /// One-time POST of the measured iframe geometry so the backend log shows
+  /// what the device's iframe actually did (verifies iOS layout quirks).
+  Future<void> _reportOrbRects(Map<String, dynamic> rects) async {
+    try {
+      await http.post(
+        Uri.parse('${AppConstants.aiTokenServiceUrl}/client-report'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'build': '$kVoxUiBuildId orb-rects',
+          'ts': DateTime.now().toIso8601String(),
+          'geometry': rects,
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
+  }
+
   /// Build orb visualization widget.
   ///
   /// The orb iframe is pointer-transparent (see orb_widget_web_impl.dart), so
@@ -1228,13 +1295,16 @@ class _AIViewContentState extends State<_AIViewContent>
             micButtonSize: UiTuningValues.micButtonSize,
             isDrawerOpen: widget.isDrawerOpen,
             statusTextOverride: controller.toolCallStatusText,
+            onButtonRects: _onOrbButtonRects,
           ),
           hitTarget(
-            Rect.fromLTWH(micLeft, rowTop, micSize, micSize),
+            _measuredMicRect ??
+                Rect.fromLTWH(micLeft, rowTop, micSize, micSize),
             () => controller.toggleMute(),
           ),
           hitTarget(
-            Rect.fromLTWH(spkLeft, rowTop, micSize, micSize),
+            _measuredSpkRect ??
+                Rect.fromLTWH(spkLeft, rowTop, micSize, micSize),
             () => controller.toggleSpeakerMute(),
           ),
         ],

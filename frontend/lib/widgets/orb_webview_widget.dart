@@ -16,6 +16,10 @@ class OrbWebViewWidget extends StatefulWidget {
   final LiveKitService? livekitService;
   final VoidCallback? onToggleMute;
   final VoidCallback? onToggleSpeakerMute;
+  final VoidCallback? onOpenTray;
+  final bool isTrayOpen;
+  final bool isDrawerOpen;
+  final void Function(Map<String, dynamic> rects)? onButtonRects;
   final bool isMuted;
   final bool isSpeakerMuted;
   final String? debugOrbState; // Override orb state for testing (kDebugMode only)
@@ -33,6 +37,10 @@ class OrbWebViewWidget extends StatefulWidget {
     this.livekitService,
     this.onToggleMute,
     this.onToggleSpeakerMute,
+    this.onOpenTray,
+    this.isTrayOpen = false,
+    this.isDrawerOpen = false,
+    this.onButtonRects,
     this.isMuted = false,
     this.isSpeakerMuted = false,
     this.debugOrbState,

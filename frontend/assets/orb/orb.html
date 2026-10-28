@@ -1176,8 +1176,38 @@
           if (t.micButtonSize !== undefined) {
             document.documentElement.style.setProperty('--mic-button-size', t.micButtonSize + 'px');
           }
+          setTimeout(reportButtonRects, 60);
         }
       };
+
+
+      // ── Report exact button rects to the Flutter host ────────────────────
+      // The host overlays tap zones at these positions so the zones always
+      // match the rendered buttons, regardless of iframe layout quirks
+      // (iOS iframe viewport scaling, flex centering overflow, tune changes).
+      function reportButtonRects() {
+        const mic = document.getElementById('mic-button');
+        const spk = document.getElementById('speaker-button');
+        if (!mic || !spk) return;
+        const mr = mic.getBoundingClientRect();
+        const sr = spk.getBoundingClientRect();
+        const de = document.documentElement;
+        const vv = window.visualViewport;
+        window.parent.postMessage(JSON.stringify({
+          type: 'orb-button-rects',
+          layoutWidth: de.clientWidth,
+          layoutHeight: de.clientHeight,
+          innerWidth: window.innerWidth,
+          dpr: window.devicePixelRatio || 1,
+          vvScale: vv ? vv.scale : null,
+          vvOX: vv ? vv.offsetLeft : null,
+          vvOY: vv ? vv.offsetTop : null,
+          mic: { x: mr.left, y: mr.top, w: mr.width, h: mr.height },
+          spk: { x: sr.left, y: sr.top, w: sr.width, h: sr.height },
+        }), '*');
+      }
+      window.addEventListener('load', function () { setTimeout(reportButtonRects, 60); });
+      window.addEventListener('resize', function () { setTimeout(reportButtonRects, 60); });
 
       // Initialize elements
       initializeElements();

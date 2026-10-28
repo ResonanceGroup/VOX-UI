@@ -1,0 +1,17 @@
+{
+  "stt_url": "http://10.0.0.128:8090",
+  "stt_model": "Systran/faster-distil-whisper-large-v3",
+  "tts_url": "http://10.0.0.128:8880",
+  "tts_voice": "bm_george",
+  "tts_speed": 1.1,
+  "tts_model": "tts-1",
+  "llm_base_url": "http://localhost:8642",
+  "llm_model": "hermes-agent",
+  "llm_api_key": "rghermes-local-key",
+  "llm_max_completion_tokens": 2048,
+  "llm_read_timeout": 1200,
+  "llm_max_retries": 0,
+  "max_context_items": 1,
+  "preemptive_generation": true,
+  "discard_while_generating": true
+}

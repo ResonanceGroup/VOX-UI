@@ -35,6 +35,7 @@ class OrbWebViewWidget extends StatefulWidget {
   final double size;
   final LiveKitService? livekitService;
   final VoidCallback? onToggleMute;
+  final void Function(Map<String, dynamic> rects)? onButtonRects;
   final VoidCallback? onToggleSpeakerMute;
   final VoidCallback? onOpenTray;
   final bool isTrayOpen;
@@ -57,6 +58,7 @@ class OrbWebViewWidget extends StatefulWidget {
     this.size = 300.0,
     this.livekitService,
     this.onToggleMute,
+    this.onButtonRects,
     this.onToggleSpeakerMute,
     this.onOpenTray,
     this.isTrayOpen = false,
@@ -115,9 +117,10 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
         String? type;
         // orb.html sends JSON.stringify({type: '...'}), so raw is a String.
         // Fall back to JsObject property access for any non-stringified senders.
+        Map? decoded;
         if (raw is String) {
           try {
-            final decoded = jsonDecode(raw) as Map?;
+            decoded = jsonDecode(raw) as Map?;
             type = decoded?['type'] as String?;
           } catch (_) {}
         } else if (raw is js.JsObject) {
@@ -129,6 +132,8 @@ class _OrbWebViewWidgetState extends State<OrbWebViewWidget> {
           widget.onToggleSpeakerMute?.call();
         } else if (type == 'open-tray') {
           widget.onOpenTray?.call();
+        } else if (type == 'orb-button-rects' && decoded != null) {
+          widget.onButtonRects?.call(Map<String, dynamic>.from(decoded));
         }
       } catch (_) {}
     });

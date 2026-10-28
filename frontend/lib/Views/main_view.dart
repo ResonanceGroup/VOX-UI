@@ -46,7 +46,7 @@ class _MainViewContent extends StatefulWidget {
   State<_MainViewContent> createState() => _MainViewContentState();
 }
 
-const String kVoxUiBuildId = '2026-10-28.4';
+const String kVoxUiBuildId = '2026-10-28.5';
 
 class _MainViewContentState extends State<_MainViewContent> {
   int _selectedIndex = 0;
