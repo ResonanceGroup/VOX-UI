@@ -72,6 +72,28 @@ def _tool_display_name(tool_name: str) -> str:
     return tool_name.replace("_", " ").title()
 
 
+def _extract_tool_detail(raw_args: str) -> "tuple[Optional[str], Optional[str]]":
+    """Extract a human-readable description + args preview from tool args.
+
+    Letta Code tools carry a `description` (e.g. Bash's "clear description
+    of what this command does"); fall back to other common fields, then to
+    a raw-args preview.
+    """
+    if not raw_args:
+        return None, None
+    try:
+        parsed = json.loads(raw_args)
+    except Exception:
+        return None, raw_args[:400]
+    if not isinstance(parsed, dict):
+        return None, raw_args[:400]
+    for key in ("description", "command", "prompt", "query", "path", "url"):
+        value = parsed.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip(), raw_args[:400]
+    return None, raw_args[:400]
+
+
 class LettaLLMStream(llm.LLMStream):
     """
     LLMStream implementation for Lettabot OpenAI-compatible API.
@@ -96,20 +118,37 @@ class LettaLLMStream(llm.LLMStream):
         self._tool_call_count = 0
         # Track tool calls by index to match call/return
         self._active_tool_calls: dict[int, str] = {}  # index → tool_name
+        self._call_ids: dict[int, str] = {}  # index → unique call_id
+        self._tool_call_args: dict[int, str] = {}  # index → accumulated args JSON
 
-    async def _publish_tool_status(self, tool_name: str, status: str) -> None:
+    async def _publish_tool_status(
+        self,
+        tool_name: str,
+        status: str,
+        *,
+        call_id: str | None = None,
+        description: str | None = None,
+        args: str | None = None,
+    ) -> None:
         """Publish a tool_call_status data message to the Flutter client."""
         publish_fn = self._parent_llm.config.publish_data
         if publish_fn is None:
             return
         try:
-            await publish_fn({
+            payload = {
                 "type": "tool_call_status",
                 "tool_name": tool_name,
                 "display_name": _tool_display_name(tool_name),
                 "status": status,  # "calling" or "completed"
                 "count": self._tool_call_count,
-            })
+            }
+            if call_id:
+                payload["call_id"] = call_id
+            if description:
+                payload["description"] = description
+            if args:
+                payload["args"] = args
+            await publish_fn(payload)
         except Exception as e:
             logger.debug("Failed to publish tool_call_status: %s", e)
 
@@ -175,31 +214,53 @@ class LettaLLMStream(llm.LLMStream):
                 # Tool call events — the Lettabot API emits these in the SSE stream
                 if delta.tool_calls:
                     for tc_delta in delta.tool_calls:
-                        tc_index = getattr(tc_delta, 'index', 0)
-                        tc_id = getattr(tc_delta, 'id', None) or f"call_{tc_index}"
+                        tc_index = getattr(tc_delta, 'index', 0) or 0
+                        tc_id = getattr(tc_delta, 'id', None)
                         func = getattr(tc_delta, 'function', None)
-                        tool_name = getattr(func, 'name', None) or 'unknown'
-                        tool_args = getattr(func, 'arguments', None) or '{}'
+                        tool_name = getattr(func, 'name', None)
+                        tool_args = getattr(func, 'arguments', None) or ''
 
-                        if tool_name and tool_name != 'unknown':
+                        if tool_name and tool_name != 'unknown' and tc_index not in self._active_tool_calls:
+                            # First delta for this call — publish immediately
+                            # for instant "calling" feedback in the UI.
                             self._tool_call_count += 1
+                            call_id = tc_id or f"tc{self._tool_call_count}_{tc_index}"
                             self._active_tool_calls[tc_index] = tool_name
-                            logger.info("Lettabot tool_call: %s (index=%d)", tool_name, tc_index)
+                            self._call_ids[tc_index] = call_id
+                            self._tool_call_args[tc_index] = tool_args
+                            logger.info("Lettabot tool_call: %s (index=%d, id=%s)", tool_name, tc_index, call_id)
 
                             # Publish tool call status to Flutter
-                            await self._publish_tool_status(tool_name, "calling")
+                            await self._publish_tool_status(tool_name, "calling", call_id=call_id)
                             # Reset timeout (keepalive)
+                            self._reset_timeout()
+                        elif tc_index in self._active_tool_calls and tool_args:
+                            # Arguments arrive fragmented across deltas —
+                            # accumulate so the UI can show what ran.
+                            self._tool_call_args[tc_index] += tool_args
                             self._reset_timeout()
 
                 # Finish reason
                 if choice.finish_reason in ("tool_calls", "stop"):
                     # Lettabot executes tools internally — by the time we get
                     # finish_reason, tools are done. Publish completed for any
-                    # active tool calls we saw during the stream.
-                    for idx, name in self._active_tool_calls.items():
-                        await self._publish_tool_status(name, "completed")
+                    # active tool calls we saw during the stream, including
+                    # the description/args so the UI can show what ran.
+                    for idx, name in list(self._active_tool_calls.items()):
+                        description, args_preview = _extract_tool_detail(
+                            self._tool_call_args.get(idx, "")
+                        )
+                        await self._publish_tool_status(
+                            name,
+                            "completed",
+                            call_id=self._call_ids.get(idx),
+                            description=description,
+                            args=args_preview,
+                        )
                         self._reset_timeout()
                     self._active_tool_calls.clear()
+                    self._call_ids.clear()
+                    self._tool_call_args.clear()
 
             logger.info("LettaLLM stream completed: %d chunks, %d tool calls",
                         chunk_count, self._tool_call_count)

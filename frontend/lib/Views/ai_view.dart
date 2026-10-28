@@ -920,11 +920,14 @@ class _AIViewContentState extends State<_AIViewContent>
     double scale,
   ) {
     final isCalling = message.toolStatus == 'calling';
+    final hasDetail =
+        message.toolArgs != null || message.toolDescription != null;
     final iconColor = isCalling
         ? (isDark ? Colors.white54 : Colors.black45)
         : (isDark ? Colors.white24 : Colors.black12);
     final textColor = isDark ? Colors.white60 : Colors.black45;
-    final tileKey = '${message.toolName}_${message.timestamp.millisecondsSinceEpoch}';
+    final tileKey =
+        '${message.toolCallId ?? message.toolName}_${message.timestamp.millisecondsSinceEpoch}';
     final isExpanded = _expandedToolCalls.contains(tileKey);
 
     return Align(
@@ -954,55 +957,97 @@ class _AIViewContentState extends State<_AIViewContent>
               color: (isDark ? Colors.white : Colors.black).withOpacity(0.06),
             ),
           ),
-          child: Row(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: EdgeInsets.only(top: 2 * scale),
-                child: isCalling
-                    ? SizedBox(
-                        width: 12 * scale,
-                        height: 12 * scale,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 1.5,
-                          color: iconColor,
-                        ),
-                      )
-                    : Icon(
-                        Icons.check_circle_outline,
-                        size: 12 * scale,
-                        color: iconColor,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(top: 2 * scale),
+                    child: isCalling
+                        ? SizedBox(
+                            width: 12 * scale,
+                            height: 12 * scale,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.5,
+                              color: iconColor,
+                            ),
+                          )
+                        : Icon(
+                            Icons.check_circle_outline,
+                            size: 12 * scale,
+                            color: iconColor,
+                          ),
+                  ),
+                  SizedBox(width: 6 * scale),
+                  Flexible(
+                    child: Text(
+                      message.toolDescription ?? message.text,
+                      style: TextStyle(
+                        fontSize: 14 * scale,
+                        color: textColor,
+                        fontWeight: FontWeight.w400,
+                        height: 1.3,
                       ),
-              ),
-              SizedBox(width: 6 * scale),
-              Flexible(
-                child: Text(
-                  message.text,
-                  style: TextStyle(
-                    fontSize: 14 * scale,
-                    color: textColor,
-                    fontWeight: FontWeight.w400,
-                    height: 1.3,
+                      maxLines: isExpanded ? null : 2,
+                      overflow:
+                          isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                    ),
                   ),
-                  maxLines: isExpanded ? null : 2,
-                  overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-                ),
+                  if (hasDetail)
+                    Padding(
+                      padding: EdgeInsets.only(top: 2 * scale),
+                      child: Icon(
+                        isExpanded ? Icons.unfold_less : Icons.unfold_more,
+                        size: 12 * scale,
+                        color: textColor.withOpacity(0.5),
+                      ),
+                    ),
+                ],
               ),
-              if (!isExpanded)
-                Padding(
-                  padding: EdgeInsets.only(top: 2 * scale),
-                  child: Icon(
-                    Icons.unfold_more,
-                    size: 12 * scale,
-                    color: textColor.withOpacity(0.5),
+              if (isExpanded && message.toolArgs != null) ...[
+                SizedBox(height: 6 * scale),
+                Container(
+                  width: double.infinity,
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.65,
+                  ),
+                  padding: EdgeInsets.all(8 * scale),
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(6 * scale),
+                  ),
+                  child: Text(
+                    _prettyToolArgs(message.toolArgs!),
+                    style: TextStyle(
+                      fontSize: 12 * scale,
+                      fontFamily: 'monospace',
+                      color: textColor,
+                      height: 1.4,
+                    ),
                   ),
                 ),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// Pretty-print tool call args JSON for the expanded tile.
+  String _prettyToolArgs(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        const encoder = JsonEncoder.withIndent('  ');
+        return encoder.convert(decoded);
+      }
+    } catch (_) {}
+    return raw;
   }
 
   /// Detect if text is a single emoji (with optional skin-tone modifier).

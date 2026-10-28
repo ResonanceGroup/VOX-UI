@@ -229,7 +229,7 @@ class AIController extends ChangeNotifier {
 
       if (toolStatus == 'calling' && displayName.isNotEmpty) {
         _toolCallStatusText = displayName;
-        // Add tool call tile to chat history
+        // Add tool call tile to chat history (one tile per call)
         _addToHistory(ConversationMessage(
           text: displayName,
           isUser: false,
@@ -237,22 +237,41 @@ class AIController extends ChangeNotifier {
           isToolCall: true,
           toolName: status['tool_name'] as String? ?? '',
           toolStatus: toolStatus,
+          toolCallId: status['call_id'] as String?,
         ));
       } else if (toolStatus == 'completed' && displayName.isNotEmpty) {
-        // Update the last matching tool call tile to "completed"
-        for (int i = _conversationHistory.length - 1; i >= 0; i--) {
+        // Update the matching tool call tile to "completed" — prefer exact
+        // call_id match; fall back to the OLDEST 'calling' tile with the same
+        // tool name (FIFO, so repeated same-tool calls complete in order).
+        final callId = status['call_id'] as String?;
+        final toolName = status['tool_name'] as String?;
+        final description = status['description'] as String?;
+        final args = status['args'] as String?;
+        int? matchIndex;
+        for (int i = 0; i < _conversationHistory.length; i++) {
           final msg = _conversationHistory[i];
-          if (msg.isToolCall && msg.toolName == (status['tool_name'] as String?) && msg.toolStatus == 'calling') {
-            _conversationHistory[i] = ConversationMessage(
-              text: displayName,
-              isUser: false,
-              timestamp: msg.timestamp,
-              isToolCall: true,
-              toolName: msg.toolName,
-              toolStatus: 'completed',
-            );
+          if (!msg.isToolCall || msg.toolStatus != 'calling') continue;
+          if (callId != null && msg.toolCallId == callId) {
+            matchIndex = i;
             break;
           }
+          if (callId == null && msg.toolName == toolName) {
+            matchIndex ??= i; // first (oldest) match
+          }
+        }
+        if (matchIndex != null) {
+          final msg = _conversationHistory[matchIndex];
+          _conversationHistory[matchIndex] = ConversationMessage(
+            text: displayName,
+            isUser: false,
+            timestamp: msg.timestamp,
+            isToolCall: true,
+            toolName: msg.toolName,
+            toolStatus: 'completed',
+            toolCallId: msg.toolCallId,
+            toolDescription: description ?? msg.toolDescription,
+            toolArgs: args ?? msg.toolArgs,
+          );
         }
         // Clear status text if this was the last active tool call
         _toolCallStatusText = null;
@@ -526,7 +545,8 @@ class AIController extends ChangeNotifier {
     if (_conversationHistory.isNotEmpty) {
       final last = _conversationHistory.last;
       final gap = message.timestamp.difference(last.timestamp).abs();
-      if (last.text == message.text &&
+      if (!message.isToolCall &&
+          last.text == message.text &&
           last.isUser == message.isUser &&
           gap < const Duration(seconds: 3)) {
         return;
@@ -584,6 +604,9 @@ class ConversationMessage {
   final bool isToolCall;
   final String toolName;
   final String toolStatus; // "calling" or "completed"
+  final String? toolCallId; // unique per call (matches worker call_id)
+  final String? toolDescription; // e.g. Bash tool's description arg
+  final String? toolArgs; // raw JSON args preview
 
   ConversationMessage({
     required this.text,
@@ -592,5 +615,8 @@ class ConversationMessage {
     this.isToolCall = false,
     this.toolName = '',
     this.toolStatus = '',
+    this.toolCallId,
+    this.toolDescription,
+    this.toolArgs,
   });
 }
