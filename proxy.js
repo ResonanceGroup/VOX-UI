@@ -13,6 +13,35 @@ const TOKEN_PORT  = 7882;
 const LK_PORT     = 7880;
 const SERVE_PORT  = 3000;
 
+// RG Link (agent-sdk-mobile-app) voice-mode web build — routed by path so the
+// public hostname serves both apps. The bridge path carries a random gate
+// secret; the bridge itself stays loopback-bound and token-injecting.
+const RGLINK_PORT        = 8085;
+const RGLINK_BRIDGE_PORT = 4613;
+// The bridge path is an access secret (it is the only gate on the bridge), so
+// it lives in gitignored proxy.env next to this file, never in the repo.
+function loadProxyEnv() {
+  try {
+    for (const line of fs.readFileSync(path.join(__dirname, 'proxy.env'), 'utf8').split('\n')) {
+      const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
+      if (m && !(m[1] in process.env)) process.env[m[1]] = m[2];
+    }
+  } catch (e) { /* no env file: fall through to the explicit error below */ }
+}
+loadProxyEnv();
+const RGLINK_BRIDGE_PATH = process.env.RGLINK_BRIDGE_PATH || '';
+if (!RGLINK_BRIDGE_PATH) console.error('WARNING: RGLINK_BRIDGE_PATH unset (create proxy.env) — RG Link bridge routing disabled');
+const RGLINK_PREFIXES = ['/node_modules/', '/_expo/', '/__bloop/', '/agents', '/chat'];
+
+function isRglinkPath(url) {
+  const [p, q] = (url || '').split('?');
+  // /assets/ is shared: VoxUI's Flutter assets (incl. its orb at
+  // /assets/assets/orb/orb.html) must stay static; only Expo Router asset
+  // requests (which always carry ?unstable_path=) go to RG Link.
+  if (p === '/assets' || p === '/assets/') return (q || '').includes('unstable_path=');
+  return RGLINK_PREFIXES.some((prefix) => p === prefix || p.startsWith(prefix));
+}
+
 const MIME = {
   '.html': 'text/html', '.js': 'application/javascript',
   '.css': 'text/css',   '.png': 'image/png',
@@ -75,6 +104,9 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // RG Link web build (page routes, Expo assets, orb, bloop proxy paths)
+  if (isRglinkPath(req.url)) return proxyHttp(req, res, RGLINK_PORT);
+
   // Static files
   let filePath = path.join(STATIC_DIR, req.url === '/' ? '/index.html' : req.url.split('?')[0]);
   if (!fs.existsSync(filePath)) filePath = path.join(STATIC_DIR, 'index.html');
@@ -91,27 +123,57 @@ const server = http.createServer((req, res) => {
   stream.pipe(res);
 });
 
-// WebSocket proxy for /rtc* → LiveKit
+// WebSocket proxies:
+//   /bridge-<secret> → RG Link bridge :4613 (gated by unguessable path)
+//   /rtc*            → LiveKit :7880 (unchanged)
+//   everything else  → RG Link web proxy :8085 (Metro HMR etc.)
 const wss = new WebSocketServer({ noServer: true });
+
+function pipeWs(ws, upstreamUrl, wsOptions) {
+  const upstream = new WebSocket(upstreamUrl, wsOptions?.protocols || [], wsOptions?.headers ? { headers: wsOptions.headers } : undefined);
+  upstream.on('open', () => {
+    ws.on('message', (d, binary) => upstream.readyState === 1 && upstream.send(d, { binary }));
+    upstream.on('message', (d, binary) => ws.readyState === 1 && ws.send(d, { binary }));
+  });
+  const close = (code, reason) => {
+    try { ws.close(code, reason); } catch(_) {}
+    try { upstream.close(); } catch(_) {}
+  };
+  ws.on('close', close); upstream.on('close', close);
+  ws.on('error', (e) => { console.error('client ws error', e.message); close(1011); });
+  upstream.on('error', (e) => { console.error('upstream ws error', e.message); close(1011); });
+}
+
 server.on('upgrade', (req, socket, head) => {
   console.log('[WS] upgrade: ' + req.url);
-  wss.handleUpgrade(req, socket, head, (ws) => {
-    // iOS Safari + livekit-client sometimes produces /rtc/rtc — normalise to /rtc
-    const lkPath = req.url.startsWith('/rtc/rtc') ? req.url.replace('/rtc/rtc', '/rtc') : req.url;
-    if (lkPath !== req.url) console.log('[WS] normalised double-rtc path → ' + lkPath);
-    const upstream = new WebSocket(`ws://127.0.0.1:${LK_PORT}${lkPath}`);
-    upstream.on('open', () => {
-      ws.on('message', (d, binary) => upstream.readyState === 1 && upstream.send(d, { binary }));
-      upstream.on('message', (d, binary) => ws.readyState === 1 && ws.send(d, { binary }));
+  const upgradePath = (req.url || '').split('?')[0];
+  const protocols = (req.headers['sec-websocket-protocol'] || '')
+    .split(',').map((x) => x.trim()).filter(Boolean);
+
+  if (RGLINK_BRIDGE_PATH && upgradePath === RGLINK_BRIDGE_PATH) {
+    // Gate = the unguessable path. Origin is rewritten to loopback because the
+    // bridge only accepts loopback origins; the capability token never leaves the box.
+    wss.handleUpgrade(req, socket, head, (ws) =>
+      pipeWs(ws, `ws://127.0.0.1:${RGLINK_BRIDGE_PORT}${req.url}`, {
+        protocols,
+        headers: { Origin: `http://127.0.0.1:${RGLINK_BRIDGE_PORT}` },
+      }));
+    return;
+  }
+
+  if (upgradePath.startsWith('/rtc')) {
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      // iOS Safari + livekit-client sometimes produces /rtc/rtc — normalise to /rtc
+      const lkPath = req.url.startsWith('/rtc/rtc') ? req.url.replace('/rtc/rtc', '/rtc') : req.url;
+      if (lkPath !== req.url) console.log('[WS] normalised double-rtc path → ' + lkPath);
+      pipeWs(ws, `ws://127.0.0.1:${LK_PORT}${lkPath}`);
     });
-    const close = (code, reason) => {
-      try { ws.close(code, reason); } catch(_) {}
-      try { upstream.close(); } catch(_) {}
-    };
-    ws.on('close', close); upstream.on('close', close);
-    ws.on('error', (e) => { console.error('client ws error', e.message); close(1011); });
-    upstream.on('error', (e) => { console.error('upstream ws error', e.message); close(1011); });
-  });
+    return;
+  }
+
+  // Default: RG Link web proxy (Metro HMR, Expo dev websockets)
+  wss.handleUpgrade(req, socket, head, (ws) =>
+    pipeWs(ws, `ws://127.0.0.1:${RGLINK_PORT}${req.url}`));
 });
 
 server.listen(SERVE_PORT, () => console.log(`VoxUI proxy listening on :${SERVE_PORT}`));
